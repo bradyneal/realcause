@@ -1,0 +1,11 @@
+name: gen
+channels:
+  - defaults
+dependencies:
+  - matplotlib
+  - pandas
+  - seaborn
+  - pip:
+    - pyro-ppl==1.2.1
+prefix: /anaconda3/envs/gen
+
