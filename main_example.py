@@ -6,9 +6,6 @@ from DataGenModel import DataGenModel
 from data.synthetic import generate_zty_linear_scalar_data
 
 
-df = generate_zty_linear_scalar_data(500)
-
-
 def model(z, t=None, y=None):
     sigma_t = pyro.sample("sigma_t", dist.Uniform(0., 10.))
     w_zt = pyro.sample('w_zt', dist.Normal(0., 10.))
@@ -26,5 +23,6 @@ def model(z, t=None, y=None):
     return t, y
 
 
+df = generate_zty_linear_scalar_data(500)
 gen_model = DataGenModel(df, model, AutoNormal, n_iters=2000)
-gen_model.plot_ty_dists(n_samples_per_z=10, save_name='test')
+gen_model.plot_ty_dists(n_samples_per_z=1, save_name='test')

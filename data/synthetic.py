@@ -4,8 +4,9 @@ import pandas as pd
 from DataGenModel import Z, T, Y
 
 
-def generate_zty_linear_scalar_data(n, format='pandas', seed=0, alpha=2, beta=10, delta=5, z_mean=0, z_std=1,
-        t_noise_mean=0, t_noise_std=1, y_noise_mean=0, y_noise_std=1):
+def generate_zty_linear_scalar_data(n, format='pandas', seed=0, alpha=-2, beta=2, delta=2,
+                                    z_mean=0, z_std=1, t_noise_mean=0, t_noise_std=1,
+                                    y_noise_mean=0, y_noise_std=1):
     np.random.seed(seed)
     z = np.random.normal(loc=z_mean, scale=z_std, size=n)
     t = (alpha * z) + np.random.normal(loc=t_noise_mean, scale=t_noise_std, size=n)

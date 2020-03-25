@@ -113,7 +113,7 @@ class DataGenModel:
         return samples
 
     def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True, save_name=SAVE_NAME, n_samples_per_z=N_SAMPLES_PER_Z,
-                      thin_model=None, thin_true=None, t_site=T_SITE, y_site=Y_SITE, joint_kwargs=None):
+                      thin_model=None, thin_true=None, t_site=T_SITE, y_site=Y_SITE, joint_kwargs={}):
         samples = self.sample(n_samples_per_z, sites=(t_site, y_site))
         t_model, y_model = to_np_vectors([samples[T_SITE], samples[Y_SITE]], thin_interval=thin_model)
         t_true, y_true = to_np_vectors(self._get_data_tensors([self.tlabel, self.ylabel]), thin_interval=thin_true)
