@@ -5,7 +5,8 @@ dependencies:
   - matplotlib
   - pandas
   - seaborn
+  - statsmodels
   - pip:
-    - pyro-ppl==1.2.1
+    - pyro-ppl
 prefix: /anaconda3/envs/gen
 
