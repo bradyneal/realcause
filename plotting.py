@@ -52,12 +52,12 @@ def compare_bivariate_marginals(x1, x2, y1, y2, xlabel=None, ylabel=None, label1
     if qqplot:
         f2, ax2 = plt.subplots(1, 2, figsize=FIGSIZE)
         compare_marginal_qqplots(x1, x2, ax=ax2[0],
-                                 label1='{} ({})'.format(xlabel, label1),
-                                 label2='{} ({})'.format(xlabel, label2))
+                                 label1=get_quantile_label(label1, xlabel),
+                                 label2=get_quantile_label(label2,  xlabel))
 
         compare_marginal_qqplots(y1, y2, ax=ax2[1],
-                                 label1='{} ({})'.format(ylabel, label1),
-                                 label2='{} ({})'.format(ylabel, label2))
+                                 label1=get_quantile_label(label1, ylabel),
+                                 label2=get_quantile_label(label2, ylabel))
         save_and_show(f2, save_qq_fname)
         plots.append(f2)
 
@@ -65,6 +65,10 @@ def compare_bivariate_marginals(x1, x2, y1, y2, xlabel=None, ylabel=None, label1
         return plots[0]
     else:
         return plots
+
+
+def get_quantile_label(dist, var):
+    return '{} {} quantiles'.format(dist, var)
 
 
 def save_and_show(f, save_fname):
