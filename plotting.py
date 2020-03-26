@@ -28,7 +28,13 @@ def compare_marginal_qqplots(x1, x2, label1=None, label2=None, ax=None):
         print('Warning: statsmodels is not installed, so no qqplot will be made',
               '\nInstall: pip install statsmodels')
         return
-    return qqplot_2samples(x1, x2, xlabel=label1, ylabel=label2, ax=ax)
+    if len(x1) > len(x2):
+        print('Unexpected behavior: switching the order of the arguments to qqplot to avoid statsmodels error...',
+              '\n\t"{}" will be on the x-axis instead of y-axis and "{}" will be on the y-axis instead of x-axis'
+              .format(label2, label1))
+        return qqplot_2samples(x2, x1, xlabel=label2, ylabel=label1, ax=ax)
+    else:
+        return qqplot_2samples(x1, x2, xlabel=label1, ylabel=label2, ax=ax)
 
 
 def compare_bivariate_marginals(x1, x2, y1, y2, xlabel=None, ylabel=None, label1=None, label2=None,
