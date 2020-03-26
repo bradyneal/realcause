@@ -126,9 +126,9 @@ class DataGenModel:
                            kwargs=joint_kwargs)
 
         if marginal_hist or marginal_qq:
-            compare_bivariate_marginals(t_model, t_true, y_model, y_true,
+            compare_bivariate_marginals(t_true, t_model, y_true, y_model,
                                         xlabel=T, ylabel=Y,
-                                        label1=MODEL_LABEL, label2=TRUE_LABEL,
+                                        label1=TRUE_LABEL, label2=MODEL_LABEL,
                                         hist=marginal_hist, qqplot=marginal_qq,
                                         save_hist_fname='{}_ty_marginal_hists.pdf'.format(save_name),
                                         save_qq_fname='{}_ty_marginal_qqplots.pdf'.format(save_name))
