@@ -43,7 +43,7 @@ T_MODEL_LABEL = '{} ({})'.format(T, MODEL_LABEL)
 Y_MODEL_LABEL = '{} ({})'.format(Y, MODEL_LABEL)
 T_TRUE_LABEL = '{} ({})'.format(T, TRUE_LABEL)
 Y_TRUE_LABEL = '{} ({})'.format(Y, TRUE_LABEL)
-SAVE_NAME = 'DataGenModel'
+NAME = 'DataGenModel'
 
 
 class DataGenModel:
@@ -153,7 +153,7 @@ class DataGenModel:
         samples = pred(z_samples)
         return samples
 
-    def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True, save_name=SAVE_NAME, n_samples_per_z=N_SAMPLES_PER_Z,
+    def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True, name=NAME, n_samples_per_z=N_SAMPLES_PER_Z,
                       thin_model=None, thin_true=None, t_site=T_SITE, y_site=Y_SITE, joint_kwargs={}):
         samples = self.sample(n_samples_per_z, sites=(t_site, y_site))
         t_model, y_model = to_np_vectors([samples[T_SITE], samples[Y_SITE]], thin_interval=thin_model)
@@ -163,15 +163,16 @@ class DataGenModel:
             compare_joints(t_model, y_model, t_true, y_true,
                            xlabel1=T_MODEL_LABEL, ylabel1=Y_MODEL_LABEL,
                            xlabel2=T_TRUE_LABEL, ylabel2=Y_TRUE_LABEL,
-                           save_fname='{}_ty_joints.pdf'.format(save_name),
-                           kwargs=joint_kwargs)
+                           save_fname='{}_ty_joints.pdf'.format(name),
+                           name=name, kwargs=joint_kwargs)
 
         if marginal_hist or marginal_qq:
             compare_bivariate_marginals(t_true, t_model, y_true, y_model,
                                         xlabel=T, ylabel=Y,
                                         label1=TRUE_LABEL, label2=MODEL_LABEL,
                                         hist=marginal_hist, qqplot=marginal_qq,
-                                        save_hist_fname='{}_ty_marginal_hists.pdf'.format(save_name),
-                                        save_qq_fname='{}_ty_marginal_qqplots.pdf'.format(save_name))
+                                        save_hist_fname='{}_ty_marginal_hists.pdf'.format(name),
+                                        save_qq_fname='{}_ty_marginal_qqplots.pdf'.format(name),
+                                        name=name)
 
     # TODO: implement holding out data and evaluating stuff (e.g. log-likelihood and quant diag) on that
