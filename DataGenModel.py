@@ -11,7 +11,8 @@ import pyro.optim
 import pyro.distributions as dist
 # from pyro.nn import PyroModule, PyroSample
 from pyro.infer.autoguide import AutoDiagonalNormal, AutoMultivariateNormal, AutoDelta, AutoNormal
-from pyro.infer import SVI, Trace_ELBO, Predictive
+from pyro.infer import SVI, Trace_ELBO, Predictive, MCMC, NUTS, HMC
+from pyro.infer.mcmc.mcmc_kernel import MCMCKernel
 from torch.distributions import constraints
 
 from types import FunctionType
@@ -19,12 +20,20 @@ from types import FunctionType
 from util import to_np_vector, to_np_vectors
 from plotting import compare_joints, compare_bivariate_marginals
 
+import os
+import sys
+
+str_to_mcmc_sampler = {
+    'NUTS': NUTS,
+    'HMC': HMC,
+}
+
 Z = 'z'
 T = 't'
 Y = 'y'
 T_SITE = T + '_obs'
 Y_SITE = Y + '_obs'
-MCMC = 'NUTS'
+MCMC_DEFAULT = NUTS
 # N_SAMPLES = 100
 N_SAMPLES_PER_Z = 10
 
@@ -39,7 +48,7 @@ SAVE_NAME = 'DataGenModel'
 
 class DataGenModel:
 
-    def __init__(self, data, model, guide, svi=True, opt=None, lr=0.03, n_iters=5000, log_interval=100, mcmc=None,
+    def __init__(self, data, model, guide=None, svi=True, opt=None, lr=0.03, n_iters=5000, log_interval=100, mcmc=None,
                  col_labels={Z: Z, T: T, Y: Y}, seed=0, enable_validation=True):
         # TODO: docstring that specifies
         # 1. data must be in z,t,y format
@@ -49,34 +58,51 @@ class DataGenModel:
 
         self.data = data
         self.model = model
-        self.guide = guide
-        self.mcmc = mcmc
+        self.svi = svi
         self.zlabel = col_labels[Z]
         self.tlabel = col_labels[T]
         self.ylabel = col_labels[Y]
 
-        # Prepare guide
-        # "Meta-guide" that takes model as argument to get actual guide
-        if isinstance(guide, pyro.nn.module._PyroModuleMeta):
-            self.guide = guide(model)
-        # Hopefully, a regular guide function
-        elif isinstance(self.guide, FunctionType):
-            self.guide = guide
-        else:
-            raise ValueError('Invalid guide: {}'.format(self.guide))
-
         # Prepare posterior
-        if svi and mcmc is not None:
+        if svi and mcmc:
             raise ValueError('Cannot do both SVI and MCMC. Choose one.')
         if svi:
+            # Prepare guide
+            # "Meta-guide" that takes model as argument to get actual guide
+            if guide is None:
+                raise ValueError('A guide is a mandatory argument when using SVI. Please specify it.')
+            elif isinstance(guide, pyro.nn.module._PyroModuleMeta):
+                self.guide = guide(model)
+            # Hopefully, a regular guide function
+            elif isinstance(self.guide, FunctionType):
+                self.guide = guide
+            else:
+                raise ValueError('Invalid guide: {}'.format(self.guide))
+
             if opt is None:
                 opt = pyro.optim.Adam({'lr': lr})
+
             self._train(opt, n_iters, log_interval)
         else:
             if mcmc is None:
-                self.mcmc = MCMC
+                mcmc = MCMC_DEFAULT
+            elif isinstance(mcmc, str) and mcmc.upper() in str_to_mcmc_sampler.keys():
+                mcmc = str_to_mcmc_sampler[mcmc.upper()]
+
+            if isinstance(mcmc, MCMCKernel):
+                print('Using fully specified MCMC kernel')
+                self.mcmc_kernel = mcmc
+            elif mcmc is NUTS:
+                print('Using NUTS default kernel')
+                self.mcmc_kernel = NUTS(model)
+            elif mcmc is HMC:
+                raise ValueError('A default HMC is not supported. Please either use NUTS '
+                                 'or give an HMC kernel that is fully specified.')
             else:
-                self.mcmc = mcmc
+                raise ValueError('Unsupported mcmc: {}'.format(mcmc))
+
+            if guide is not None:
+                print('Warning: the "guide" argument is currently not supported for MCMC, so it will be ignored.')
 
     def _train(self, opt, n_iters, log_interval):
         svi = SVI(self.model, self.guide, opt, loss=Trace_ELBO())
@@ -104,12 +130,27 @@ class DataGenModel:
         else:
             return tensors
 
-    def sample(self, n_samples_per_z=N_SAMPLES_PER_Z, z_samples=None, sites=(T_SITE, Y_SITE)):
-        # NOTE: might need to use 'posterior_samples' arg for MCMC
+    def sample(self, n_samples_per_z=N_SAMPLES_PER_Z, z_samples=None, sites=(T_SITE, Y_SITE), mcmc_kwargs={}):
+        if self.svi:
+            pred = Predictive(self.model, guide=self.guide, num_samples=n_samples_per_z, return_sites=sites)
+        else:   # MCMC
+            mcmc = MCMC(self.mcmc_kernel, num_samples=n_samples_per_z, **mcmc_kwargs)
+            z, t, y = self._get_data_tensors([self.zlabel, self.tlabel, self.ylabel])
+            mcmc.run(z, t, y)
+            pred = Predictive(self.model, posterior_samples=mcmc.get_samples(),
+                              num_samples=n_samples_per_z, return_sites=sites)
+
+            # To avoid OMP error that results from mcmc.summary() not playing nicely with matplotlib on MacOS
+            # Remove condition if it occurs on other operating systems
+            if sys.platform == "darwin":
+                os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
+            print('\n\nMCMC posterior summary:')
+            mcmc.summary()
+
         if z_samples is None:
-            z = self._get_data_tensors(self.zlabel)     # use "training data"
-        pred = Predictive(self.model, guide=self.guide, num_samples=n_samples_per_z, return_sites=sites)
-        samples = pred(z)
+            z_samples = self._get_data_tensors(self.zlabel)  # use "training data"
+        samples = pred(z_samples)
         return samples
 
     def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True, save_name=SAVE_NAME, n_samples_per_z=N_SAMPLES_PER_Z,
