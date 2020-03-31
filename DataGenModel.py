@@ -130,14 +130,16 @@ class DataGenModel:
         else:
             return tensors
 
-    def sample(self, n_samples_per_z=N_SAMPLES_PER_Z, z_samples=None, sites=(T_SITE, Y_SITE), mcmc_kwargs={}):
+    def sample(self, n_samples_per_z=N_SAMPLES_PER_Z, model=None, z_samples=None, sites=(T_SITE, Y_SITE), mcmc_kwargs={}):
+        if model is None:
+            model = self.model
         if self.svi:
-            pred = Predictive(self.model, guide=self.guide, num_samples=n_samples_per_z, return_sites=sites)
+            pred = Predictive(model, guide=self.guide, num_samples=n_samples_per_z, return_sites=sites)
         else:   # MCMC
             mcmc = MCMC(self.mcmc_kernel, num_samples=n_samples_per_z, **mcmc_kwargs)
             z, t, y = self._get_data_tensors([self.zlabel, self.tlabel, self.ylabel])
             mcmc.run(z, t, y)
-            pred = Predictive(self.model, posterior_samples=mcmc.get_samples(),
+            pred = Predictive(model, posterior_samples=mcmc.get_samples(),
                               num_samples=n_samples_per_z, return_sites=sites)
 
             # To avoid OMP error that results from mcmc.summary() not playing nicely with matplotlib on MacOS
@@ -152,6 +154,18 @@ class DataGenModel:
             z_samples = self._get_data_tensors(self.zlabel)  # use "training data"
         samples = pred(z_samples)
         return samples
+
+    def sample_interventional(self, intervention_val, site=T_SITE, **kwargs):
+        interventional_model = pyro.do(self.model, data={site: intervention_val})
+        return self.sample(model=interventional_model, **kwargs)
+
+    def get_interventional_mean(self, intervention_val, treatment_site=T_SITE, outcome_site=Y_SITE, **kwargs):
+        samples = self.sample_interventional(intervention_val=intervention_val, site=treatment_site, **kwargs)
+        return to_np_vector(samples[outcome_site]).mean()
+
+    def get_ate(self, intervention_val1=0, intervention_val2=1, **kwargs):
+        return self.get_interventional_mean(intervention_val2, **kwargs) - \
+               self.get_interventional_mean(intervention_val1, **kwargs)
 
     def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True, name=NAME, n_samples_per_z=N_SAMPLES_PER_Z,
                       thin_model=None, thin_true=None, t_site=T_SITE, y_site=Y_SITE, joint_kwargs={}):
