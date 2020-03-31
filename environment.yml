@@ -6,6 +6,7 @@ dependencies:
   - pandas
   - seaborn
   - statsmodels
+  - pytest
   - pip:
     - pyro-ppl
 prefix: /anaconda3/envs/gen
