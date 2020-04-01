@@ -15,6 +15,7 @@ from models import linear_gaussian_full_model, linear_gaussian_outcome_model
 # def gen_model_delta7(delta7_df):
 #     return DataGenModel(delta7_df, linear_gaussian_full_model, AutoNormal, n_iters=1500)
 
+@pytest.mark.slow
 @pytest.mark.parametrize('ate, lr, n_iters', [
     (1, 0.03, 1500),
     (5, 0.03, 1500),
@@ -32,6 +33,7 @@ def test_linear_full_model_ate(ate, lr, n_iters):
     assert gen_model.get_ate() == approx(ate, abs=.1)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize('ate, lr, n_iters', [
     (1, 0.03, 1500),
     (5, 0.03, 1500),
