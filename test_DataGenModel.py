@@ -7,16 +7,7 @@ from data.synthetic import generate_zty_linear_scalar_data
 from models import linear_gaussian_full_model, linear_gaussian_outcome_model
 
 
-# @pytest.fixture(scope='session')
-# def delta7_df():
-#     return generate_zty_linear_scalar_data(100, alpha=2, beta=10, delta=7)
-#
-# @pytest.fixture(scope='session')
-# def gen_model_delta7(delta7_df):
-#     return DataGenModel(delta7_df, linear_gaussian_full_model, AutoNormal, n_iters=1500)
-
-@pytest.mark.slow
-@pytest.mark.parametrize('ate, lr, n_iters', [
+@pytest.fixture(scope='module', params=[
     (1, 0.03, 1500),
     (5, 0.03, 1500),
     (7, 0.03, 1500),
@@ -25,27 +16,26 @@ from models import linear_gaussian_full_model, linear_gaussian_outcome_model
     (-5, 0.03, 1000),
     (-20, 0.05, 2500),
 ])
-def test_linear_full_model_ate(ate, lr, n_iters):
-    df = generate_zty_linear_scalar_data(500, alpha=2, beta=10, delta=ate)
-    gen_model = DataGenModel(df, linear_gaussian_full_model, AutoNormal, lr=lr, n_iters=n_iters)
-    print('expected: {}\t actual: {}'.format(ate, gen_model.get_ate()))
-    # assert gen_model.get_ate() == approx(ate, rel=.1, abs=.1)
-    assert gen_model.get_ate() == approx(ate, abs=.1)
+def linear_gen_model_ate(request):
+    ate, lr, n_iters = request.param
+
+    def _linear_gen_model_ate(model):
+        df = generate_zty_linear_scalar_data(500, alpha=2, beta=10, delta=ate)
+        gen_model = DataGenModel(df, model, AutoNormal, lr=lr, n_iters=n_iters)
+        ate_est = gen_model.get_ate(n_samples_per_z=100)
+        print('expected: {}\t actual: {}'.format(ate, ate_est))
+        return ate_est
+
+    return _linear_gen_model_ate
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('ate, lr, n_iters', [
-    (1, 0.03, 1500),
-    (5, 0.03, 1500),
-    (7, 0.03, 1500),
-    (20, 0.05, 3000),
-    (0, 0.03, 1000),
-    (-5, 0.03, 1000),
-    (-20, 0.05, 2500),
-])
-def test_linear_outcome_model_ate(ate, lr, n_iters):
-    df = generate_zty_linear_scalar_data(500, alpha=2, beta=10, delta=ate)
-    gen_model = DataGenModel(df, linear_gaussian_outcome_model, AutoNormal, lr=lr, n_iters=n_iters)
-    ate_est = gen_model.get_ate(n_samples_per_z=100)
-    print('expected: {}\t actual: {}'.format(ate, ate_est))
-    assert gen_model.get_ate() == approx(ate, abs=.1)
+def test_linear_full_model_ate(linear_gen_model_ate):
+    ate_est = linear_gen_model_ate(model=linear_gaussian_full_model)
+    assert ate_est == approx(ate_est, abs=.1)
+
+
+@pytest.mark.slow
+def test_linear_outcome_model_ate(linear_gen_model_ate):
+    ate_est = linear_gen_model_ate(model=linear_gaussian_outcome_model)
+    assert ate_est == approx(ate_est, abs=.1)
