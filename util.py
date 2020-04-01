@@ -25,3 +25,13 @@ def to_np_vectors(tensors, by_column=True, thin_interval=None):
         return np_vects[0]
     else:
         return np_vects
+
+
+def get_num_positional_args(f):
+    n_args = f.__code__.co_argcount
+    if f.__defaults__ is not None:  # in case there are no kwargs
+        n_kwargs = len(f.__defaults__)
+    else:
+        n_kwargs = 0
+    n_positional_args = n_args - n_kwargs
+    return n_positional_args

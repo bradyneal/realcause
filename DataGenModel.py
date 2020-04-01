@@ -17,7 +17,7 @@ from torch.distributions import constraints
 
 from types import FunctionType
 
-from util import to_np_vector, to_np_vectors
+from util import to_np_vector, to_np_vectors, get_num_positional_args
 from plotting import compare_joints, compare_bivariate_marginals
 
 import os
@@ -130,7 +130,7 @@ class DataGenModel:
         else:
             return tensors
 
-    def sample(self, n_samples_per_z=N_SAMPLES_PER_Z, model=None, z_samples=None, sites=(T_SITE, Y_SITE), mcmc_kwargs={}):
+    def sample(self, n_samples_per_z=N_SAMPLES_PER_Z, model=None, z_samples=None, t_samples=None, sites=(T_SITE, Y_SITE), mcmc_kwargs={}):
         if model is None:
             model = self.model
         if self.svi:
@@ -152,12 +152,23 @@ class DataGenModel:
 
         if z_samples is None:
             z_samples = self._get_data_tensors(self.zlabel)  # use "training data"
-        samples = pred(z_samples)
+
+        # Decide between full models that only take z as input (only condition on z)
+        # and outcome models that take both z and t as input (condition on both z and t)
+        n_positional_args = get_num_positional_args(self.model)
+        if n_positional_args == 1:
+            samples = pred(z_samples)
+        elif n_positional_args == 2:
+            if t_samples is None:
+                raise ValueError('t_samples argument must be specified, if the model takes 2 arguments (e.g. z and t)')
+            samples = pred(z_samples, t_samples)
+        else:
+            raise ValueError('model has unsupported number of positional arguments:', n_positional_args)
         return samples
 
     def sample_interventional(self, intervention_val, site=T_SITE, **kwargs):
         interventional_model = pyro.do(self.model, data={site: intervention_val})
-        return self.sample(model=interventional_model, **kwargs)
+        return self.sample(model=interventional_model, t_samples=intervention_val, **kwargs)
 
     def get_interventional_mean(self, intervention_val, treatment_site=T_SITE, outcome_site=Y_SITE, **kwargs):
         samples = self.sample_interventional(intervention_val=intervention_val, site=treatment_site, **kwargs)
