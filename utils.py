@@ -18,9 +18,9 @@ def to_np_vector(x, by_column=True, thin_interval=None):
 
 
 def to_np_vectors(tensors, by_column=True, thin_interval=None):
-    if not (isinstance(tensors, list) or isinstance(tensors, tuple)):
+    if not isinstance(tensors, (list, tuple)):
         tensors = (tensors,)
-    np_vects = tuple(to_np_vector(x) for x in tensors)
+    np_vects = tuple(to_np_vector(x, by_column=by_column, thin_interval=thin_interval) for x in tensors)
     if len(np_vects) == 1:
         return np_vects[0]
     else:
