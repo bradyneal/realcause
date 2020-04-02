@@ -19,6 +19,7 @@ from types import FunctionType
 
 from utils import to_np_vector, to_np_vectors, get_num_positional_args
 from plotting import compare_joints, compare_bivariate_marginals
+from data import Z, T, Y
 
 import os
 import sys
@@ -28,9 +29,6 @@ str_to_mcmc_sampler = {
     'HMC': HMC,
 }
 
-Z = 'z'
-T = 't'
-Y = 'y'
 T_SITE = T + '_obs'
 Y_SITE = Y + '_obs'
 MCMC_DEFAULT = NUTS

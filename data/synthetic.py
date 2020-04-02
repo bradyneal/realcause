@@ -1,7 +1,6 @@
 import numpy as np
 import torch
-import pandas as pd
-from DataGenModel import Z, T, Y
+from utils import to_pandas_df
 
 
 def generate_zty_linear_scalar_data(n, format='pandas', seed=0, alpha=-2, beta=2, delta=2,
@@ -12,7 +11,7 @@ def generate_zty_linear_scalar_data(n, format='pandas', seed=0, alpha=-2, beta=2
     t = (alpha * z) + np.random.normal(loc=t_noise_mean, scale=t_noise_std, size=n)
     y = (delta * t) + (beta * z) + np.random.normal(loc=y_noise_mean, scale=y_noise_std, size=n)
     if format.lower() == 'pandas':
-        return pd.DataFrame({Z: z, T: t, Y: y})
+        return to_pandas_df(z, t, y)
     elif format.lower() == 'torch':
         return tfloat(z, t, y)
 
