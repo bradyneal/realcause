@@ -17,7 +17,7 @@ from torch.distributions import constraints
 
 from types import FunctionType
 
-from util import to_np_vector, to_np_vectors, get_num_positional_args
+from utils import to_np_vector, to_np_vectors, get_num_positional_args
 from plotting import compare_joints, compare_bivariate_marginals
 
 import os

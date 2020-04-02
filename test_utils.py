@@ -1,4 +1,4 @@
-from util import get_num_positional_args
+from utils import get_num_positional_args
 
 
 def test_get_num_positional_args():
