@@ -39,3 +39,17 @@ def test_linear_full_model_ate(linear_gen_model_ate):
 def test_linear_outcome_model_ate(linear_gen_model_ate):
     ate_est = linear_gen_model_ate(model=linear_gaussian_outcome_model)
     assert ate_est == approx(ate_est, abs=.1)
+
+
+
+
+@pytest.fixture(scope='class')
+def linear_scalar_df():
+    return generate_zty_linear_scalar_data(100, alpha=2, beta=10, delta=5)
+
+
+@pytest.mark.parametrize('model', [
+    linear_gaussian_full_model, linear_gaussian_outcome_model,
+])
+def test_fast_model(linear_scalar_df, model):
+    DataGenModel(linear_scalar_df, model, AutoNormal, n_iters=10)
