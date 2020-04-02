@@ -53,11 +53,42 @@ dependencies:
   - zipp=2.2.0=py_0
   - zlib=1.2.11=h1de35cc_3
   - pip:
+    - appdirs==1.4.3
+    - arrow==0.15.5
+    - autograd==1.3
+    - binaryornot==0.4.4
+    - chardet==3.0.4
+    - click==7.1.1
+    - cloudpickle==1.3.0
+    - cookiecutter==1.7.0
+    - decorator==4.4.2
+    - future==0.18.2
+    - gym==0.17.1
+    - idna==2.9
+    - jinja2==2.11.1
+    - jinja2-time==0.2.0
+    - joblib==0.14.1
+    - markupsafe==1.1.1
+    - mesa==0.8.6
+    - networkx==2.4
+    - nose==1.3.7
     - numpy==1.18.1
     - opt-einsum==3.1.0
+    - ply==3.11
+    - poyo==0.5.0
+    - py-mini-racer==0.2.0
+    - pyglet==1.5.0
+    - pyomo==5.6.9
     - pyro-api==0.1.1
     - pyro-ppl==1.3.0
+    - pyutilib==5.8.0
+    - requests==2.23.0
+    - scikit-learn==0.22.2.post1
+    - sklearn==0.0
     - torch==1.4.0
     - tqdm==4.43.0
+    - urllib3==1.25.8
+    - whichcraft==0.6.1
+    - whynot==0.12.0
 prefix: /anaconda3/envs/gen
 

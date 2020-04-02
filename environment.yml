@@ -9,5 +9,6 @@ dependencies:
   - pytest
   - pip:
     - pyro-ppl
+    - whynot
 prefix: /anaconda3/envs/gen
 
