@@ -18,5 +18,3 @@ def generate_lalonde_random_outcome(data_format=TORCH, hidden_dim=64, alpha_scal
     (z, t, y), causal_effects = lalonde.experiments.run_lalonde(
         num_samples=None, hidden_dim=hidden_dim, alpha_scale=alpha_scale, seed=seed)
     return to_data_format(data_format, z, t, y), causal_effects
-
-# TODO: change return format to use to_data_format()
