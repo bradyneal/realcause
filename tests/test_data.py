@@ -27,5 +27,8 @@ def test_lalonde_random_outcome_data_torch():
 
 
 def test_multivariate_z_data():
-    z, t, y = generate_zty_linear_multi_z_data(10)
+    n = 10
+    d = 5
+    z, t, y = generate_zty_linear_multi_z_data(n, zdim=5)
     assert all(isinstance(x, torch.Tensor) for x in (z, t, y))
+    assert z.shape == (n, d) and t.shape == (n,) and y.shape == (n,)
