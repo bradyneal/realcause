@@ -71,3 +71,12 @@ def to_pandas_df(z, t, y):
 
 def get_zlabel(i=None, zlabel=Z):
     return zlabel if i is None else zlabel + str(i)
+
+
+def to_tensors(*args):
+    if len(args) == 1:
+        if isinstance(args[0], (tuple, list)):
+            args = args[0]
+        else:
+            return torch.tensor(args[0], dtype=torch.float)
+    return tuple(torch.tensor(arg, dtype=torch.float) for arg in args)
