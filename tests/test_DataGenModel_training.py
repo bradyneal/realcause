@@ -9,13 +9,13 @@ from DataGenModel import DataGenModel
 from data.synthetic import generate_zty_linear_scalar_data
 from models import linear_gaussian_full_model, linear_gaussian_outcome_model
 
+# Mark all tests in this module as slow
 pytestmark = pytest.mark.slow
 
 
 @pytest.fixture(scope='module', params=[
     (1, 0.03, 1500),
     (5, 0.03, 1500),
-    (7, 0.03, 1500),
     (20, 0.05, 3000),
     (0, 0.03, 1000),
     (-5, 0.03, 1000),
