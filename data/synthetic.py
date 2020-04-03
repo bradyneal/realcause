@@ -16,8 +16,10 @@ def generate_zty_linear_scalar_data(n, format='pandas', seed=0, alpha=-2, beta=2
         return tfloat(z, t, y)
 
 
-def tfloat(*args):
+def to_tensors(*args):
     if len(args) == 1:
-        return torch.tensor(args[0], dtype=torch.float)
-    else:
-        return tuple(torch.tensor(arg, dtype=torch.float) for arg in args)
+        if isinstance(args[0], (tuple, list)):
+            args = args[0]
+        else:
+            return torch.tensor(args[0], dtype=torch.float)
+    return tuple(torch.tensor(arg, dtype=torch.float) for arg in args)
