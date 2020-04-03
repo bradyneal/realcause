@@ -4,6 +4,7 @@ from pytest import approx
 from pyro.infer.autoguide import AutoNormal
 from DataGenModel import DataGenModel
 from data.synthetic import generate_zty_linear_scalar_data, generate_zty_linear_multi_z_data
+from data.whynot_simulators import generate_lalonde_random_outcome
 from models import linear_gaussian_full_model, linear_gaussian_outcome_model, linear_multi_z_outcome_model
 from utils import PANDAS, TORCH
 
@@ -26,4 +27,9 @@ def linear_multi_z_data():
 
 
 def test_fast_multi_z_model(linear_multi_z_data):
+    DataGenModel(linear_multi_z_data, linear_multi_z_outcome_model, AutoNormal, n_iters=10)
+
+
+def test_fast_lalonde_linear_outcome_model(linear_multi_z_data):
+    (z, t, y), causal_effects = generate_lalonde_random_outcome(data_format=TORCH)
     DataGenModel(linear_multi_z_data, linear_multi_z_outcome_model, AutoNormal, n_iters=10)
