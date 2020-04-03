@@ -29,23 +29,23 @@ def linear_gen_model_ate(request):
         gen_model = DataGenModel(df, model, AutoNormal, lr=lr, n_iters=n_iters)
         ate_est = gen_model.get_ate(n_samples_per_z=100)
         print('expected: {}\t actual: {}'.format(ate, ate_est))
-        return ate_est
+        return ate, ate_est
 
     return _linear_gen_model_ate
 
 
 def test_linear_full_model_ate(linear_gen_model_ate):
-    ate_est = linear_gen_model_ate(model=linear_gaussian_full_model)
-    assert ate_est == approx(ate_est, abs=.1)
+    ate, ate_est = linear_gen_model_ate(model=linear_gaussian_full_model)
+    assert ate_est == approx(ate, abs=.1)
 
 
 def test_linear_outcome_model_ate(linear_gen_model_ate):
-    ate_est = linear_gen_model_ate(model=linear_gaussian_outcome_model)
-    assert ate_est == approx(ate_est, abs=.1)
+    ate, ate_est = linear_gen_model_ate(model=linear_gaussian_outcome_model)
+    assert ate_est == approx(ate, abs=.1)
 
 
 @pytest.mark.parametrize('ate', [-5, 0, 5])
-def test_linear_multi_z_outcome_model(ate):
+def test_linear_multi_z_outcome_model_ate(ate):
     z, t, y = generate_zty_linear_multi_z_data(500, zdim=10, delta=ate)
     gen_model = DataGenModel((z, t, y), linear_multi_z_outcome_model, AutoNormal, n_iters=1000)
     ate_est = gen_model.get_ate()
