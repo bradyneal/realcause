@@ -115,14 +115,36 @@ class DataGenModel:
     def _get_data_tensors(self, labels):
         """
         Get the torch tensors corresponding to the columns with the specified labels
-        :param labels: list/tuple of column name(s) of self.data, a pandas DataFrame
+        :param labels: list/tuple of column name(s) of self.data, which is either a
+            a Pandas DataFrame or a homogeneous list/tuple of ndarrays of torch.Tensors
         :return: tuple of torch tensors (one for each label)
         """
-        if not (isinstance(labels, str) or isinstance(labels, list) or isinstance(labels, tuple)):
+        if not isinstance(labels, (str, list, tuple)):
             raise ValueError('Invalid input: {}'.format(labels))
         if isinstance(labels, str):
             labels = (labels,)
-        tensors = tuple(torch.tensor(self.data[label], dtype=torch.float) for label in labels)
+
+        if isinstance(self.data, pd.DataFrame):
+            tensors = tuple(torch.tensor(self.data[label], dtype=torch.float) for label in labels)
+        elif isinstance(self.data, (list, tuple)):
+            data_length = len(self.data)
+            assert len(self.data) == data_length
+            str_to_index = {
+                'z': 0,
+                't': 1,
+                'y': 2
+            }
+
+            if all(isinstance(x, np.ndarray) for x in self.data):
+                tensors = tuple(torch.tensor(self.data[str_to_index[label]], dtype=torch.float) for label in labels)
+            elif all(isinstance(x, torch.Tensor) for x in self.data):
+                tensors = tuple(self.data[str_to_index[label]] for label in labels)
+            else:
+                raise ValueError('Invalid data types in self.data: {}, {}, {}'.format(
+                    (type(self.data[i]) for i in range(data_length))))
+        else:
+            raise ValueError('self.data is an invalid data type: {}'.format(type(self.data)))
+
         if len(tensors) == 1:
             return tensors[0]
         else:
