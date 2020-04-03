@@ -10,7 +10,7 @@ from utils import PANDAS, TORCH
 
 @pytest.fixture(scope='module', params=[PANDAS, TORCH])
 def linear_scalar_data(request):
-    return generate_zty_linear_scalar_data(100, format=request.param, alpha=2, beta=10, delta=5)
+    return generate_zty_linear_scalar_data(100, data_format=request.param, alpha=2, beta=10, delta=5)
 
 
 @pytest.mark.parametrize('model', [
