@@ -8,6 +8,20 @@ from models import linear_gaussian_full_model, linear_gaussian_outcome_model
 from utils import PANDAS, TORCH
 
 
+@pytest.fixture(scope='module', params=[PANDAS, TORCH])
+def linear_scalar_data(request):
+    return generate_zty_linear_scalar_data(100, format=request.param, alpha=2, beta=10, delta=5)
+
+
+@pytest.mark.parametrize('model', [
+    linear_gaussian_full_model, linear_gaussian_outcome_model,
+])
+def test_fast_model(linear_scalar_data, model):
+    DataGenModel(linear_scalar_data, model, AutoNormal, n_iters=10)
+
+
+# SLOW TESTS that require training whole models #
+
 @pytest.fixture(scope='module', params=[
     (1, 0.03, 1500),
     (5, 0.03, 1500),
@@ -40,15 +54,3 @@ def test_linear_full_model_ate(linear_gen_model_ate):
 def test_linear_outcome_model_ate(linear_gen_model_ate):
     ate_est = linear_gen_model_ate(model=linear_gaussian_outcome_model)
     assert ate_est == approx(ate_est, abs=.1)
-
-
-@pytest.fixture(scope='module', params=[PANDAS, TORCH])
-def linear_scalar_df(request):
-    return generate_zty_linear_scalar_data(100, format=request.param, alpha=2, beta=10, delta=5)
-
-
-@pytest.mark.parametrize('model', [
-    linear_gaussian_full_model, linear_gaussian_outcome_model,
-])
-def test_fast_model(linear_scalar_df, model):
-    DataGenModel(linear_scalar_df, model, AutoNormal, n_iters=10)
