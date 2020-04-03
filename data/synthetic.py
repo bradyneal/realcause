@@ -1,5 +1,5 @@
 import numpy as np
-from data import to_data_format, PANDAS
+from utils import to_data_format, PANDAS
 
 
 def generate_zty_linear_scalar_data(n, format=PANDAS, seed=0, alpha=-2, beta=2, delta=2,
