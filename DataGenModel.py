@@ -15,7 +15,7 @@ from pyro.infer import SVI, Trace_ELBO, Predictive, MCMC, NUTS, HMC
 from pyro.infer.mcmc.mcmc_kernel import MCMCKernel
 from torch.distributions import constraints
 
-from types import FunctionType
+from types import FunctionType, MethodType
 
 from utils import to_np_vector, to_np_vectors, get_num_positional_args
 from plotting import compare_joints, compare_bivariate_marginals
@@ -72,10 +72,10 @@ class DataGenModel:
             elif isinstance(guide, pyro.nn.module._PyroModuleMeta):
                 self.guide = guide(model)
             # Hopefully, a regular guide function
-            elif isinstance(self.guide, FunctionType):
+            elif isinstance(guide, (FunctionType, MethodType)):
                 self.guide = guide
             else:
-                raise ValueError('Invalid guide: {}'.format(self.guide))
+                raise ValueError('Invalid guide: {}'.format(guide))
 
             if opt is None:
                 opt = pyro.optim.Adam({'lr': lr})
