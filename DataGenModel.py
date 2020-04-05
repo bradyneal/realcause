@@ -19,9 +19,8 @@ from pyro.infer.autoguide import AutoGuide
 
 from types import FunctionType, MethodType
 
-from utils import to_np_vector, to_np_vectors, get_num_positional_args
+from utils import to_np_vector, to_np_vectors, get_num_positional_args, Z, T, Y
 from plotting import compare_joints, compare_bivariate_marginals
-from data import Z, T, Y
 
 import os
 import sys

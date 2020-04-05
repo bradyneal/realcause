@@ -1,3 +1,2 @@
-Z = 'z'
-T = 't'
-Y = 'y'
+from .synthetic import *
+from .whynot_simulators import *

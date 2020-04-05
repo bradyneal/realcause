@@ -4,8 +4,9 @@ import torch
 from types import FunctionType, MethodType
 import warnings
 
-from data import Z, T, Y
-
+Z = 'z'
+T = 't'
+Y = 'y'
 
 PANDAS = 'pandas'
 TORCH = 'torch'
