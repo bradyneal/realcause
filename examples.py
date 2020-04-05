@@ -26,7 +26,7 @@ zdim = 10
 gen_model = DataGenModel((z, t, y), linear_multi_z_outcome_model, AutoNormal, lr=.03, n_iters=2500)
 print('Expected ATE: 10\t Actual: ', gen_model.get_ate())
 
+zdim = 5
+(z, t, y) = generate_zty_linear_multi_z_data(100, zdim=zdim, delta=10)
 vae = VAE(w_dim=zdim)
-gen_model = DataGenModel((z, t, y), vae.model, vae.guide, lr=.001, n_iters=300)
-print('Expected ATE: 10\t Actual: ', gen_model.get_ate())
-
+gen_model = DataGenModel((z, t, y), vae.model, vae.guide, lr=.001, n_iters=20000)
