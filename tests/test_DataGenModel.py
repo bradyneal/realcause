@@ -14,11 +14,18 @@ def linear_scalar_data(request):
     return generate_zty_linear_scalar_data(100, data_format=request.param, alpha=2, beta=10, delta=5)
 
 
-@pytest.mark.parametrize('model', [
-    linear_gaussian_full_model, linear_gaussian_outcome_model,
-])
-def test_fast_scalar_model(linear_scalar_data, model):
-    DataGenModel(linear_scalar_data, model, AutoNormal, n_iters=10)
+@pytest.fixture(scope='module', params=[linear_gaussian_full_model, linear_gaussian_outcome_model])
+def linear_scalar_model(request):
+    return request.param
+
+
+def test_fast_scalar_model(linear_scalar_data, linear_scalar_model):
+    DataGenModel(linear_scalar_data, linear_scalar_model, AutoNormal, n_iters=10)
+
+
+def test_fast_ate(linear_scalar_data, linear_scalar_model):
+    gen_model = DataGenModel(linear_scalar_data, linear_scalar_model, AutoNormal, n_iters=10)
+    gen_model.get_ate()
 
 
 @pytest.fixture(scope='module')
