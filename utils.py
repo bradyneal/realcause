@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 import torch
 from data import Z, T, Y
-from types import MethodType
+from types import FunctionType, MethodType
+from pyro.infer.autoguide import AutoGuide
+
 
 PANDAS = 'pandas'
 TORCH = 'torch'
@@ -84,15 +86,25 @@ def to_np_vectors(tensors, by_column=True, thin_interval=None):
 
 
 def get_num_positional_args(f):
-    n_args = f.__code__.co_argcount
+    # TODO: add AutoGuide support
+    # if isinstance(f, AutoGuide):
+    #     f = f.forward.__func__
+
+    if isinstance(f, FunctionType):
+        n_args = f.__code__.co_argcount
+    elif isinstance(f, MethodType):
+        # Get corresponding function of class method and remove 'self' argument
+        f = f.__func__
+        n_args = f.__code__.co_argcount - 1
+    else:
+        raise ValueError('Invalid argument type: {}'.format(type(f)))
+
     if f.__defaults__ is not None:  # in case there are no kwargs
         n_kwargs = len(f.__defaults__)
     else:
         n_kwargs = 0
+
     n_positional_args = n_args - n_kwargs
-    # Remove 'self' argument from class methods
-    if isinstance(f, MethodType):
-        n_positional_args = n_positional_args - 1
     return n_positional_args
 
 
