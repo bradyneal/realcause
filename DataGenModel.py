@@ -150,7 +150,7 @@ class DataGenModel:
         else:
             return tensors
 
-    def sample(self, n_samples_per_z=N_SAMPLES_PER_Z, model=None, z_samples=None, t_samples=None, sites=(T_SITE, Y_SITE), mcmc_kwargs={}):
+    def sample(self, n_samples_per_z=N_SAMPLES_PER_Z, model=None, z_samples=None, t_samples=None, y_samples=None, sites=(T_SITE, Y_SITE), mcmc_kwargs={}):
         if model is None:
             model = self.model
         if self.svi:
@@ -175,18 +175,29 @@ class DataGenModel:
 
         # Decide between full models that only take z as input (only condition on z)
         # and outcome models that take both z and t as input (condition on both z and t)
-        n_positional_args = get_num_positional_args(self.model)
-        if n_positional_args == 1:
+        # and models that take z, t, and y as input (e.g. VAEs)
+        max_n_positional_args = max(get_num_positional_args(self.model), get_num_positional_args(self.guide))
+        if max_n_positional_args == 1:
             samples = pred(z_samples)
-        elif n_positional_args == 2:
+        elif max_n_positional_args == 2:
             if t_samples is None:
                 raise ValueError('t_samples argument must be specified, if the model takes 2 arguments (e.g. z and t)')
+            if t_samples.shape[0] != z_samples.shape[0]:
+                t_samples = t_samples.repeat_interleave(z_samples.shape[0])
             samples = pred(z_samples, t_samples)
+        elif max_n_positional_args == 3:
+            if y_samples is None:
+                y_samples = self._get_data_tensors(self.ylabel)
+            if t_samples.shape[0] != z_samples.shape[0]:
+                t_samples = t_samples.repeat_interleave(z_samples.shape[0])
+            samples = pred(z_samples, t_samples, y_samples)
         else:
-            raise ValueError('model has unsupported number of positional arguments:', n_positional_args)
+            raise ValueError('model has unsupported number of positional arguments:', max_n_positional_args)
         return samples
 
     def sample_interventional(self, intervention_val, site=T_SITE, **kwargs):
+        if not isinstance(intervention_val, torch.Tensor):
+            intervention_val = torch.tensor([intervention_val], dtype=torch.float32)
         interventional_model = pyro.do(self.model, data={site: intervention_val})
         return self.sample(model=interventional_model, t_samples=intervention_val, **kwargs)
 
