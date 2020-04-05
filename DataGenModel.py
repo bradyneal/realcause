@@ -5,6 +5,7 @@ import seaborn as sns; sns.set()
 import matplotlib.pyplot as plt
 from torch import nn
 from scipy import stats
+import warnings
 
 import pyro
 import pyro.optim
@@ -14,6 +15,7 @@ from pyro.infer.autoguide import AutoDiagonalNormal, AutoMultivariateNormal, Aut
 from pyro.infer import SVI, Trace_ELBO, Predictive, MCMC, NUTS, HMC
 from pyro.infer.mcmc.mcmc_kernel import MCMCKernel
 from torch.distributions import constraints
+from pyro.infer.autoguide import AutoGuide
 
 from types import FunctionType, MethodType
 
@@ -176,23 +178,29 @@ class DataGenModel:
         # Decide between full models that only take z as input (only condition on z)
         # and outcome models that take both z and t as input (condition on both z and t)
         # and models that take z, t, and y as input (e.g. VAEs)
-        max_n_positional_args = max(get_num_positional_args(self.model), get_num_positional_args(self.guide))
-        if max_n_positional_args == 1:
+        n_positional_args = get_num_positional_args(self.model)
+        if isinstance(self.guide, (FunctionType, MethodType)):
+            n_positional_args = max(n_positional_args, get_num_positional_args(self.guide))
+        elif isinstance(self.guide, AutoGuide) and isinstance(self.model, MethodType):
+            warnings.warn('If using VAE and AutoGuide, it is unclear whether '
+                          'DataGenModel.sample() currently works with these.')
+
+        if n_positional_args == 1:
             samples = pred(z_samples)
-        elif max_n_positional_args == 2:
+        elif n_positional_args == 2:
             if t_samples is None:
                 raise ValueError('t_samples argument must be specified, if the model takes 2 arguments (e.g. z and t)')
             if t_samples.shape[0] != z_samples.shape[0]:
                 t_samples = t_samples.repeat_interleave(z_samples.shape[0])
             samples = pred(z_samples, t_samples)
-        elif max_n_positional_args == 3:
+        elif n_positional_args == 3:
             if y_samples is None:
                 y_samples = self._get_data_tensors(self.ylabel)
             if t_samples.shape[0] != z_samples.shape[0]:
                 t_samples = t_samples.repeat_interleave(z_samples.shape[0])
             samples = pred(z_samples, t_samples, y_samples)
         else:
-            raise ValueError('model has unsupported number of positional arguments:', max_n_positional_args)
+            raise ValueError('model/guide has unsupported number of positional arguments:', n_positional_args)
         return samples
 
     def sample_interventional(self, intervention_val, site=T_SITE, **kwargs):

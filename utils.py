@@ -3,7 +3,6 @@ import pandas as pd
 import torch
 from data import Z, T, Y
 from types import FunctionType, MethodType
-from pyro.infer.autoguide import AutoGuide
 
 
 PANDAS = 'pandas'
@@ -86,10 +85,6 @@ def to_np_vectors(tensors, by_column=True, thin_interval=None):
 
 
 def get_num_positional_args(f):
-    # TODO: add AutoGuide support
-    # if isinstance(f, AutoGuide):
-    #     f = f.forward.__func__
-
     if isinstance(f, FunctionType):
         n_args = f.__code__.co_argcount
     elif isinstance(f, MethodType):
