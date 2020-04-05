@@ -1,5 +1,6 @@
 import seaborn as sns; sns.set()
 import matplotlib.pyplot as plt
+import warnings
 
 
 FIGSIZE = [12, 5]
@@ -28,8 +29,8 @@ def compare_marginal_qqplots(x1, x2, label1=None, label2=None, ax=None):
     try:
         from statsmodels.graphics.gofplots import qqplot_2samples
     except ImportError as e:
-        print('Warning: statsmodels is not installed, so no qqplot will be made',
-              '\nInstall: pip install statsmodels')
+        warnings.warn('statsmodels is not installed, so no qqplot will be made '
+                     '\nInstall: pip install statsmodels', Warning)
         return
     if len(x1) > len(x2):
         print('Unexpected behavior: switching the order of the arguments to qqplot to avoid statsmodels error...',

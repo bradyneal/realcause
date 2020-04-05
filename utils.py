@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
 import torch
-from data import Z, T, Y
 from types import FunctionType, MethodType
+import warnings
+
+from data import Z, T, Y
 
 
 PANDAS = 'pandas'
@@ -45,7 +47,7 @@ def to_pandas_df(z, t, y):
         else:
             raise ValueError('Unexpected z.ndim: {}'.format(z.ndim))
     else:
-        print('Warning: unexpected z type: {}'.format(type(z)))
+        warnings.warn(' unexpected z type: {}'.format(type(z)), Warning)
     d[T] = t
     d[Y] = y
     return pd.DataFrame(d)

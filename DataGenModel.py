@@ -102,7 +102,7 @@ class DataGenModel:
                 raise ValueError('Unsupported mcmc: {}'.format(mcmc))
 
             if guide is not None:
-                print('Warning: the "guide" argument is currently not supported for MCMC, so it will be ignored.')
+                warnings.warn('the "guide" argument is currently not supported for MCMC, so it will be ignored.', Warning)
 
     def _train(self, opt, n_iters, log_interval):
         svi = SVI(self.model, self.guide, opt, loss=Trace_ELBO())
