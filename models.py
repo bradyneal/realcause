@@ -135,8 +135,10 @@ class Encoder(nn.Module):
 class VAE(nn.Module):
     # by default our latent space is 50-dimensional
     # and we use 400 hidden units
-    def __init__(self, hidden_dim=400, z_dim=50, w_dim=10, t_dim=1, y_dim=1, use_cuda=False):
+    def __init__(self, hidden_dim=400, z_dim=50, w_dim=10, t_dim=1, y_dim=1, seed=0, use_cuda=False):
         super().__init__()
+        pyro.set_rng_seed(seed)
+
         # create the encoder and decoder networks
         self.encoder = Encoder(hidden_dim=hidden_dim, z_dim=z_dim, w_dim=w_dim, t_dim=t_dim)
         self.decoder = Decoder(hidden_dim=hidden_dim, z_dim=z_dim, w_dim=w_dim, t_dim=t_dim, y_dim=y_dim)
