@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import torch
 from data import Z, T, Y
+from types import MethodType
 
 PANDAS = 'pandas'
 TORCH = 'torch'
@@ -89,6 +90,9 @@ def get_num_positional_args(f):
     else:
         n_kwargs = 0
     n_positional_args = n_args - n_kwargs
+    # Remove 'self' argument from class methods
+    if isinstance(f, MethodType):
+        n_positional_args = n_positional_args - 1
     return n_positional_args
 
 
