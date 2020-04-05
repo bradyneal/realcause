@@ -12,9 +12,9 @@ If step 1 above fails, try the following instead: `conda env create -f environme
 
 ## Project Structure
 ```
-├── data/			- folder for data generators and real datasets
-├── models/			- folder for Pyro/PyTorch models and guides
-├── tests/			- folder for test suite
+├── data/		- folder for data generators and real datasets
+├── models/		- folder for Pyro/PyTorch models and guides
+├── tests/		- folder for test suite
 ├── DataGenModel.py
 	- workhorse class that takes in a dataset, model, guide, etc. and 
 	  provides useful methods such as training, sampling, ATE calculation,
