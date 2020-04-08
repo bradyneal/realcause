@@ -7,8 +7,10 @@ dependencies:
   - seaborn
   - statsmodels
   - pytest
+  - r-base        # not necessary if not using whynot_estimators
+  - r-essentials  # not necessary if not using whynot_estimators
   - pip:
     - pyro-ppl
     - whynot
+    - whynot_estimators
 prefix: /anaconda3/envs/gen
-
