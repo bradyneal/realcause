@@ -10,12 +10,14 @@ Y = 'y'
 
 PANDAS = 'pandas'
 TORCH = 'torch'
+NUMPY = 'numpy'
 
 
 def to_data_format(data_format, z, t, y):
     format_to_func = {
         PANDAS: to_pandas_df,
-        TORCH: to_tensors
+        TORCH: to_tensors,
+        NUMPY: to_np_arrays
     }
     if data_format in format_to_func.keys():
         return format_to_func[data_format](z, t, y)
@@ -61,6 +63,16 @@ def to_tensors(*args):
         else:
             return torch.tensor(args[0], dtype=torch.float)
     return tuple(torch.tensor(arg, dtype=torch.float) for arg in args)
+
+
+def to_np_arrays(*args):
+    if len(args) == 1:
+        if isinstance(args[0], (tuple, list)):
+            args = args[0]
+        else:
+            return np.array(args[0], dtype=np.float)
+        return np.array(args[0], dtype=np.float)
+    return tuple(np.array(arg, dtype=np.float) for arg in args)
 
 
 def to_np_vector(x, by_column=True, thin_interval=None):
