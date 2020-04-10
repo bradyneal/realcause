@@ -1,9 +1,10 @@
 import seaborn as sns; sns.set()
 import matplotlib.pyplot as plt
 import warnings
-
+import os
 
 FIGSIZE = [12, 5]
+DIR = 'plots'
 
 
 def compare_joints(x1, y1, x2, y2, xlabel1=None, ylabel1=None, xlabel2=None, ylabel2=None,
@@ -88,7 +89,11 @@ def get_quantile_label(dist, var):
     return '{} {} quantiles'.format(dist, var)
 
 
-def save_and_show(f, save_fname):
+def save_and_show(f, save_fname, dir=DIR):
     if save_fname is not None:
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        if os.sep not in save_fname:
+            save_fname = os.path.join(dir, save_fname)
         f.savefig(save_fname, bbox_inches='tight')
     plt.show()
