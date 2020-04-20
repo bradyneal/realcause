@@ -19,13 +19,21 @@ def linear_scalar_model(request):
     return request.param
 
 
-def test_fast_scalar_model(linear_scalar_data, linear_scalar_model):
-    DataGenModel(linear_scalar_data, linear_scalar_model, AutoNormal, n_iters=10)
+@pytest.fixture(scope='module')
+def linear_gen_model(linear_scalar_data, linear_scalar_model):
+    return DataGenModel(linear_scalar_data, linear_scalar_model, AutoNormal, n_iters=10)
 
 
-def test_fast_ate(linear_scalar_data, linear_scalar_model):
-    gen_model = DataGenModel(linear_scalar_data, linear_scalar_model, AutoNormal, n_iters=10)
-    gen_model.get_ate()
+def test_fast_scalar_model(linear_gen_model):
+    pass    # Just make a test for the linear_gen_model fixture
+
+
+def test_fast_ate(linear_gen_model):
+    linear_gen_model.get_ate()
+
+
+def test_fast_plot_ty_dists(linear_gen_model):
+    linear_gen_model.plot_ty_dists(n_samples_per_z=10, name='test', test=True)
 
 
 @pytest.fixture(scope='module')

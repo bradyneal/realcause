@@ -8,7 +8,7 @@ DIR = 'plots'
 
 
 def compare_joints(x1, y1, x2, y2, xlabel1=None, ylabel1=None, xlabel2=None, ylabel2=None,
-                   name=None, save_fname=None, kwargs=None):
+                   name=None, save_fname=None, test=False, kwargs=None):
     f, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=FIGSIZE)
     if name is not None:
         f.suptitle(name + ' Joint Kernel Density Estimate Plots')
@@ -17,7 +17,7 @@ def compare_joints(x1, y1, x2, y2, xlabel1=None, ylabel1=None, xlabel2=None, yla
     ax[0].set(xlabel=xlabel1, ylabel=ylabel1)
     sns.kdeplot(x2, y2, ax=ax[1], **kwargs)
     ax[1].set(xlabel=xlabel2, ylabel=ylabel2)
-    save_and_show(f, save_fname)
+    save_and_show(f, save_fname, test=test)
     return f
 
 
@@ -43,7 +43,8 @@ def compare_marginal_qqplots(x1, x2, label1=None, label2=None, ax=None):
 
 
 def compare_bivariate_marginals(x1, x2, y1, y2, xlabel=None, ylabel=None, label1=None, label2=None,
-                                hist=True, qqplot=True, name=None, save_hist_fname=None, save_qq_fname=None):
+                                hist=True, qqplot=True, name=None, save_hist_fname=None, save_qq_fname=None,
+                                test=False):
     if not (hist or qqplot):
         print('Both hist and qqplot are False, so no plots were made.')
 
@@ -61,7 +62,7 @@ def compare_bivariate_marginals(x1, x2, y1, y2, xlabel=None, ylabel=None, label1
         ax1[1].legend()
         ax1[1].set(xlabel=ylabel)
 
-        save_and_show(f1, save_hist_fname)
+        save_and_show(f1, save_hist_fname, test=test)
         plots.append(f1)
 
     if qqplot:
@@ -76,7 +77,7 @@ def compare_bivariate_marginals(x1, x2, y1, y2, xlabel=None, ylabel=None, label1
         compare_marginal_qqplots(y1, y2, ax=ax2[1],
                                  label1=get_quantile_label(label1, ylabel),
                                  label2=get_quantile_label(label2, ylabel))
-        save_and_show(f2, save_qq_fname)
+        save_and_show(f2, save_qq_fname, test=test)
         plots.append(f2)
 
     if len(plots) == 1:
@@ -89,7 +90,9 @@ def get_quantile_label(dist, var):
     return '{} {} quantiles'.format(dist, var)
 
 
-def save_and_show(f, save_fname, dir=DIR):
+def save_and_show(f, save_fname, dir=DIR, test=False):
+    if test:
+        return
     if save_fname is not None:
         if not os.path.exists(dir):
             os.makedirs(dir)
