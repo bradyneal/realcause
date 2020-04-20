@@ -173,33 +173,22 @@ class DataGenModel:
 
         if z_samples is None:
             z_samples = self._get_data_tensors(self.zlabel)  # use "training data"
+        if t_samples is None:
+            t_samples = self._get_data_tensors(self.tlabel)  # use "training data"
 
         # Decide between full models that only take z as input (only condition on z)
         # and outcome models that take both z and t as input (condition on both z and t)
-        # and models that take z, t, and y as input (e.g. VAEs)
-        n_positional_args = get_num_positional_args(self.model)
-        if isinstance(self.guide, (FunctionType, MethodType)):
-            n_positional_args = max(n_positional_args, get_num_positional_args(self.guide))
-        elif isinstance(self.guide, AutoGuide) and isinstance(self.model, MethodType):
-            warnings.warn('If using VAE and AutoGuide, it is unclear whether '
-                          'DataGenModel.sample() currently works with these.')
+        n_model_args = get_num_positional_args(self.model)
 
-        if n_positional_args == 1:
+        if n_model_args == 1:
             samples = pred(z_samples)
-        elif n_positional_args == 2:
-            if t_samples is None:
-                raise ValueError('t_samples argument must be specified, if the model takes 2 arguments (e.g. z and t)')
+        elif n_model_args == 2:
             if t_samples.shape[0] != z_samples.shape[0]:
                 t_samples = t_samples.repeat_interleave(z_samples.shape[0])
             samples = pred(z_samples, t_samples)
-        elif n_positional_args == 3:
-            if y_samples is None:
-                y_samples = self._get_data_tensors(self.ylabel)
-            if t_samples.shape[0] != z_samples.shape[0]:
-                t_samples = t_samples.repeat_interleave(z_samples.shape[0])
-            samples = pred(z_samples, t_samples, y_samples)
+            samples[sites[0]] = t_samples.expand((n_samples_per_z, -1))
         else:
-            raise ValueError('model/guide has unsupported number of positional arguments:', n_positional_args)
+            raise ValueError('model has unsupported number of positional arguments:', n_model_args)
         return samples
 
     def sample_interventional(self, intervention_val, site=T_SITE, **kwargs):
@@ -217,7 +206,7 @@ class DataGenModel:
                self.get_interventional_mean(intervention_val1, **kwargs)
 
     def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True, name=NAME, n_samples_per_z=N_SAMPLES_PER_Z,
-                      thin_model=None, thin_true=None, t_site=T_SITE, y_site=Y_SITE, joint_kwargs={}):
+                      thin_model=None, thin_true=None, t_site=T_SITE, y_site=Y_SITE, joint_kwargs={}, test=False):
         samples = self.sample(n_samples_per_z, sites=(t_site, y_site))
         t_model, y_model = to_np_vectors([samples[T_SITE], samples[Y_SITE]], thin_interval=thin_model)
         t_true, y_true = to_np_vectors(self._get_data_tensors([self.tlabel, self.ylabel]), thin_interval=thin_true)
@@ -227,7 +216,7 @@ class DataGenModel:
                            xlabel1=T_MODEL_LABEL, ylabel1=Y_MODEL_LABEL,
                            xlabel2=T_TRUE_LABEL, ylabel2=Y_TRUE_LABEL,
                            save_fname='{}_ty_joints.pdf'.format(name),
-                           name=name, kwargs=joint_kwargs)
+                           name=name, test=test, kwargs=joint_kwargs)
 
         if marginal_hist or marginal_qq:
             compare_bivariate_marginals(t_true, t_model, y_true, y_model,
@@ -236,6 +225,6 @@ class DataGenModel:
                                         hist=marginal_hist, qqplot=marginal_qq,
                                         save_hist_fname='{}_ty_marginal_hists.pdf'.format(name),
                                         save_qq_fname='{}_ty_marginal_qqplots.pdf'.format(name),
-                                        name=name)
+                                        name=name, test=test)
 
     # TODO: implement holding out data and evaluating stuff (e.g. log-likelihood and quant diag) on that
