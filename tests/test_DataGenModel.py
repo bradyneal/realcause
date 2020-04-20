@@ -32,8 +32,9 @@ def test_fast_ate(linear_gen_model):
     linear_gen_model.get_ate()
 
 
+@pytest.mark.plot
 def test_fast_plot_ty_dists(linear_gen_model):
-    linear_gen_model.plot_ty_dists(n_samples_per_z=10, name='test', test=True)
+    linear_gen_model.plot_ty_dists(n_samples_per_z=2, name='test', test=True)
 
 
 @pytest.fixture(scope='module')
