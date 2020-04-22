@@ -27,7 +27,7 @@ If step 1 above fails, try the following instead: `conda env create -f environme
 ```
 
 ## Testing
-This project uses [pytest](https://docs.pytest.org/en/latest/). Before you push code, it is generally a good idea to run `pytest` to make sure it hasn't broken anything that is covered by the existing tests, especially if you are pushing a big commit. You can run `pytest -v` for a bit more verbose output. This will just run fast tests that only take a few seconds. You can run the slow tests that involve fully training models by including the `--runslow` flag.
+This project uses [pytest](https://docs.pytest.org/en/latest/). Before you push code, it is generally a good idea to run `pytest` to make sure it hasn't broken anything that is covered by the existing tests, especially if you are pushing a big commit. You can run `pytest -v` for a bit more verbose output. This will just run fast tests that only take a few seconds. You can run the slow tests that involve fully training models by including the `--runslow` flag. You can run the plotting tests by including the `--runplot` flag.
 
 ## Installing whynot_estimators
 The regular `whynot` package comes with [3 simple estimators](https://github.com/zykls/whynot/blob/master/whynot/algorithms/causal_suite.py#L47): OLS, propensity score matching, and propensity score weighted OLS. These may be sufficient for your purposes. If not, read further.
