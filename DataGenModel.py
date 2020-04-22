@@ -205,8 +205,9 @@ class DataGenModel:
         return self.get_interventional_mean(intervention_val2, **kwargs) - \
                self.get_interventional_mean(intervention_val1, **kwargs)
 
-    def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True, name=NAME, n_samples_per_z=N_SAMPLES_PER_Z,
-                      thin_model=None, thin_true=None, t_site=T_SITE, y_site=Y_SITE, joint_kwargs={}, test=False):
+    def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True, name=NAME,
+                      file_ext='pdf', n_samples_per_z=N_SAMPLES_PER_Z, thin_model=None,
+                      thin_true=None, t_site=T_SITE, y_site=Y_SITE, joint_kwargs={}, test=False):
         samples = self.sample(n_samples_per_z, sites=(t_site, y_site))
         t_model, y_model = to_np_vectors([samples[T_SITE], samples[Y_SITE]], thin_interval=thin_model)
         t_true, y_true = to_np_vectors(self._get_data_tensors([self.tlabel, self.ylabel]), thin_interval=thin_true)
@@ -215,7 +216,7 @@ class DataGenModel:
             compare_joints(t_model, y_model, t_true, y_true,
                            xlabel1=T_MODEL_LABEL, ylabel1=Y_MODEL_LABEL,
                            xlabel2=T_TRUE_LABEL, ylabel2=Y_TRUE_LABEL,
-                           save_fname='{}_ty_joints.pdf'.format(name),
+                           save_fname='{}_ty_joints.{}'.format(name, file_ext),
                            name=name, test=test, kwargs=joint_kwargs)
 
         if marginal_hist or marginal_qq:
@@ -223,8 +224,8 @@ class DataGenModel:
                                         xlabel=T, ylabel=Y,
                                         label1=TRUE_LABEL, label2=MODEL_LABEL,
                                         hist=marginal_hist, qqplot=marginal_qq,
-                                        save_hist_fname='{}_ty_marginal_hists.pdf'.format(name),
-                                        save_qq_fname='{}_ty_marginal_qqplots.pdf'.format(name),
+                                        save_hist_fname='{}_ty_marginal_hists.{}'.format(name, file_ext),
+                                        save_qq_fname='{}_ty_marginal_qqplots.{}'.format(name, file_ext),
                                         name=name, test=test)
 
     # TODO: implement holding out data and evaluating stuff (e.g. log-likelihood and quant diag) on that
