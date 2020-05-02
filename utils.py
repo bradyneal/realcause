@@ -56,13 +56,19 @@ def to_pandas_df(z, t, y):
     return pd.DataFrame(d)
 
 
+def to_tensor(x):
+    if isinstance(x, (pd.DataFrame, pd.Series)):
+        x = x.values
+    return torch.tensor(x, dtype=torch.float)
+
+
 def to_tensors(*args):
     if len(args) == 1:
         if isinstance(args[0], (tuple, list)):
             args = args[0]
         else:
-            return torch.tensor(args[0], dtype=torch.float)
-    return tuple(torch.tensor(arg, dtype=torch.float) for arg in args)
+            return to_tensor(args[0])
+    return tuple(to_tensor(arg) for arg in args)
 
 
 def to_np_arrays(*args):
