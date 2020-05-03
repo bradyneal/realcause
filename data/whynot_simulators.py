@@ -15,6 +15,6 @@ with warnings.catch_warnings():
 
 def generate_lalonde_random_outcome(data_format=TORCH, hidden_dim=64, alpha_scale=0.1, seed=0):
     # num_samples parameter is ignored by the simulator since the lalonde dataset is a fixed size
-    (z, t, y), causal_effects = lalonde.experiments.run_lalonde(
+    (w, t, y), causal_effects = lalonde.experiments.run_lalonde(
         num_samples=None, hidden_dim=hidden_dim, alpha_scale=alpha_scale, seed=seed)
-    return to_data_format(data_format, z, t, y), causal_effects
+    return to_data_format(data_format, w, t, y), causal_effects

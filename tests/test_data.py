@@ -1,7 +1,7 @@
 import pandas as pd
 import torch
 
-from data.synthetic import generate_zty_linear_scalar_data, generate_zty_linear_multi_z_data
+from data.synthetic import generate_wty_linear_scalar_data, generate_wty_linear_multi_w_data
 from data.whynot_simulators import generate_lalonde_random_outcome
 from data.lalonde import load_lalonde
 from utils import PANDAS, TORCH
@@ -10,13 +10,13 @@ import os
 
 
 def test_linear_scalar_data_pandas():
-    df = generate_zty_linear_scalar_data(10, data_format=PANDAS)
+    df = generate_wty_linear_scalar_data(10, data_format=PANDAS)
     assert isinstance(df, pd.DataFrame)
 
 
 def test_linear_scalar_data_torch():
-    z, t, y = generate_zty_linear_scalar_data(10, data_format=TORCH)
-    assert all(isinstance(x, torch.Tensor) for x in (z, t, y))
+    w, t, y = generate_wty_linear_scalar_data(10, data_format=TORCH)
+    assert all(isinstance(x, torch.Tensor) for x in (w, t, y))
 
 
 def test_lalonde_pandas():
@@ -90,13 +90,13 @@ def test_lalonde_random_outcome_data_pandas():
 
 
 def test_lalonde_random_outcome_data_torch():
-    (z, t, y), causal_effects = generate_lalonde_random_outcome(data_format=TORCH)
-    assert all(isinstance(x, torch.Tensor) for x in (z, t, y))
+    (w, t, y), causal_effects = generate_lalonde_random_outcome(data_format=TORCH)
+    assert all(isinstance(x, torch.Tensor) for x in (w, t, y))
 
 
-def test_multivariate_z_data():
+def test_multivariate_w_data():
     n = 10
     d = 5
-    z, t, y = generate_zty_linear_multi_z_data(n, zdim=5)
-    assert all(isinstance(x, torch.Tensor) for x in (z, t, y))
-    assert z.shape == (n, d) and t.shape == (n,) and y.shape == (n,)
+    w, t, y = generate_wty_linear_multi_w_data(n, wdim=5)
+    assert all(isinstance(x, torch.Tensor) for x in (w, t, y))
+    assert w.shape == (n, d) and t.shape == (n,) and y.shape == (n,)

@@ -1,8 +1,8 @@
 from pyro.infer.autoguide import AutoNormal
 from DataGenModel import DataGenModel
-from data.synthetic import generate_zty_linear_scalar_data, generate_zty_linear_multi_z_data
+from data.synthetic import generate_wty_linear_scalar_data, generate_wty_linear_multi_w_data
 from data.whynot_simulators import generate_lalonde_random_outcome
-from models import linear_gaussian_full_model, linear_gaussian_outcome_model, linear_multi_z_outcome_model, VAE
+from models import linear_gaussian_full_model, linear_gaussian_outcome_model, linear_multi_w_outcome_model, VAE
 import numpy as np
 import pandas as pd
 import whynot as wn
@@ -28,7 +28,7 @@ class Benchmark:
 
     def __init__(self, data_generator=None, ate=2, verbose=True):
         if data_generator is None:
-            self.data_generator = partial(generate_zty_linear_multi_z_data,
+            self.data_generator = partial(generate_wty_linear_multi_w_data,
                                           data_format=NUMPY, binary_treatment=True, delta=ate)
         else:
             self.data_generator = data_generator
@@ -53,8 +53,8 @@ class Benchmark:
             if self.verbose:
                 print('Seed:', seed)
 
-            z, t, y = self.data_generator(n_samples, seed=seed)
-            estimated_effects = wn.causal_suite(z, t, y, verbose=self.verbose)
+            w, t, y = self.data_generator(n_samples, seed=seed)
+            estimated_effects = wn.causal_suite(w, t, y, verbose=self.verbose)
 
             if len(estimates_data) == 0:
                 for key, estimate in estimated_effects.items():

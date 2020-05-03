@@ -19,7 +19,7 @@ from pyro.infer.autoguide import AutoGuide
 
 from types import FunctionType, MethodType
 
-from utils import to_np_vector, to_np_vectors, get_num_positional_args, Z, T, Y
+from utils import to_np_vector, to_np_vectors, get_num_positional_args, W, T, Y
 from plotting import compare_joints, compare_bivariate_marginals
 
 import os
@@ -34,7 +34,7 @@ T_SITE = T + '_obs'
 Y_SITE = Y + '_obs'
 MCMC_DEFAULT = NUTS
 # N_SAMPLES = 100
-N_SAMPLES_PER_Z = 10
+N_SAMPLES_PER_W = 10
 
 MODEL_LABEL = 'model'
 TRUE_LABEL = 'true'
@@ -48,9 +48,9 @@ NAME = 'DataGenModel'
 class DataGenModel:
 
     def __init__(self, data, model, guide=None, svi=True, opt=None, lr=0.03, n_iters=5000, log_interval=100, mcmc=None,
-                 col_labels={Z: Z, T: T, Y: Y}, seed=0, enable_validation=True):
+                 col_labels={W: W, T: T, Y: Y}, seed=0, enable_validation=True):
         # TODO: docstring that specifies
-        # 1. data must be in z,t,y format
+        # 1. data must be in w,t,y format
         # 2. model is a pyro model and guide is a matching pyro guide or autoguide
         pyro.set_rng_seed(seed)
         pyro.enable_validation(enable_validation)  # Good for debugging
@@ -58,7 +58,7 @@ class DataGenModel:
         self.data = data
         self.model = model
         self.svi = svi
-        self.zlabel = col_labels[Z]
+        self.wlabel = col_labels[W]
         self.tlabel = col_labels[T]
         self.ylabel = col_labels[Y]
 
@@ -108,8 +108,8 @@ class DataGenModel:
         pyro.clear_param_store()
         for i in range(n_iters):
             # calculate the loss and take a gradient step
-            z, t, y = self._get_data_tensors([self.zlabel, self.tlabel, self.ylabel])
-            loss = svi.step(z, t, y)
+            w, t, y = self._get_data_tensors([self.wlabel, self.tlabel, self.ylabel])
+            loss = svi.step(w, t, y)
             if i % log_interval == 0:
                 print("[iter %04d] loss: %.4f" % (i + 1, loss / len(y)))
 
@@ -131,7 +131,7 @@ class DataGenModel:
             data_length = len(self.data)
             assert len(self.data) == data_length
             str_to_index = {
-                'z': 0,
+                'w': 0,
                 't': 1,
                 'y': 2
             }
@@ -151,17 +151,17 @@ class DataGenModel:
         else:
             return tensors
 
-    def sample(self, n_samples_per_z=N_SAMPLES_PER_Z, model=None, z_samples=None, t_samples=None, y_samples=None, sites=(T_SITE, Y_SITE), mcmc_kwargs={}):
+    def sample(self, n_samples_per_w=N_SAMPLES_PER_W, model=None, w_samples=None, t_samples=None, y_samples=None, sites=(T_SITE, Y_SITE), mcmc_kwargs={}):
         if model is None:
             model = self.model
         if self.svi:
-            pred = Predictive(model, guide=self.guide, num_samples=n_samples_per_z, return_sites=sites)
+            pred = Predictive(model, guide=self.guide, num_samples=n_samples_per_w, return_sites=sites)
         else:   # MCMC
-            mcmc = MCMC(self.mcmc_kernel, num_samples=n_samples_per_z, **mcmc_kwargs)
-            z, t, y = self._get_data_tensors([self.zlabel, self.tlabel, self.ylabel])
-            mcmc.run(z, t, y)
+            mcmc = MCMC(self.mcmc_kernel, num_samples=n_samples_per_w, **mcmc_kwargs)
+            w, t, y = self._get_data_tensors([self.wlabel, self.tlabel, self.ylabel])
+            mcmc.run(w, t, y)
             pred = Predictive(model, posterior_samples=mcmc.get_samples(),
-                              num_samples=n_samples_per_z, return_sites=sites)
+                              num_samples=n_samples_per_w, return_sites=sites)
 
             # To avoid OMP error that results from mcmc.summary() not playing nicely with matplotlib on MacOS
             # Remove condition if it occurs on other operating systems
@@ -171,22 +171,22 @@ class DataGenModel:
             print('\n\nMCMC posterior summary:')
             mcmc.summary()
 
-        if z_samples is None:
-            z_samples = self._get_data_tensors(self.zlabel)  # use "training data"
+        if w_samples is None:
+            w_samples = self._get_data_tensors(self.wlabel)  # use "training data"
         if t_samples is None:
             t_samples = self._get_data_tensors(self.tlabel)  # use "training data"
 
-        # Decide between full models that only take z as input (only condition on z)
-        # and outcome models that take both z and t as input (condition on both z and t)
+        # Decide between full models that only take w as input (only condition on w)
+        # and outcome models that take both w and t as input (condition on both w and t)
         n_model_args = get_num_positional_args(self.model)
 
         if n_model_args == 1:
-            samples = pred(z_samples)
+            samples = pred(w_samples)
         elif n_model_args == 2:
-            if t_samples.shape[0] != z_samples.shape[0]:
-                t_samples = t_samples.repeat_interleave(z_samples.shape[0])
-            samples = pred(z_samples, t_samples)
-            samples[sites[0]] = t_samples.expand((n_samples_per_z, -1))
+            if t_samples.shape[0] != w_samples.shape[0]:
+                t_samples = t_samples.repeat_interleave(w_samples.shape[0])
+            samples = pred(w_samples, t_samples)
+            samples[sites[0]] = t_samples.expand((n_samples_per_w, -1))
         else:
             raise ValueError('model has unsupported number of positional arguments:', n_model_args)
         return samples
@@ -206,9 +206,9 @@ class DataGenModel:
                self.get_interventional_mean(intervention_val1, **kwargs)
 
     def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True, name=NAME,
-                      file_ext='pdf', n_samples_per_z=N_SAMPLES_PER_Z, thin_model=None,
+                      file_ext='pdf', n_samples_per_w=N_SAMPLES_PER_W, thin_model=None,
                       thin_true=None, t_site=T_SITE, y_site=Y_SITE, joint_kwargs={}, test=False):
-        samples = self.sample(n_samples_per_z, sites=(t_site, y_site))
+        samples = self.sample(n_samples_per_w, sites=(t_site, y_site))
         t_model, y_model = to_np_vectors([samples[T_SITE], samples[Y_SITE]], thin_interval=thin_model)
         t_true, y_true = to_np_vectors(self._get_data_tensors([self.tlabel, self.ylabel]), thin_interval=thin_true)
 
