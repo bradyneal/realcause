@@ -85,7 +85,7 @@ def to_np_vector(x, by_column=True, thin_interval=None):
     if not isinstance(x, (torch.Tensor, np.ndarray)):
         raise ValueError('Invalid input type: {}'.format(type(x)))
     if isinstance(x, torch.Tensor):
-        x = x.detach.numpy()
+        x = x.detach().numpy()
     if by_column:
         order = 'F'
     else:
