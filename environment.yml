@@ -1,16 +1,18 @@
-name: gen
+name: test
 channels:
   - defaults
 dependencies:
   - matplotlib
   - pandas
+  - pip
+  - pytest
+  - python=3
   - seaborn
   - statsmodels
-  - pytest
   - r-base        # not necessary if not using whynot_estimators
   - r-essentials  # not necessary if not using whynot_estimators
   - pip:
-    - pyro-ppl
+    - pyro-ppl    # not necessary if not using Pyro
     - whynot
     - whynot_estimators
-prefix: /anaconda3/envs/gen
+prefix: /anaconda3/envs/test
