@@ -10,7 +10,7 @@ import warnings
 
 from types import FunctionType, MethodType
 
-from BaseGenModel import BaseGenModel
+from .BaseGenModel import BaseGenModel
 from utils import to_np_vector, to_np_vectors, get_num_positional_args, W, T, Y
 from plotting import compare_joints, compare_bivariate_marginals
 

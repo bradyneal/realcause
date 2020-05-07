@@ -1,6 +1,6 @@
 import pytest
 
-from BaseGenModel import BaseGenModel
+from models.BaseGenModel import BaseGenModel
 
 
 def test_subclass_working():
