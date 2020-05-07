@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from numbers import Number
 import numpy as np
+from scipy import stats
 
 from plotting import compare_joints, compare_bivariate_marginals
 from utils import T, Y, to_np_vectors
@@ -135,16 +136,28 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
                                         save_qq_fname='{}_ty_marginal_qqplots.{}'.format(name, file_ext),
                                         name=name, test=test)
 
+    def get_univariate_quant_metrics(self, thin_model=None, thin_true=None):
+        """
+        Calculates quantitative metrics for the difference between p(t) and
+        p_model(t) and the difference between p(y) and p_model(y)
 
-class GenModelPassing(BaseGenModel):
-
-    def __init__(self, w, t, y):
-        self.w = w
-        self.t = t
-        self.y = y
-
-    def sample_t(self, w):
-        pass
-
-    def sample_y(self, t, w):
-        pass
+        :param thin_model: thinning interval for the model data
+        :param thin_true: thinning interval for the real data
+        :return: {
+            't_ks_pval': ks p-value with null that t_model and t_true are from the same distribution
+            'y_ks_pval': ks p-value with null that y_model and y_true are from the same distribution
+            't_wasserstein_dist': wasserstein distance between t_true and t_model
+            'y_wasserstein_dist': wasserstein distance between y_true and y_model
+        }
+        """
+        _, t_model, y_model = to_np_vectors(self.sample(), thin_interval=thin_model)
+        t_true, y_true = to_np_vectors((self.t, self.y), thin_interval=thin_true)
+        ks_label = '_ks_pval'
+        wasserstein_label = '_wasserstein_dist'
+        metrics = {
+            T + ks_label: stats.ks_2samp(t_model, t_true).pvalue,
+            Y + ks_label: stats.ks_2samp(y_model, y_true).pvalue,
+            T + wasserstein_label: stats.wasserstein_distance(t_model, t_true),
+            Y + wasserstein_label: stats.wasserstein_distance(y_model, y_true),
+        }
+        return metrics

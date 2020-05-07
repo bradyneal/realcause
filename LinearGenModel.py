@@ -202,5 +202,6 @@ if __name__ == '__main__':
     lgm = LinearGenModel(w, t, y)
     data_samples = lgm.sample()
     lgm.plot_ty_dists()
+    metrics = lgm.get_univariate_quant_metrics()
 
     # TODO: do tests on the samples, visualize etc.
