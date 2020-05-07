@@ -10,7 +10,7 @@ import warnings
 
 from types import FunctionType, MethodType
 
-from .BaseGenModel import BaseGenModel
+from models.BaseGenModel import BaseGenModel
 from utils import to_np_vector, to_np_vectors, get_num_positional_args, W, T, Y
 from plotting import compare_joints, compare_bivariate_marginals
 
@@ -202,6 +202,8 @@ if __name__ == '__main__':
     lgm = LinearGenModel(w, t, y)
     data_samples = lgm.sample()
     lgm.plot_ty_dists()
-    metrics = lgm.get_univariate_quant_metrics()
+    uni_metrics = lgm.get_univariate_quant_metrics()
+    multi_ty_metrics = lgm.get_multivariate_quant_metrics(include_w=False)
+    multi_wty_metrics = lgm.get_multivariate_quant_metrics(include_w=True)
 
     # TODO: do tests on the samples, visualize etc.

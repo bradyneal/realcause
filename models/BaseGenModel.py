@@ -2,9 +2,11 @@ from abc import ABCMeta, abstractmethod
 from numbers import Number
 import numpy as np
 from scipy import stats
+import torch
+from torch.autograd import Variable
 
 from plotting import compare_joints, compare_bivariate_marginals
-from utils import T, Y, to_np_vectors
+from utils import T, Y, to_np_vectors, to_torch_variable
 
 MODEL_LABEL = 'model'
 TRUE_LABEL = 'true'
@@ -161,3 +163,60 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             Y + wasserstein_label: stats.wasserstein_distance(y_model, y_true),
         }
         return metrics
+
+    def get_multivariate_quant_metrics(self, include_w=True, norm=2, k=1,
+                                       alphas=None, n_permutations=1000):
+        """
+        Computes all the test statistics and p-values for the multivariate two
+        sample tests from the torch_two_sample package. See that documentation
+        for more info the specific tests:
+        https://torch-two-sample.readthedocs.io/en/latest/
+
+        :param include_w: If False, test if p(t, y) = p_model(t, y).
+        If True, test if p(w, t, y) = p(w, t, y).
+        :param norm: norm used for Friedman-Rafsky test and kNN test
+        :param k: number of nearest neighbors to use for kNN test
+        :param alphas: list of kernel parameters for MMD test
+        :param n_permutations: number of permutations for each test
+        :return: dictionary of p-values for the tests
+        """
+        try:
+            from torch_two_sample.statistics_nondiff import FRStatistic, KNNStatistic
+            from torch_two_sample.statistics_diff import MMDStatistic, EnergyStatistic
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(str(e) + ' ... Install: pip install git+git://github.com/josipd/torch-two-sample')
+
+        t_model, y_model = to_np_vectors(self.sample()[1:], column_vector=True)
+        t_true, y_true = to_np_vectors((self.t, self.y), column_vector=True)
+        model_samples = np.hstack((t_model, y_model))
+        true_samples = np.hstack((t_true, y_true))
+
+        if include_w:
+            model_samples = np.hstack((self.w, model_samples))
+            true_samples = np.hstack((self.w, true_samples))
+
+        assert model_samples.shape[0] == true_samples.shape[0]
+        n = model_samples.shape[0]
+
+        model_samples = to_torch_variable(model_samples)
+        true_samples = to_torch_variable(true_samples)
+        results = {}
+
+        fr = FRStatistic(n, n)
+        matrix = fr(model_samples, true_samples, norm=norm, ret_matrix=True)[1]
+        results['Friedman-Rafsky pval'] = fr.pval(matrix, n_permutations=n_permutations)
+
+        knn = KNNStatistic(n, n, k)
+        matrix = knn(model_samples, true_samples, norm=norm, ret_matrix=True)[1]
+        results['kNN pval'] = knn.pval(matrix, n_permutations=n_permutations)
+
+        if alphas is not None:
+            mmd = MMDStatistic(n, n)
+            matrix = mmd(model_samples, true_samples, alphas=None, ret_matrix=True)[1]
+            results['MMD pval'] = mmd.pval(matrix, n_permutations=n_permutations)
+
+        energy = EnergyStatistic(n, n)
+        matrix = energy(model_samples, true_samples, ret_matrix=True)[1]
+        results['Energy pval'] = energy.pval(matrix, n_permutations=n_permutations)
+
+        return results

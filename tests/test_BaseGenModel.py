@@ -6,7 +6,8 @@ from models.LinearGenModel import LinearGenModel
 from data.synthetic import generate_wty_linear_multi_w_data
 
 ATE = 5
-N = 500
+N = 50
+
 
 def test_subclass_working():
 
@@ -73,7 +74,7 @@ def test_linear_gen_model(linear_gen_model):
 
 def test_ate(linear_gen_model):
     ate_est = linear_gen_model.get_ate()
-    assert ate_est == approx(ATE, abs=.1)
+    assert ate_est == approx(ATE, abs=.2)
 
 
 def test_ite(linear_gen_model):
@@ -84,3 +85,11 @@ def test_ite(linear_gen_model):
 @pytest.mark.plot
 def test_plot_ty(linear_gen_model):
     linear_gen_model.plot_ty_dists(test=True)
+
+
+def test_univariate_quant_metrics(linear_gen_model):
+    linear_gen_model.get_univariate_quant_metrics()
+
+
+def test_multivariate_quant_metrics(linear_gen_model):
+    linear_gen_model.get_multivariate_quant_metrics()

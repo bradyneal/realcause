@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
+from torch.autograd import Variable
 from types import FunctionType, MethodType
 import warnings
 
@@ -62,6 +63,10 @@ def to_tensor(x):
     return torch.tensor(x, dtype=torch.float)
 
 
+def to_torch_variable(x):
+    return Variable(to_tensor(x))
+
+
 def to_tensors(*args):
     if len(args) == 1:
         if isinstance(args[0], (tuple, list)):
@@ -81,7 +86,7 @@ def to_np_arrays(*args):
     return tuple(np.array(arg, dtype=np.float) for arg in args)
 
 
-def to_np_vector(x, by_column=True, thin_interval=None):
+def to_np_vector(x, by_column=False, thin_interval=None, column_vector=False):
     if not isinstance(x, (torch.Tensor, np.ndarray)):
         raise ValueError('Invalid input type: {}'.format(type(x)))
     if isinstance(x, torch.Tensor):
@@ -89,18 +94,22 @@ def to_np_vector(x, by_column=True, thin_interval=None):
     if by_column:
         order = 'F'
     else:
-        order = 'C' # by row
-    np_vect = x.reshape(-1, order=order)
+        order = 'C'  # by row
+    if column_vector:
+        np_vect = x.reshape(-1, 1, order=order)
+    else:
+        np_vect = x.reshape(-1, order=order)
     if thin_interval is not None:
         return np_vect[::thin_interval]
     else:
         return np_vect
 
 
-def to_np_vectors(tensors, by_column=True, thin_interval=None):
+def to_np_vectors(tensors, by_column=False, thin_interval=None, column_vector=False):
     if not isinstance(tensors, (list, tuple)):
         tensors = (tensors,)
-    np_vects = tuple(to_np_vector(x, by_column=by_column, thin_interval=thin_interval) for x in tensors)
+    np_vects = tuple(to_np_vector(x, by_column=by_column, thin_interval=thin_interval, column_vector=column_vector)
+                     for x in tensors)
     if len(np_vects) == 1:
         return np_vects[0]
     else:

@@ -1,18 +1,22 @@
-name: test
+name: gen
 channels:
   - defaults
+  - pytorch
 dependencies:
   - matplotlib
   - pandas
   - pip
   - pytest
   - python=3
+  - pytorch
   - seaborn
   - statsmodels
+  - torchvision
   - r-base        # not necessary if not using whynot_estimators
   - r-essentials  # not necessary if not using whynot_estimators
   - pip:
+    - git+git://github.com/josipd/torch-two-sample
     - pyro-ppl    # not necessary if not using Pyro
     - whynot
     - whynot_estimators
-prefix: /anaconda3/envs/test
+prefix: /anaconda3/envs/gen
