@@ -1,7 +1,12 @@
 import pytest
+from pytest import approx
 
 from models.BaseGenModel import BaseGenModel
+from models.LinearGenModel import LinearGenModel
+from data.synthetic import generate_wty_linear_multi_w_data
 
+ATE = 5
+N = 500
 
 def test_subclass_working():
 
@@ -53,3 +58,29 @@ def test_subclass_missing_method():
 
     with pytest.raises(TypeError):
         GenModelMissingMethod(0, 0, 0)
+
+
+@pytest.fixture(scope='module')
+def linear_gen_model(request):
+    ate = ATE
+    w, t, y = generate_wty_linear_multi_w_data(N, data_format='numpy', wdim=5, delta=ate)
+    return LinearGenModel(w, t, y)
+
+
+def test_linear_gen_model(linear_gen_model):
+    pass    # just a test for the linear_gen_model fixture
+
+
+def test_ate(linear_gen_model):
+    ate_est = linear_gen_model.get_ate()
+    assert ate_est == approx(ATE, abs=.1)
+
+
+def test_ite(linear_gen_model):
+    ite_est = linear_gen_model.get_ite()
+    assert ite_est.shape[0] == N
+
+
+@pytest.mark.plot
+def test_plot_ty(linear_gen_model):
+    linear_gen_model.plot_ty_dists(test=True)

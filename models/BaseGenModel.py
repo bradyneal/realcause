@@ -83,7 +83,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         if not isinstance(w, np.ndarray):
             raise ValueError('Unsupported data type: {} ... only numpy is currently supported'.format(type(w)))
         if isinstance(t, Number):
-            t = np.full_like(w, t)
+            t = np.full_like(self.t, t)
         return self.sample_y(t, w)
 
     def get_interventional_mean(self, t):
@@ -91,7 +91,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         return samples.mean()
 
     def get_ate(self, t1=1, t0=0, w=None):
-        return self.get_interventional_mean(t1, w) - self.get_interventional_mean(t0, w)
+        return self.get_interventional_mean(t1) - self.get_interventional_mean(t0)
 
     def get_ite(self, t1=1, t0=0, w=None):
         if w is None:
