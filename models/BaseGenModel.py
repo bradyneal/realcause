@@ -76,7 +76,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
     def sample(self):
         w = self.sample_w()
         t = self.sample_t(w)
-        y = self.sample_y(w, t)
+        y = self.sample_y(t, w)
         return w, t, y
 
     def sample_interventional(self, t, w=None):

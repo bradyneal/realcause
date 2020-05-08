@@ -88,8 +88,14 @@ def test_plot_ty(linear_gen_model):
 
 
 def test_univariate_quant_metrics(linear_gen_model):
-    linear_gen_model.get_univariate_quant_metrics()
+    metrics = linear_gen_model.get_univariate_quant_metrics()
+    for k, v in metrics.items():
+        if 'pval' in k:
+            assert v > 0.5
 
 
 def test_multivariate_quant_metrics(linear_gen_model):
-    linear_gen_model.get_multivariate_quant_metrics()
+    metrics = linear_gen_model.get_multivariate_quant_metrics()
+    for k, v in metrics.items():
+        if 'pval' in k:
+            assert v > 0.5
