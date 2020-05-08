@@ -148,14 +148,14 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         :return: {
             't_ks_pval': ks p-value with null that t_model and t_true are from the same distribution
             'y_ks_pval': ks p-value with null that y_model and y_true are from the same distribution
-            't_wasserstein_dist': wasserstein distance between t_true and t_model
-            'y_wasserstein_dist': wasserstein distance between y_true and y_model
+            't_wasserstein1_dist': wasserstein1 distance between t_true and t_model
+            'y_wasserstein1_dist': wasserstein1 distance between y_true and y_model
         }
         """
         _, t_model, y_model = to_np_vectors(self.sample(), thin_interval=thin_model)
         t_true, y_true = to_np_vectors((self.t, self.y), thin_interval=thin_true)
         ks_label = '_ks_pval'
-        wasserstein_label = '_wasserstein_dist'
+        wasserstein_label = '_wasserstein1_dist'
         metrics = {
             T + ks_label: stats.ks_2samp(t_model, t_true).pvalue,
             Y + ks_label: stats.ks_2samp(y_model, y_true).pvalue,
@@ -167,10 +167,10 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
     def get_multivariate_quant_metrics(self, include_w=True, norm=2, k=1,
                                        alphas=None, n_permutations=1000):
         """
-        Computes all the test statistics and p-values for the multivariate two
-        sample tests from the torch_two_sample package. See that documentation
-        for more info the specific tests:
-        https://torch-two-sample.readthedocs.io/en/latest/
+        Computes Wasserstein-1 and Wasserstein-2 distances. Also computes all the
+        test statistics and p-values for the multivariate two sample tests from
+        the torch_two_sample package. See that documentation for more info on
+        the specific tests: https://torch-two-sample.readthedocs.io/en/latest/
 
         :param include_w: If False, test if p(t, y) = p_model(t, y).
         If True, test if p(w, t, y) = p(w, t, y).
@@ -178,8 +178,20 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         :param k: number of nearest neighbors to use for kNN test
         :param alphas: list of kernel parameters for MMD test
         :param n_permutations: number of permutations for each test
-        :return: dictionary of p-values for the tests
+        :return: {
+            'wasserstein1_dist': wasserstein1 distance between p_true and p_model
+            'wasserstein2_dist': wasserstein2 distance between p_true and p_model
+            'Friedman-Rafsky pval': p-value for Friedman-Rafsky test with null
+                that p_true and p_model are from the same distribution
+            'kNN pval': p-value for kNN test with null that p_true and p_model are from the same distribution
+            'MMD pval': p-value for MMD test with null that p_true and p_model are from the same distribution
+            'Energy pval': p-value for the energy test with null that p_true and p_model are from the same distribution
+        }
         """
+        try:
+            import ot
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(str(e) + ' ... Install: conda install cython && conda install -c conda-forge pot')
         try:
             from torch_two_sample.statistics_nondiff import FRStatistic, KNNStatistic
             from torch_two_sample.statistics_diff import MMDStatistic, EnergyStatistic
@@ -198,25 +210,35 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         assert model_samples.shape[0] == true_samples.shape[0]
         n = model_samples.shape[0]
 
-        model_samples = to_torch_variable(model_samples)
-        true_samples = to_torch_variable(true_samples)
-        results = {}
+        a, b = np.ones((n,)) / n, np.ones((n,)) / n  # uniform distribution on samples
+        M_wasserstein1 = ot.dist(model_samples, true_samples, metric='euclidean')
+        wasserstein1_dist = ot.emd2(a, b, M_wasserstein1)
+        M_wasserstein2 = ot.dist(model_samples, true_samples, metric='sqeuclidean')
+        wasserstein2_dist = np.sqrt(ot.emd2(a, b, M_wasserstein2))
+
+        results = {
+            'wasserstein1_dist': wasserstein1_dist,
+            'wasserstein2_dist': wasserstein2_dist,
+        }
+
+        model_samples_var = to_torch_variable(model_samples)
+        true_samples_var = to_torch_variable(true_samples)
 
         fr = FRStatistic(n, n)
-        matrix = fr(model_samples, true_samples, norm=norm, ret_matrix=True)[1]
+        matrix = fr(model_samples_var, true_samples_var, norm=norm, ret_matrix=True)[1]
         results['Friedman-Rafsky pval'] = fr.pval(matrix, n_permutations=n_permutations)
 
         knn = KNNStatistic(n, n, k)
-        matrix = knn(model_samples, true_samples, norm=norm, ret_matrix=True)[1]
+        matrix = knn(model_samples_var, true_samples_var, norm=norm, ret_matrix=True)[1]
         results['kNN pval'] = knn.pval(matrix, n_permutations=n_permutations)
 
         if alphas is not None:
             mmd = MMDStatistic(n, n)
-            matrix = mmd(model_samples, true_samples, alphas=None, ret_matrix=True)[1]
+            matrix = mmd(model_samples_var, true_samples_var, alphas=None, ret_matrix=True)[1]
             results['MMD pval'] = mmd.pval(matrix, n_permutations=n_permutations)
 
         energy = EnergyStatistic(n, n)
-        matrix = energy(model_samples, true_samples, ret_matrix=True)[1]
+        matrix = energy(model_samples_var, true_samples_var, ret_matrix=True)[1]
         results['Energy pval'] = energy.pval(matrix, n_permutations=n_permutations)
 
         return results

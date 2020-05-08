@@ -91,11 +91,11 @@ def test_univariate_quant_metrics(linear_gen_model):
     metrics = linear_gen_model.get_univariate_quant_metrics()
     for k, v in metrics.items():
         if 'pval' in k:
-            assert v > 0.5
+            assert v > 0.2
 
 
 def test_multivariate_quant_metrics(linear_gen_model):
     metrics = linear_gen_model.get_multivariate_quant_metrics()
     for k, v in metrics.items():
         if 'pval' in k:
-            assert v > 0.5
+            assert v > 0.2

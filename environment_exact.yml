@@ -1,5 +1,6 @@
 name: gen
 channels:
+  - conda-forge
   - defaults
 dependencies:
   - _r-mutex=1.0.0=anacondar_1
@@ -10,10 +11,10 @@ dependencies:
   - bleach=3.1.0=py37_0
   - bwidget=1.9.11=1
   - bzip2=1.0.8=h1de35cc_0
-  - ca-certificates=2020.1.1=0
+  - ca-certificates=2020.4.5.1=hecc5488_0
   - cairo=1.14.12=hc4e6be7_4
   - cctools=895=1
-  - certifi=2020.4.5.1=py37_0
+  - certifi=2020.4.5.1=py37hc8dfbb8_0
   - clang=4.0.1=1
   - clang_osx-64=4.0.1=h1ce6c1d_18
   - clangxx=4.0.1=1
@@ -77,10 +78,11 @@ dependencies:
   - nbformat=5.0.4=py_0
   - ncurses=6.2=h0a44026_0
   - notebook=6.0.3=py37_0
+  - numpy=1.18.1=py37h7241aed_0
   - numpy-base=1.18.1=py37h6575580_1
-  - openssl=1.1.1f=h1de35cc_0
+  - openssl=1.1.1g=h0b31af3_0
   - packaging=20.3=py_0
-  - pandas=1.0.1=py37h6c726b0_0
+  - pandas=1.0.3=py37h6c726b0_0
   - pandoc=2.2.3.2=0
   - pandocfilters=1.4.2=py37_1
   - pango=1.42.4=h060686c_0
@@ -92,6 +94,7 @@ dependencies:
   - pip=20.0.2=py37_1
   - pixman=0.38.0=h1de35cc_0
   - pluggy=0.13.1=py37_0
+  - pot=0.6.0=py37h86efe34_0
   - prometheus_client=0.7.1=py_0
   - prompt-toolkit=3.0.4=py_0
   - prompt_toolkit=3.0.4=0
@@ -101,8 +104,9 @@ dependencies:
   - pyparsing=2.4.6=py_0
   - pyrsistent=0.16.0=py37h1de35cc_0
   - pytest=5.4.1=py37_0
-  - python=3.7.6=h359304d_2
+  - python=3.7.7=hfe9666f_0_cpython
   - python-dateutil=2.8.1=py_0
+  - python_abi=3.7=1_cp37m
   - pytz=2019.3=py_0
   - pyzmq=17.1.2=py37h1de35cc_0
   - r-askpass=1.0=r36h1de35cc_0
@@ -244,7 +248,7 @@ dependencies:
   - scipy=1.4.1=py37h9fa6033_0
   - seaborn=0.10.0=py_0
   - send2trash=1.5.0=py37_0
-  - setuptools=46.1.1=py37_0
+  - setuptools=46.1.3=py37_0
   - six=1.14.0=py37_0
   - sqlite=3.31.1=ha441bb4_0
   - statsmodels=0.11.0=py37h1de35cc_0
@@ -267,6 +271,7 @@ dependencies:
     - arrow==0.15.5
     - autograd==1.3
     - binaryornot==0.4.4
+    - cffi==1.14.0
     - chardet==3.0.4
     - click==7.1.1
     - cloudpickle==1.3.0
@@ -280,21 +285,24 @@ dependencies:
     - mesa==0.8.6
     - networkx==2.4
     - nose==1.3.7
-    - numpy==1.18.1
-    - opt-einsum==3.1.0
+    - opt-einsum==3.2.0
     - ply==3.11
     - poyo==0.5.0
     - py-mini-racer==0.2.0
+    - pycparser==2.20
     - pyglet==1.5.0
     - pyomo==5.6.9
     - pyro-api==0.1.1
-    - pyro-ppl==1.3.0
+    - pyro-ppl==1.3.1
     - pyutilib==5.8.0
     - requests==2.23.0
+    - rpy2==3.1.0
     - scikit-learn==0.22.2.post1
+    - simplegeneric==0.8.1
     - sklearn==0.0
     - torch==1.4.0
-    - tqdm==4.43.0
+    - torch-two-sample==0.1
+    - tqdm==4.45.0
     - tzlocal==2.0.0
     - urllib3==1.25.8
     - whichcraft==0.6.1

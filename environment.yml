@@ -3,7 +3,9 @@ channels:
   - defaults
   - pytorch
 dependencies:
+  - cython
   - matplotlib
+  - numpy
   - pandas
   - pip
   - pytest
@@ -16,6 +18,7 @@ dependencies:
   - r-essentials  # not necessary if not using whynot_estimators
   - pip:
     - git+git://github.com/josipd/torch-two-sample
+    - POT
     - pyro-ppl    # not necessary if not using Pyro
     - whynot
     - whynot_estimators
