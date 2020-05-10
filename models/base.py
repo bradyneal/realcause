@@ -2,8 +2,6 @@ from abc import ABCMeta, abstractmethod
 from numbers import Number
 import numpy as np
 from scipy import stats
-import torch
-from torch.autograd import Variable
 
 from plotting import compare_joints, compare_bivariate_marginals
 from utils import T, Y, to_np_vectors, to_torch_variable
@@ -88,14 +86,14 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             t = np.full_like(self.t, t)
         return self.sample_y(t, w)
 
-    def get_interventional_mean(self, t):
+    def interventional_mean(self, t):
         samples = self.sample_interventional(t)
         return samples.mean()
 
-    def get_ate(self, t1=1, t0=0, w=None):
-        return self.get_interventional_mean(t1) - self.get_interventional_mean(t0)
+    def ate(self, t1=1, t0=0, w=None):
+        return self.interventional_mean(t1) - self.interventional_mean(t0)
 
-    def get_ite(self, t1=1, t0=0, w=None):
+    def ite(self, t1=1, t0=0, w=None):
         if w is None:
             w = self.sample_w()
         return self.sample_interventional(t1, w) - self.sample_interventional(t0, w)

@@ -1,69 +1,85 @@
-import pyro
-import pyro.distributions as dist
-from pyro.nn import PyroModule, PyroSample, PyroParam
-import torch
-from torch import nn
+import numpy as np
+from models.base import BaseGenModel
 
 
-def linear_gaussian_full_model(w, t=None, y=None):
-    sigma_t = pyro.sample("sigma_t", dist.Uniform(0., 10.))
-    w_wt = pyro.sample('w_wt', dist.Normal(0., 10.))
-    b_t = pyro.sample('b_t', dist.Normal(0., 10.))
+class LinearGenModel(BaseGenModel):
 
-    sigma_y = pyro.sample('sigma_y', dist.Uniform(0., 10.))
-    w_ty = pyro.sample('w_ty', dist.Normal(0., 10.))
-    w_wy = pyro.sample('w_wy', dist.Normal(0., 10.))
-    b_y = pyro.sample('b_y', dist.Normal(0., 10.))
+    def __init__(self, w, t, y, lambda0_t_w=1e-5, lambda0_y_tw=1e-5):
+        self.w, self.t, self.y = self._matricize((w, t, y))
+        self._train(lambda0_t_w, lambda0_y_tw)
 
-    with pyro.plate("data", w.shape[0]):
-        t = pyro.sample("t_obs", dist.Normal(w_wt * w + b_t, sigma_t), obs=t)
-        y = pyro.sample("y_obs", dist.Normal(w_ty * t + w_wy * w + b_y, sigma_y), obs=y)
+    def _matricize(self, data):
+        return [np.reshape(d, [d.shape[0], -1]) for d in data]
 
-    return t, y
+    def _train(self, lambda0_t_w=1e-5, lambda0_y_tw=1e-5):
+        # fitting a linear Gaussian model defined as
+        # p(y | x) = N(y; beta*x, sigma^2)
+        # with a prior p(beta) = N(0, sigma^2/lambda0) which amounts to L2 penalty on beta: lambda||beta||^2
+        # where x and y are input and output respectively
+        # TODO: learning different sigma for each output feature
+
+        w, t, y = self.w, self.t, self.y
+
+        # t | w
+        self.beta_t_w, self.sigma_t_w = self.linear_gaussian_solver(w, t, lambda0_t_w)
+
+        # y | t and w
+        self.beta_y_tw, self.sigma_y_tw = self.linear_gaussian_solver(np.concatenate([w, t], 1), y, lambda0_y_tw)
+
+    def _pad_with_ones(self, X):
+        return np.concatenate([np.ones((X.shape[0], 1)), X], axis=1)
+
+    def _linear_gaussian_solver(self, X, Y, lambda0=1e-5):
+        beta = np.linalg.inv(X.T.dot(X) + lambda0 * np.identity(X.shape[1])).dot(X.T.dot(Y))
+        var = ((Y - X.dot(beta)) ** 2).mean()
+        # assuming sharing the save variance parameter across different yj's
+        return beta, np.sqrt(var)
+
+    def linear_gaussian_solver(self, X, Y, lambda0=1e-5):
+        return self._linear_gaussian_solver(self._pad_with_ones(X), Y, lambda0)
+
+    def gaussian_sampler(self, mean, sigma):
+        return np.random.randn(*mean.shape) * sigma + mean
+
+    def linear_gaussian_sampler(self, X, beta, sigma):
+        mean = self._pad_with_ones(X).dot(beta)
+        return self.gaussian_sampler(mean, sigma)
+
+    def sample_t(self, w=None):
+        if w is None:
+            w = self.sample_w()
+        t_samples = self.linear_gaussian_sampler(
+            w,
+            self.beta_t_w,
+            self.sigma_t_w
+        )
+        return t_samples
+
+    def sample_y(self, t, w=None):
+        if w is None:
+            w = self.sample_w()
+        y_samples = self.linear_gaussian_sampler(
+            np.concatenate([w, t], 1),
+            self.beta_y_tw,
+            self.sigma_y_tw
+        )
+        return y_samples
 
 
-def linear_gaussian_assignment_model(w, t=None):
-    sigma_t = pyro.sample("sigma_t", dist.Uniform(0., 10.))
-    w_wt = pyro.sample('w_wt', dist.Normal(0., 10.))
-    b_t = pyro.sample('b_t', dist.Normal(0., 10.))
+if __name__ == '__main__':
+    from data.synthetic import generate_wty_linear_multi_w_data
+    from utils import NUMPY
 
-    with pyro.plate("data", w.shape[0]):
-        t = pyro.sample("t_obs", dist.Normal(w_wt * w + b_t, sigma_t), obs=t)
+    # data = generate_wty_linear_multi_w_data(500, data_format=NUMPY, wdim=5)
+    #
+    # dgm = DataGenModel(data)
+    # data_samples = dgm.sample()
 
-    return t
+    w, t, y = generate_wty_linear_multi_w_data(500, data_format=NUMPY, wdim=5)
 
-
-def linear_gaussian_outcome_model(w, t, y=None):
-    sigma_y = pyro.sample('sigma_y', dist.Uniform(0., 10.))
-    w_ty = pyro.sample('w_ty', dist.Normal(0., 10.))
-    w_wy = pyro.sample('w_wy', dist.Normal(0., 10.))
-    b_y = pyro.sample('b_y', dist.Normal(0., 10.))
-
-    with pyro.plate("data", w.shape[0]):
-        y = pyro.sample("y_obs", dist.Normal(w_ty * t + w_wy * w + b_y, sigma_y), obs=y)
-
-    return y
-
-
-def linear_multi_w_outcome_model(w, t, y=None):
-    assert w.ndim == 2 and w.shape[1] > 1
-
-    class LinearGaussianOutcomeModel(PyroModule):
-        def __init__(self, wdim):
-            super().__init__()
-
-            self.linear_wy = PyroModule[nn.Linear](wdim, 1)
-            self.linear_wy.weight = PyroSample(dist.Normal(0., 10.).expand([1, wdim]).to_event(2))
-            self.linear_wy.bias = PyroSample(dist.Normal(0., 10.))
-
-        def forward(self, w, t, y=None):
-            w_ty = pyro.sample('w_ty', dist.Normal(0., 10.))
-            y_mean = self.linear_wy(w).squeeze(-1) + w_ty * t
-
-            sigma_y = pyro.sample("sigma_y", dist.Uniform(0., 10.))
-            with pyro.plate("data", w.shape[0]):
-                y = pyro.sample("y_obs", dist.Normal(y_mean, sigma_y), obs=y)
-
-            return y
-
-    return LinearGaussianOutcomeModel(w.shape[1])(w, t, y)
+    lgm = LinearGenModel(w, t, y)
+    data_samples = lgm.sample()
+    lgm.plot_ty_dists()
+    uni_metrics = lgm.get_univariate_quant_metrics()
+    multi_ty_metrics = lgm.get_multivariate_quant_metrics(include_w=False)
+    multi_wty_metrics = lgm.get_multivariate_quant_metrics(include_w=True)

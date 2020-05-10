@@ -1,8 +1,8 @@
 import pytest
 from pytest import approx
 
-from models.BaseGenModel import BaseGenModel
-from models.LinearGenModel import LinearGenModel
+from models.base import BaseGenModel
+from models.linear import LinearGenModel
 from data.synthetic import generate_wty_linear_multi_w_data
 
 ATE = 5
@@ -73,12 +73,12 @@ def test_linear_gen_model(linear_gen_model):
 
 
 def test_ate(linear_gen_model):
-    ate_est = linear_gen_model.get_ate()
+    ate_est = linear_gen_model.ate()
     assert ate_est == approx(ATE, abs=.2)
 
 
 def test_ite(linear_gen_model):
-    ite_est = linear_gen_model.get_ite()
+    ite_est = linear_gen_model.ite()
     assert ite_est.shape[0] == N
 
 
