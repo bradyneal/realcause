@@ -4,7 +4,7 @@ import numpy as np
 from scipy import stats
 
 from plotting import compare_joints, compare_bivariate_marginals
-from utils import T, Y, to_np_vectors, to_torch_variable
+from utils import T, Y, to_np_vectors, to_torch_variable, permutation_test
 
 MODEL_LABEL = 'model'
 TRUE_LABEL = 'true'
@@ -86,17 +86,17 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             t = np.full_like(self.t, t)
         return self.sample_y(t, w)
 
-    def interventional_mean(self, t):
-        samples = self.sample_interventional(t)
+    def interventional_mean(self, t, w=None):
+        samples = self.sample_interventional(t=t, w=w)
         return samples.mean()
 
     def ate(self, t1=1, t0=0, w=None):
-        return self.interventional_mean(t1) - self.interventional_mean(t0)
+        return self.interventional_mean(t=t1, w=w) - self.interventional_mean(t=t0, w=w)
 
     def ite(self, t1=1, t0=0, w=None):
         if w is None:
             w = self.sample_w()
-        return self.sample_interventional(t1, w) - self.sample_interventional(t0, w)
+        return self.sample_interventional(t=t1, w=w) - self.sample_interventional(t=t0, w=w)
 
     def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True, name=None,
                       file_ext='pdf', thin_model=None, thin_true=None, joint_kwargs={}, test=False):
@@ -209,14 +209,32 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         n = model_samples.shape[0]
 
         a, b = np.ones((n,)) / n, np.ones((n,)) / n  # uniform distribution on samples
-        M_wasserstein1 = ot.dist(model_samples, true_samples, metric='euclidean')
-        wasserstein1_dist = ot.emd2(a, b, M_wasserstein1)
-        M_wasserstein2 = ot.dist(model_samples, true_samples, metric='sqeuclidean')
-        wasserstein2_dist = np.sqrt(ot.emd2(a, b, M_wasserstein2))
+
+        def calculate_wasserstein1_dist(x, y):
+            M_wasserstein1 = ot.dist(x, y, metric='euclidean')
+            wasserstein1_dist = ot.emd2(a, b, M_wasserstein1)
+            return wasserstein1_dist
+
+        def calculate_wasserstein2_dist(x, y):
+            M_wasserstein2 = ot.dist(x, y, metric='sqeuclidean')
+            wasserstein2_dist = np.sqrt(ot.emd2(a, b, M_wasserstein2))
+            return wasserstein2_dist
+
+        wasserstein1_pval = permutation_test(model_samples, true_samples,
+                                             func=calculate_wasserstein1_dist,
+                                             method='approximate',
+                                             num_rounds=n_permutations,
+                                             seed=0)
+
+        wasserstein2_pval = permutation_test(model_samples, true_samples,
+                                             func=calculate_wasserstein2_dist,
+                                             method='approximate',
+                                             num_rounds=n_permutations,
+                                             seed=0)
 
         results = {
-            'wasserstein1_dist': wasserstein1_dist,
-            'wasserstein2_dist': wasserstein2_dist,
+            'wasserstein1 pval': wasserstein1_pval,
+            'wasserstein2 pval': wasserstein2_pval,
         }
 
         model_samples_var = to_torch_variable(model_samples)
