@@ -213,7 +213,6 @@ def permutation_test(x, y, func='x_mean != y_mean', method='approximate',
 
     more_extreme = 0.
     reference_stat = func(x, y)
-    print('reference_stat:', reference_stat)
 
     # Note that whether we compute the combinations or permutations
     # does not affect the results, since the number of permutations
