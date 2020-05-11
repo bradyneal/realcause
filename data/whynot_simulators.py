@@ -1,4 +1,4 @@
-from utils import to_data_format, TORCH
+from utils import to_data_format, NUMPY
 
 import warnings
 
@@ -13,7 +13,7 @@ with warnings.catch_warnings():
     from whynot.simulators import lalonde
 
 
-def generate_lalonde_random_outcome(data_format=TORCH, hidden_dim=64, alpha_scale=0.1, seed=0):
+def generate_lalonde_random_outcome(data_format=NUMPY, hidden_dim=64, alpha_scale=0.1, seed=0):
     # num_samples parameter is ignored by the simulator since the lalonde dataset is a fixed size
     (w, t, y), causal_effects = lalonde.experiments.run_lalonde(
         num_samples=None, hidden_dim=hidden_dim, alpha_scale=alpha_scale, seed=seed)

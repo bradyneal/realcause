@@ -43,7 +43,7 @@ Smith, J. A. and Todd, P. E. (2005). Does matching overcome LaLonde's critique o
 
 import os
 import pandas as pd
-from utils import to_data_format, TORCH, PANDAS
+from utils import to_data_format, NUMPY, PANDAS
 
 
 DATA_FOLDER = 'datasets'
@@ -52,7 +52,7 @@ LALONDE = 'lalonde'
 PSID = 'psid1'
 
 
-def load_lalonde(rct_version=DEHEJIA_WAHBA, obs_version=PSID, rct=False, data_format=TORCH):
+def load_lalonde(rct_version=DEHEJIA_WAHBA, obs_version=PSID, rct=False, data_format=NUMPY):
     """
     Load LaLonde dataset: RCT or combined RCT with observational control group
     Options for 2 x 6 = 12 different observational datasets and 2 RCT datasets
@@ -60,7 +60,7 @@ def load_lalonde(rct_version=DEHEJIA_WAHBA, obs_version=PSID, rct=False, data_fo
     :param rct_version: 'lalonde' for LaLonde (1986)'s original RCT data or 'dw' for Dehejia & Wahba (1999)'s RCT data
     :param obs_version: observational data to use for the control group
     :param rct: use RCT data for both the treatment AND control groups (no observational data)
-    :param data_format returned data format: 'torch' Tensors, 'pandas' DataFrame, or 'numpy' ndarrays
+    :param data_format: returned data format: 'torch' Tensors, 'pandas' DataFrame, or 'numpy' ndarrays
     :return: (covariates, treatment, outcome) tuple or Pandas DataFrame
     """
     rct_df = load_lalonde_rct(rct_version)

@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import torch
 
@@ -98,5 +99,5 @@ def test_multivariate_w_data():
     n = 10
     d = 5
     w, t, y = generate_wty_linear_multi_w_data(n, wdim=5)
-    assert all(isinstance(x, torch.Tensor) for x in (w, t, y))
+    assert all(isinstance(x, np.ndarray) for x in (w, t, y))
     assert w.shape == (n, d) and t.shape == (n,) and y.shape == (n,)

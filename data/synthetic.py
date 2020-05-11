@@ -1,8 +1,8 @@
 import numpy as np
-from utils import to_data_format, PANDAS, TORCH
+from utils import to_data_format, NUMPY
 
 
-def generate_wty_linear_scalar_data(n, data_format=PANDAS, binary_treatment=False,
+def generate_wty_linear_scalar_data(n, data_format=NUMPY, binary_treatment=False,
                                     w_2d=False, seed=0, alpha=-2, beta=2, delta=2,
                                     w_mean=0, w_std=1, t_noise_mean=0, t_noise_std=1,
                                     y_noise_mean=0, y_noise_std=1):
@@ -19,7 +19,7 @@ def generate_wty_linear_scalar_data(n, data_format=PANDAS, binary_treatment=Fals
     return to_data_format(data_format, w, t, y)
 
 
-def generate_wty_linear_multi_w_data(n, wdim=10, data_format=TORCH,
+def generate_wty_linear_multi_w_data(n, wdim=10, data_format=NUMPY,
                                      binary_treatment=False, seed=0, delta=2,
                                      alpha_mean=0, alpha_std=1, beta_mean=0, beta_std=1,
                                      w_mean=0, w_std=1, t_noise_mean=0, t_noise_std=1,
