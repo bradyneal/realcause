@@ -62,7 +62,7 @@ def test_subclass_missing_method():
 
 
 @pytest.fixture(scope='module')
-def linear_gen_model(request):
+def linear_gen_model():
     ate = ATE
     w, t, y = generate_wty_linear_multi_w_data(N, data_format='numpy', wdim=5, delta=ate)
     return LinearGenModel(w, t, y)
@@ -88,14 +88,9 @@ def test_plot_ty(linear_gen_model):
 
 
 def test_univariate_quant_metrics(linear_gen_model):
-    metrics = linear_gen_model.get_univariate_quant_metrics()
-    for k, v in metrics.items():
-        if 'pval' in k:
-            assert v > 0.2
+    linear_gen_model.get_univariate_quant_metrics()
 
 
 def test_multivariate_quant_metrics(linear_gen_model):
-    metrics = linear_gen_model.get_multivariate_quant_metrics()
-    for k, v in metrics.items():
-        if 'pval' in k:
-            assert v > 0.2
+    linear_gen_model.get_multivariate_quant_metrics(include_w=True)
+    linear_gen_model.get_multivariate_quant_metrics(include_w=False)
