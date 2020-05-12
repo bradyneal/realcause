@@ -5,14 +5,14 @@ import torch
 from data.synthetic import generate_wty_linear_scalar_data, generate_wty_linear_multi_w_data
 from data.whynot_simulators import generate_lalonde_random_outcome
 from data.lalonde import load_lalonde
-from utils import PANDAS, TORCH
+from utils import NUMPY, PANDAS, PANDAS_SINGLE, TORCH
 
 import os
 
 
 def test_linear_scalar_data_pandas():
-    df = generate_wty_linear_scalar_data(10, data_format=PANDAS)
-    assert isinstance(df, pd.DataFrame)
+    w, t, y = generate_wty_linear_scalar_data(10, data_format=PANDAS)
+    assert isinstance(w, pd.DataFrame) and isinstance(t, pd.Series) and isinstance(y, pd.Series)
 
 
 def test_linear_scalar_data_torch():
@@ -21,8 +21,12 @@ def test_linear_scalar_data_torch():
 
 
 def test_lalonde_pandas():
-    print(os.getcwd())
-    df = load_lalonde(data_format=PANDAS)
+    w, t, y = load_lalonde(data_format=PANDAS)
+    assert isinstance(w, pd.DataFrame) and isinstance(t, pd.Series) and isinstance(y, pd.Series)
+
+
+def test_lalonde_pandas_single():
+    df = load_lalonde(data_format=PANDAS_SINGLE)
     assert isinstance(df, pd.DataFrame)
 
 
@@ -32,9 +36,11 @@ def test_lalonde_torch():
 
 
 def test_lalonde_defaults():
-    df1 = load_lalonde(data_format=PANDAS)
-    df2 = load_lalonde(rct_version='dw', obs_version='psid1', data_format=PANDAS)
-    pd.testing.assert_frame_equal(df1, df2)
+    w1, t1, y1 = load_lalonde()
+    w2, t2, y2 = load_lalonde(rct_version='dw', obs_version='psid1', data_format=NUMPY)
+    np.testing.assert_array_equal(w1, w2)
+    np.testing.assert_array_equal(t1, t2)
+    np.testing.assert_array_equal(y1, y2)
 
 
 def test_lalonde_dw_rct():
@@ -86,8 +92,8 @@ def test_lalonde_original_cps1():
 
 
 def test_lalonde_random_outcome_data_pandas():
-    df, causal_effects = generate_lalonde_random_outcome(data_format=PANDAS)
-    assert isinstance(df, pd.DataFrame)
+    (w, t, y), causal_effects = generate_lalonde_random_outcome(data_format=PANDAS)
+    assert isinstance(w, pd.DataFrame) and isinstance(t, pd.Series) and isinstance(y, pd.Series)
 
 
 def test_lalonde_random_outcome_data_torch():

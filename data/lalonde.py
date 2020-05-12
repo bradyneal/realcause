@@ -43,7 +43,7 @@ Smith, J. A. and Todd, P. E. (2005). Does matching overcome LaLonde's critique o
 
 import os
 import pandas as pd
-from utils import to_data_format, NUMPY, PANDAS
+from utils import to_data_format, NUMPY, PANDAS_SINGLE
 
 
 DATA_FOLDER = 'datasets'
@@ -74,7 +74,7 @@ def load_lalonde(rct_version=DEHEJIA_WAHBA, obs_version=PSID, rct=False, data_fo
         # Replace RCT control group with observational data
         combined_df = rct_df[rct_df.treat == 1].append(obs_df)
         df = combined_df
-    if data_format.lower() == PANDAS:
+    if data_format.lower() == PANDAS_SINGLE:
         return df
     else:
         w = df.drop(['data_id', 'treat', 're78'], axis='columns')

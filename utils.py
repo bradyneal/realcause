@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from functools import partial
 from itertools import combinations
 from math import factorial
 import torch
@@ -11,16 +12,18 @@ W = 'w'
 T = 't'
 Y = 'y'
 
-PANDAS = 'pandas'
-TORCH = 'torch'
 NUMPY = 'numpy'
+PANDAS = 'pandas'
+PANDAS_SINGLE = 'pandas_single'
+TORCH = 'torch'
 
 
 def to_data_format(data_format, w, t, y):
     format_to_func = {
-        PANDAS: to_pandas_df,
+        NUMPY: to_np_arrays,
+        PANDAS: partial(to_pandas, single_df=False),
+        PANDAS_SINGLE: partial(to_pandas, single_df=True),
         TORCH: to_tensors,
-        NUMPY: to_np_arrays
     }
     if data_format in format_to_func.keys():
         return format_to_func[data_format](w, t, y)
@@ -28,13 +31,14 @@ def to_data_format(data_format, w, t, y):
         raise ValueError('Invalid data format: {} ... Valid formats: {}'.format(data_format, list(format_to_func.keys())))
 
 
-def to_pandas_df(w, t, y):
+def to_pandas(w, t, y, single_df=False):
     """
     Convert array-like w, t, and y to Pandas DataFrame
     :param w: 1d or 2d np array, list, or tuple of covariates
     :param t: 1d np array, list, or tuple of treatments
     :param y: 1d np array, list, or tuple of outcomes
-    :return: Pandas DataFrame of w, t, and y
+    :param single_df: whether to return single DataFrame or 1 DataFrame and 2 Series
+    :return: (DataFrame of w, Series of t, Series of y)
     """
     if isinstance(w, (list, tuple)):
         if any(isinstance(w_i, list, tuple) for w_i in w):
@@ -52,11 +56,17 @@ def to_pandas_df(w, t, y):
             d = {get_wlabel(i + 1): w_i for i, w_i in enumerate(w.T)}
         else:
             raise ValueError('Unexpected w.ndim: {}'.format(w.ndim))
+    elif isinstance(w, pd.DataFrame):
+        d = w.to_dict()
     else:
         warnings.warn(' unexpected w type: {}'.format(type(w)), Warning)
-    d[T] = t
-    d[Y] = y
-    return pd.DataFrame(d)
+
+    if single_df:
+        d[T] = t
+        d[Y] = y
+        return pd.DataFrame(d)
+    else:
+        return pd.DataFrame(d), pd.Series(t, name=T), pd.Series(y, name=Y)
 
 
 def to_tensor(x):
