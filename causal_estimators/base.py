@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from copy import deepcopy
 
 
 class BaseEstimator(ABC):
@@ -14,6 +15,9 @@ class BaseEstimator(ABC):
     @abstractmethod
     def ate_conf_int(self, percentile=.95) -> tuple:
         pass
+
+    def copy(self):
+        return deepcopy(self)
 
 
 class BaseIteEstimator(BaseEstimator):
