@@ -16,7 +16,7 @@ class BaseEstimator(ABC):
         pass
 
 
-class BaseHeterogeneousEstimator(BaseEstimator):
+class BaseIteEstimator(BaseEstimator):
 
     @abstractmethod
     def fit(self, w, t, y):

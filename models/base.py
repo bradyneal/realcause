@@ -71,7 +71,12 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
     def sample_y(self, t, w):
         pass
 
-    def sample(self):
+    # @abstractmethod
+    # def set_seed(self, seed):
+    #     pass
+
+    def sample(self, seed=0):
+        # self.set_seed(seed)
         w = self.sample_w()
         t = self.sample_t(w)
         y = self.sample_y(t, w)

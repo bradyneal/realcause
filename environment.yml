@@ -3,9 +3,9 @@ channels:
   - defaults
   - pytorch
 dependencies:
-  - cython
+  - cython        # needs to be installed before POT
   - matplotlib
-  - numpy
+  - numpy         # needs to be installed before POT
   - pandas
   - pip
   - pytest
@@ -17,6 +17,7 @@ dependencies:
   - r-base        # not necessary if not using whynot_estimators
   - r-essentials  # not necessary if not using whynot_estimators
   - pip:
+    - causallib
     - git+git://github.com/josipd/torch-two-sample
     - POT
     - pyro-ppl    # not necessary if not using Pyro
