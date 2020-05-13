@@ -1,3 +1,7 @@
+def test_causallib():
+    import causallib
+
+
 def test_matplotlib():
     import matplotlib
 
@@ -10,7 +14,7 @@ def test_pandas():
     import pandas
 
 
-def test_python():
+def test_python_version():
     import sys
     assert sys.version_info[0] >= 3
 
