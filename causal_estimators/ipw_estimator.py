@@ -1,5 +1,4 @@
 from sklearn.linear_model import LogisticRegression
-import causallib
 from causallib.estimation import IPW
 from causal_estimators.base import BaseEstimator
 
@@ -36,29 +35,3 @@ class IPWEstimator(BaseEstimator):
 
     def ate_conf_int(self, percentile=.95) -> tuple:
         raise NotImplementedError
-
-
-
-from data.synthetic import generate_wty_linear_multi_w_data
-
-
-w, t, y = generate_wty_linear_multi_w_data(n=100, wdim=5, binary_treatment=True, delta=5, data_format='pandas')
-ipw = IPWEstimator()
-ipw.fit(w, t, y)
-est = ipw.estimate_ate()
-print(est)
-
-w, t, y = generate_wty_linear_multi_w_data(n=100, wdim=5, binary_treatment=True, delta=5, data_format='pandas')
-ipw = IPWEstimator(trim_weights=True)
-ipw.fit(w, t, y)
-print(ipw.estimate_ate())
-
-w, t, y = generate_wty_linear_multi_w_data(n=100, wdim=5, binary_treatment=True, delta=5, data_format='pandas')
-ipw = IPWEstimator(trim_eps=.023)
-ipw.fit(w, t, y)
-print(ipw.estimate_ate())
-
-w, t, y = generate_wty_linear_multi_w_data(n=100, wdim=5, binary_treatment=True, delta=5, data_format='pandas')
-ipw = IPWEstimator(stabilized=True, trim_weights=True)
-ipw.fit(w, t, y)
-print(ipw.estimate_ate())

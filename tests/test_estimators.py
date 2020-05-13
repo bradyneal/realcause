@@ -78,3 +78,31 @@ def test_ipw_estimate_near_ate(ipw_estimator):
     # large tolerance because estimator doesn't work that well
     ate_est = ipw_estimator.estimate_ate()
     assert ate_est == approx(ATE, rel=.35)
+
+
+def test_ipw_weight_trimming(linear_data):
+    w, t, y = linear_data
+    ipw = IPWEstimator(trim_weights=True)
+    ipw.fit(w, t, y)
+    assert ipw.estimate_ate() == approx(ATE, rel=.2)
+
+
+def test_ipw_trim_eps(linear_data):
+    w, t, y = linear_data
+    ipw = IPWEstimator(trim_eps=.05)
+    ipw.fit(w, t, y)
+    assert ipw.estimate_ate() == approx(ATE, rel=.2)
+
+
+def test_ipw_stabilized_weights(linear_data):
+    w, t, y = linear_data
+    ipw = IPWEstimator(stabilized=True)
+    ipw.fit(w, t, y)
+    assert ipw.estimate_ate() == approx(ATE, rel=.2)
+
+
+def test_ipw_weight_trimming_and_stabilized_weights(linear_data):
+    w, t, y = linear_data
+    ipw = IPWEstimator(trim_weights=True, stabilized=True)
+    ipw.fit(w, t, y)
+    assert ipw.estimate_ate() == approx(ATE, rel=.2)
