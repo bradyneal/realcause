@@ -22,9 +22,9 @@ ATE = 5
 N = 50
 
 
-@pytest.fixture(scope='module', params=['pandas', 'numpy'])
-def linear_data(request):
-    w, t, y = generate_wty_linear_multi_w_data(n=N, wdim=5, binary_treatment=True, delta=ATE, data_format=request.param)
+@pytest.fixture(scope='module')
+def linear_data():
+    w, t, y = generate_wty_linear_multi_w_data(n=N, wdim=5, binary_treatment=True, delta=ATE, data_format='pandas')
     return w, t, y
 
 
@@ -104,5 +104,12 @@ def test_ipw_stabilized_weights(linear_data):
 def test_ipw_weight_trimming_and_stabilized_weights(linear_data):
     w, t, y = linear_data
     ipw = IPWEstimator(trim_weights=True, stabilized=True)
+    ipw.fit(w, t, y)
+    assert ipw.estimate_ate() == approx(ATE, rel=.2)
+
+
+def test_ipw_numpy_data():
+    w, t, y = generate_wty_linear_multi_w_data(n=N, wdim=5, binary_treatment=True, delta=ATE, data_format='numpy')
+    ipw = IPWEstimator()
     ipw.fit(w, t, y)
     assert ipw.estimate_ate() == approx(ATE, rel=.2)
