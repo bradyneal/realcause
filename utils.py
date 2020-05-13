@@ -40,6 +40,8 @@ def to_pandas(w, t, y, single_df=False):
     :param single_df: whether to return single DataFrame or 1 DataFrame and 2 Series
     :return: (DataFrame of w, Series of t, Series of y)
     """
+    if isinstance(w, pd.DataFrame) and isinstance(t, pd.Series) and isinstance(y, pd.Series) and not single_df:
+        return w, t, y
     if isinstance(w, (list, tuple)):
         if any(isinstance(w_i, list, tuple) for w_i in w):
             d = {get_wlabel(i + 1): w_i for i, w_i in enumerate(w)}

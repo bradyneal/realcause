@@ -2,6 +2,8 @@ from sklearn.linear_model import LogisticRegression
 from causallib.estimation import IPW
 from causal_estimators.base import BaseEstimator
 
+from utils import to_pandas
+
 TRIM_EPS = 0.01
 
 
@@ -16,6 +18,7 @@ class IPWEstimator(BaseEstimator):
         self.y = None
 
     def fit(self, w, t, y):
+        w, t, y = to_pandas(w, t, y)
         self.ipw.fit(w, t)
         self.w = w
         self.t = t
@@ -27,6 +30,7 @@ class IPWEstimator(BaseEstimator):
         y = self.y if y is None else y
         if w is None or t is None or y is None:
             raise RuntimeError('Must run .fit(w, t, y) before running .estimate_ate()')
+        w, t, y = to_pandas(w, t, y)
         mean_potential_outcomes = self.ipw.estimate_population_outcome(w, t, y, treatment_values=[t0, t1])
         ate_estimate = mean_potential_outcomes[1] - mean_potential_outcomes[0]
         # Use below estimate_effect() method if want to allow for effects that are not differences
