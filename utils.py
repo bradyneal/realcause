@@ -68,7 +68,7 @@ def to_pandas(w, t, y, single_df=False):
         d[Y] = y
         return pd.DataFrame(d)
     else:
-        return pd.DataFrame(d), pd.Series(t, name=T), pd.Series(y, name=Y)
+        return pd.DataFrame(d), pd.Series(t.squeeze(), name=T), pd.Series(y.squeeze(), name=Y)
 
 
 def to_tensor(x):
