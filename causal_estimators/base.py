@@ -37,7 +37,8 @@ class BaseIteEstimator(BaseEstimator):
     def ate_conf_int(self, percentile=.95):
         pass
 
+    @abstractmethod
     def estimate_ite(self, t1=1, t0=0, w=None):
-        return self.predict_outcome(t=t1, w=w) - self.predict_outcome(t=t0, w=w)
+        pass
 
     # TODO: ITE confidence interval
