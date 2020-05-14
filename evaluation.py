@@ -4,14 +4,14 @@ from math import sqrt
 import numpy as np
 
 from models.base import BaseGenModel
-from causal_estimators.base import BaseEstimator
+from causal_estimators.base import BaseEstimator, BaseIteEstimator
 
 STACK_AXIS = 0
 CONF = 0.95
 
 
 def calculate_metrics(gen_model: BaseGenModel, estimator: BaseEstimator,
-                      n_iters: int, conf_ints=True):
+                      n_iters: int, conf_ints=True, return_ite_vectors=False):
     fitted_estimators = []
     for seed in range(n_iters):
         w, t, y = gen_model.sample(seed=seed)
@@ -19,7 +19,18 @@ def calculate_metrics(gen_model: BaseGenModel, estimator: BaseEstimator,
         fitted_estimators.append(estimator.copy())
 
     ate_metrics = calculate_ate_metrics(gen_model.ate(), fitted_estimators, conf_ints=conf_ints)
-    return ate_metrics
+
+    is_ite_estimator = isinstance(estimator, BaseIteEstimator)
+    if is_ite_estimator:
+        ite_metrics = calculate_ite_metrics(gen_model.ite().squeeze(), fitted_estimators)
+        ite_mean_metrics = {'mean_' + k: np.mean(v) for k, v in ite_metrics.items()}
+
+    metrics = ate_metrics
+    if is_ite_estimator:
+        metrics.update(ite_mean_metrics)
+        if return_ite_vectors:
+            metrics.update(ite_metrics)
+    return metrics
 
 
 def calculate_ate_metrics(ate: float, fitted_estimators: List[BaseEstimator], conf_ints=True):
@@ -52,6 +63,37 @@ def calculate_ate_metrics(ate: float, fitted_estimators: List[BaseEstimator], co
     return metrics
 
 
+def calculate_ite_metrics(ite: np.ndarray, fitted_estimators: List[BaseIteEstimator]):
+    ite_estimates = np.stack([fitted_estimator.estimate_ite() for
+                              fitted_estimator in fitted_estimators],
+                             axis=STACK_AXIS)
+
+    mean_ite_estimate = ite_estimates.mean(axis=STACK_AXIS)
+    ite_bias = mean_ite_estimate - ite
+    ite_abs_bias = np.abs(ite_bias)
+    ite_squared_bias = ite_bias**2
+    ite_variance = calc_vector_variance(ite_estimates, mean_ite_estimate)
+    ite_std_error = np.sqrt(ite_variance)
+    ite_mse = calc_vector_mse(ite_estimates, ite)
+    ite_rmse = np.sqrt(ite_mse)
+
+    # TODO: ITE coverage
+    # ate_coverage = calc_coverage(ate_conf_ints, ate)
+    # ate_mean_int_length = calc_mean_interval_length(ate_conf_ints)
+
+    return {
+        'ite_bias': ite_bias,
+        'ite_abs_bias': ite_abs_bias,
+        'ite_squared_bias': ite_squared_bias,
+        'ite_variance': ite_variance,
+        'ite_std_error': ite_std_error,
+        'ite_mse': ite_mse,
+        'ite_rmse': ite_rmse,
+        # 'ite_coverage': ite_coverage,
+        # 'ite_mean_int_length': ite_mean_int_length,
+    }
+
+
 def calc_variance(estimates, mean_estimate):
     return calc_mse(estimates, mean_estimate)
 
@@ -69,3 +111,17 @@ def calc_coverage(intervals: List[tuple], estimand):
 
 def calc_mean_interval_length(intervals: List[tuple]):
     return mean(interval[1] - interval[0] for interval in intervals)
+
+
+def calc_vector_variance(estimates: np.ndarray, mean_estimate: np.ndarray):
+    return calc_vector_mse(estimates, mean_estimate)
+
+
+def calc_vector_mse(estimates: np.ndarray, target: np.ndarray):
+    assert isinstance(estimates, np.ndarray) and estimates.ndim == 2
+    assert isinstance(target, np.ndarray) and target.ndim == 1
+    assert target.shape[0] == estimates.shape[1 - STACK_AXIS]
+
+    n_iters = estimates.shape[STACK_AXIS]
+    target = np.expand_dims(target, axis=STACK_AXIS).repeat(n_iters, axis=STACK_AXIS)
+    return ((estimates - target) ** 2).mean(axis=STACK_AXIS)
