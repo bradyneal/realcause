@@ -258,3 +258,7 @@ def permutation_test(x, y, func='x_mean != y_mean', method='approximate',
                 more_extreme += 1.
 
     return more_extreme / num_rounds
+
+
+def class_name(obj):
+    return type(obj).__name__
