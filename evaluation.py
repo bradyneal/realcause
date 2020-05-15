@@ -24,10 +24,12 @@ def calculate_metrics(gen_model: BaseGenModel, estimator: BaseEstimator,
     if is_ite_estimator:
         ite_metrics = calculate_ite_metrics(gen_model.ite().squeeze(), fitted_estimators)
         ite_mean_metrics = {'mean_' + k: np.mean(v) for k, v in ite_metrics.items()}
+        ite_std_metrics = {'std_of_' + k: np.std(v) for k, v in ite_metrics.items()}
 
     metrics = ate_metrics
     if is_ite_estimator:
         metrics.update(ite_mean_metrics)
+        metrics.update(ite_std_metrics)
         if return_ite_vectors:
             metrics.update(ite_metrics)
     return metrics
@@ -68,6 +70,7 @@ def calculate_ite_metrics(ite: np.ndarray, fitted_estimators: List[BaseIteEstima
                               fitted_estimator in fitted_estimators],
                              axis=STACK_AXIS)
 
+    # Calulcated for each unit/individual, this is the a vector of num units
     mean_ite_estimate = ite_estimates.mean(axis=STACK_AXIS)
     ite_bias = mean_ite_estimate - ite
     ite_abs_bias = np.abs(ite_bias)
@@ -76,6 +79,10 @@ def calculate_ite_metrics(ite: np.ndarray, fitted_estimators: List[BaseIteEstima
     ite_std_error = np.sqrt(ite_variance)
     ite_mse = calc_vector_mse(ite_estimates, ite)
     ite_rmse = np.sqrt(ite_mse)
+
+    # Calculated for a single dataset, so this is a vector of num datasets
+    pehe_squared = calc_vector_mse(ite_estimates, ite, reduce_axis=(1 - STACK_AXIS))
+    pehe = np.sqrt(pehe_squared)
 
     # TODO: ITE coverage
     # ate_coverage = calc_coverage(ate_conf_ints, ate)
@@ -91,6 +98,8 @@ def calculate_ite_metrics(ite: np.ndarray, fitted_estimators: List[BaseIteEstima
         'ite_rmse': ite_rmse,
         # 'ite_coverage': ite_coverage,
         # 'ite_mean_int_length': ite_mean_int_length,
+        'pehe_squared': pehe_squared,
+        'pehe': pehe,
     }
 
 
@@ -117,11 +126,11 @@ def calc_vector_variance(estimates: np.ndarray, mean_estimate: np.ndarray):
     return calc_vector_mse(estimates, mean_estimate)
 
 
-def calc_vector_mse(estimates: np.ndarray, target: np.ndarray):
+def calc_vector_mse(estimates: np.ndarray, target: np.ndarray, reduce_axis=STACK_AXIS):
     assert isinstance(estimates, np.ndarray) and estimates.ndim == 2
     assert isinstance(target, np.ndarray) and target.ndim == 1
     assert target.shape[0] == estimates.shape[1 - STACK_AXIS]
 
     n_iters = estimates.shape[STACK_AXIS]
     target = np.expand_dims(target, axis=STACK_AXIS).repeat(n_iters, axis=STACK_AXIS)
-    return ((estimates - target) ** 2).mean(axis=STACK_AXIS)
+    return ((estimates - target) ** 2).mean(axis=reduce_axis)
