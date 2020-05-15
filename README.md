@@ -14,6 +14,7 @@ If step 1 above fails, try the following instead: `conda env create -f environme
 ```
 ├── data/		- folder for data generators and real datasets
 ├── models/		- folder for Pyro/PyTorch models and guides
+├── plots/		- folder where (gitignored) plots are automatically saved
 ├── tests/		- folder for test suite
 ├── benchmarking.py	- benchmark estimators on data generators
 ├── DataGenModel.py

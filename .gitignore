@@ -1,6 +1,7 @@
 # Project specific
 .environment.yml.swp
 *.pdf
+*.png
 
 # Mac files
 .DS_Store
