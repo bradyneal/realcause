@@ -43,10 +43,9 @@ Smith, J. A. and Todd, P. E. (2005). Does matching overcome LaLonde's critique o
 
 import os
 import pandas as pd
-from utils import to_data_format, NUMPY, PANDAS_SINGLE
+from utils import to_data_format, NUMPY, PANDAS_SINGLE, DATA_FOLDER
 
 
-DATA_FOLDER = 'datasets'
 DEHEJIA_WAHBA = 'dw'
 LALONDE = 'lalonde'
 PSID = 'psid1'

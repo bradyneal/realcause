@@ -7,6 +7,10 @@ import torch
 from torch.autograd import Variable
 from types import FunctionType, MethodType
 import warnings
+import requests
+import os
+from urllib.parse import urlparse
+import zipfile
 
 W = 'w'
 T = 't'
@@ -16,6 +20,8 @@ NUMPY = 'numpy'
 PANDAS = 'pandas'
 PANDAS_SINGLE = 'pandas_single'
 TORCH = 'torch'
+
+DATA_FOLDER = 'datasets'
 
 
 def to_data_format(data_format, w, t, y):
@@ -262,3 +268,40 @@ def permutation_test(x, y, func='x_mean != y_mean', method='approximate',
 
 def class_name(obj):
     return type(obj).__name__
+
+
+def download_dataset(url, dataset_name, filename=None):
+    if filename is None:
+        filename = os.path.basename(urlparse(url).path)
+    file_path = os.path.join(DATA_FOLDER, filename)
+    if os.path.isfile(file_path):
+        print('{} dataset already exists at {}'.format(dataset_name, file_path))
+    else:
+        print('Downloading {} dataset to {} ...'.format(dataset_name, file_path), end=' ')
+        download_file(url, file_path)
+        print('DONE')
+    return file_path
+
+
+def download_file(url, file_path):
+    # open in binary mode
+    with open(file_path, "wb") as f:
+        # get request
+        response = requests.get(url)
+        # write to file
+        f.write(response.content)
+
+
+def unzip(path_to_zip_file, unzip_dir=None):
+    unzip_path = os.path.splitext(path_to_zip_file)[0]
+    if os.path.isfile(unzip_path):
+        print('File already unzipped at', unzip_path)
+        return unzip_path
+
+    print('Unzipping {} to {} ...'.format(path_to_zip_file, unzip_path), end=' ')
+    if unzip_dir is None:
+        unzip_dir = os.path.dirname(path_to_zip_file)
+    with zipfile.ZipFile(path_to_zip_file, 'r') as zip_ref:
+        zip_ref.extractall(unzip_dir)
+    print('DONE')
+    return unzip_path

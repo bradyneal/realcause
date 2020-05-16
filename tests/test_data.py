@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 import pandas as pd
 import torch
@@ -5,9 +6,8 @@ import torch
 from data.synthetic import generate_wty_linear_scalar_data, generate_wty_linear_multi_w_data
 from data.whynot_simulators import generate_lalonde_random_outcome
 from data.lalonde import load_lalonde
+from data.ihdp import load_ihdp
 from utils import NUMPY, PANDAS, PANDAS_SINGLE, TORCH
-
-import os
 
 
 def test_linear_scalar_data_pandas():
@@ -107,3 +107,9 @@ def test_multivariate_w_data():
     w, t, y = generate_wty_linear_multi_w_data(n, wdim=5)
     assert all(isinstance(x, np.ndarray) for x in (w, t, y))
     assert w.shape == (n, d) and t.shape == (n,) and y.shape == (n,)
+
+
+@pytest.mark.parametrize('n_realizations', [100, 1000])
+@pytest.mark.parametrize('split', ['train', 'test', 'all'])
+def test_ihdp_loading(split, n_realizations):
+    load_ihdp(split=split, n_realizations=n_realizations)
