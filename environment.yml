@@ -18,7 +18,7 @@ dependencies:
   - r-essentials  # not necessary if not using whynot_estimators
   - pip:
     - causallib
-    - git+git://github.com/josipd/torch-two-sample
+    - git+git://github.com/bradyneal/torch-two-sample
     - POT
     - pyro-ppl    # not necessary if not using Pyro
     - whynot
