@@ -5,9 +5,10 @@ from models.base import BaseGenModel
 class LinearGenModel(BaseGenModel):
 
     def __init__(self, w, t, y, lambda0_t_w=1e-5, lambda0_y_tw=1e-5, binary_treatment=False):
-        self.w, self.t, self.y = self._matricize((w, t, y))
+        super(LinearGenModel, self).__init__(*self._matricize((w, t, y)))
         self._train(lambda0_t_w, lambda0_y_tw)
         self.binary_treatment = binary_treatment
+        # TODO:
 
     def _matricize(self, data):
         return [np.reshape(d, [d.shape[0], -1]) for d in data]
