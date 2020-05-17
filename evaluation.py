@@ -39,6 +39,7 @@ def calculate_ate_metrics(ate: float, fitted_estimators: List[BaseEstimator], co
     ate_estimates = [fitted_estimator.estimate_ate() for
                      fitted_estimator in fitted_estimators]
     mean_ate_estimate = mean(ate_estimates)
+    ate_mean_abs_error = mean(abs(ate_estimate - ate) for ate_estimate in ate_estimates)
     ate_bias = mean_ate_estimate - ate
     ate_abs_bias = abs(ate_bias)
     ate_squared_bias = ate_bias**2
@@ -47,6 +48,7 @@ def calculate_ate_metrics(ate: float, fitted_estimators: List[BaseEstimator], co
     ate_mse = calc_mse(ate_estimates, ate)
     ate_rmse = sqrt(ate_mse)
     metrics = {
+        'ate_mean_abs_error': ate_mean_abs_error,
         'ate_bias': ate_bias,
         'ate_abs_bias': ate_abs_bias,
         'ate_squared_bias': ate_squared_bias,
