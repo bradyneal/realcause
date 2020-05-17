@@ -34,7 +34,7 @@ class IPWEstimator(BaseEstimator):
         mean_potential_outcomes = self.ipw.estimate_population_outcome(w, t, y, treatment_values=[t0, t1])
         ate_estimate = mean_potential_outcomes[1] - mean_potential_outcomes[0]
         # Use below estimate_effect() method if want to allow for effects that are not differences
-        # ate_estimate = ipw.estimate_effect(mean_potential_outcomes[1], mean_potential_outcomes[0])[0]
+        # ate_estimate = self.ipw.estimate_effect(mean_potential_outcomes[1], mean_potential_outcomes[0])[0]
         return ate_estimate
 
     def ate_conf_int(self, percentile=.95) -> tuple:

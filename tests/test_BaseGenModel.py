@@ -63,8 +63,7 @@ def test_subclass_missing_method():
 
 @pytest.fixture(scope='module')
 def linear_gen_model():
-    ate = ATE
-    w, t, y = generate_wty_linear_multi_w_data(N, data_format='numpy', wdim=5, delta=ate)
+    w, t, y = generate_wty_linear_multi_w_data(N, data_format='numpy', wdim=5, delta=ATE)
     return LinearGenModel(w, t, y)
 
 

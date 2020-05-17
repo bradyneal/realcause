@@ -109,7 +109,7 @@ def test_multivariate_w_data():
     assert w.shape == (n, d) and t.shape == (n,) and y.shape == (n,)
 
 
-@pytest.mark.parametrize('n_realizations', [100, 1000])
 @pytest.mark.parametrize('split', ['train', 'test', 'all'])
+@pytest.mark.parametrize('n_realizations', [100, 1000])
 def test_ihdp_loading(split, n_realizations):
     load_ihdp(split=split, n_realizations=n_realizations)
