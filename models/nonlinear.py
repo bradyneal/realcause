@@ -293,8 +293,8 @@ if __name__ == '__main__':
     y_max = y.max()
 
     mlp = MLP((w-w_mean)/w_std, t, y/y_max,
-              training_params=TrainingParams(lr=0.01, batch_size=256, num_epochs=400),
-              mlp_params_y_tw=MLPParams(n_hidden_layers=2, dim_h=128),
+              training_params=TrainingParams(lr=0.001, batch_size=256, num_epochs=2000),
+              mlp_params_y_tw=MLPParams(n_hidden_layers=2, dim_h=256),
               binary_treatment=True, outcome_distribution='mixed_log_logistic',
               outcome_min=0.0, outcome_max=1.0)
     data_samples = mlp.sample()
