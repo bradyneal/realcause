@@ -93,3 +93,14 @@ def test_univariate_quant_metrics(linear_gen_model):
 def test_multivariate_quant_metrics(linear_gen_model):
     linear_gen_model.get_multivariate_quant_metrics(include_w=True)
     linear_gen_model.get_multivariate_quant_metrics(include_w=False)
+
+
+@pytest.fixture(scope='module')
+def binary_treatment_linear_gen_model():
+    w, t, y = generate_wty_linear_multi_w_data(N, binary_treatment=True, data_format='numpy', wdim=5, delta=ATE)
+    return LinearGenModel(w, t, y, binary_treatment=True)
+
+
+@pytest.mark.plot
+def test_plot_ty_binary_treatment(binary_treatment_linear_gen_model):
+    binary_treatment_linear_gen_model.plot_ty_dists(test=True)

@@ -129,6 +129,8 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             compare_joints(t_model, y_model, t_true, y_true,
                            xlabel1=T_MODEL_LABEL, ylabel1=Y_MODEL_LABEL,
                            xlabel2=T_TRUE_LABEL, ylabel2=Y_TRUE_LABEL,
+                           xlabel=T, ylabel=Y,
+                           label1=MODEL_LABEL, label2=TRUE_LABEL,
                            save_fname='{}_ty_joints.{}'.format(name, file_ext),
                            name=name, test=test, kwargs=joint_kwargs)
 

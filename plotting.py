@@ -2,28 +2,64 @@ import seaborn as sns; sns.set()
 import matplotlib.pyplot as plt
 import warnings
 import os
+import numpy as np
 
 FIGSIZE = [12, 5]
 DIR = 'plots'
 
 
 def compare_joints(x1, y1, x2, y2, xlabel1=None, ylabel1=None, xlabel2=None, ylabel2=None,
+                   xlabel=None, ylabel=None, label1=None, label2=None,
                    name=None, save_fname=None, test=False, kwargs=None):
-    f, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=FIGSIZE)
+    uniq1 = np.unique(x1)
+    uniq2 = np.unique(x2)
+    n_uniq1 = len(uniq1)
+    n_uniq2 = len(np.unique(x2))
+
+    if n_uniq1 == 2 and n_uniq2 == 2:
+        f, ax = plt.subplots(1, 2, sharex=False, sharey=True, figsize=FIGSIZE)
+        if not np.array_equal(uniq1, [0, 1]):
+            raise ValueError('Binary x1 that is not [0, 1]: {}'.format(uniq1))
+        if not np.array_equal(uniq2, [0, 1]):
+            raise ValueError('Binary x2 that is not [0, 1]: {}'.format(uniq2))
+
+        compare_marginal_hists(y1[x1 == 0], y2[x2 == 0], label1=label1, label2=label2, ax=ax[0])
+        ax[0].legend()
+        ax[0].set(xlabel=ylabel, ylabel='p({} | {} = 0)'.format(ylabel, xlabel.upper()))
+
+        compare_marginal_hists(y1[x1 == 1], y2[x2 == 1], label1=label1, label2=label2, ax=ax[1])
+        ax[1].legend()
+        ax[1].set(xlabel=ylabel, ylabel='p({} | {} = 1)'.format(ylabel, xlabel.upper()))
+
+    elif n_uniq1 == len(x1) and n_uniq2 == len(x2):
+        f, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=FIGSIZE)
+        sns.kdeplot(x1, y1, ax=ax[0], **kwargs)
+        ax[0].set(xlabel=xlabel1, ylabel=ylabel1)
+        sns.kdeplot(x2, y2, ax=ax[1], **kwargs)
+        ax[1].set(xlabel=xlabel2, ylabel=ylabel2)
+    else:
+        raise ValueError('x1 and x2 have unexpected number of unique elements: {} and {}'
+                         .format(n_uniq1, n_uniq2))
     if name is not None:
         f.suptitle(name + ' Joint Kernel Density Estimate Plots')
-
-    sns.kdeplot(x1, y1, ax=ax[0], **kwargs)
-    ax[0].set(xlabel=xlabel1, ylabel=ylabel1)
-    sns.kdeplot(x2, y2, ax=ax[1], **kwargs)
-    ax[1].set(xlabel=xlabel2, ylabel=ylabel2)
     save_and_show(f, save_fname, test=test)
+
     return f
 
 
 def compare_marginal_hists(x1, x2, label1=None, label2=None, ax=None):
-    sns.distplot(x1, ax=ax, label=label1)
-    sns.distplot(x2, ax=ax, label=label2)
+    if is_binary(x1, x2):
+        sns.distplot(x1, kde=False, ax=ax, label=label1)
+        sns.distplot(x2, kde=False, ax=ax, label=label2)
+    else:
+        sns.distplot(x1, ax=ax, label=label1)
+        sns.distplot(x2, ax=ax, label=label2)
+
+
+def is_binary(x1, x2=None):
+    x1_is_binary = len(np.unique(x1)) == 2
+    return x1_is_binary if x2 is None else \
+        x1_is_binary and len(np.unique(x2)) == 2
 
 
 def compare_marginal_qqplots(x1, x2, label1=None, label2=None, ax=None):
