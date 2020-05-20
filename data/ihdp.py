@@ -34,6 +34,32 @@ N_REALIZATIONS_OPTIONS = {100, 1000}
 
 
 def load_ihdp(split='train', n_realizations=100):
+    """
+    Load the IHDP data with the nonlinear response surface ("B") that was used
+    by Shalit et al. (2017). Description of variables:
+        x: covariates (25: 6 continuous and 19 binary)
+        t: treatment (binary)
+        yf: "factual" (observed) outcome
+        ycf: "counterfactual" outcome (random)
+        mu0: noiseless potential outcome under control
+        mu1: noiseless potential outcome under treatment
+        ate: I guess just what was reported in the Hill (2011) paper...
+            Not actually accurate. The actual SATEs for the data are the
+            following (using (mu1 - mu0).mean()):
+                train100:   4.54328871735309
+                test100:    4.269906127209613
+                all100:     4.406597422281352
+
+                train1000:  4.402550421661204
+                test1000:   4.374712690625632
+                all1000:    4.388631556143418
+        yadd: ???
+        ymul: ???
+
+    :param split: 'train', 'test', or 'both'
+    :param n_realizations: 100 or 1000 (the two options that the data source provides)
+    :return: NpzFile with all the data ndarrays in the 'f' attribute
+    """
     if split.lower() not in SPLIT_OPTIONS:
         raise ValueError('Invalid "split" option {} ... valid options: {}'
                          .format(split, SPLIT_OPTIONS))
