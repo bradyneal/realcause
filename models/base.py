@@ -108,26 +108,29 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             w = self.sample_w()
         return self.sample_interventional(t=t1, w=w) - self.sample_interventional(t=t0, w=w)
 
-    def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True, title=True, name=None,
-                      file_ext='pdf', thin_model=None, thin_true=None, joint_kwargs={}, test=False):
+    def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True,
+                      title=True, name=None, file_ext='pdf', thin_model=None,
+                      thin_true=None, joint_kwargs={}, test=False, seed=None):
         """
         Creates up to 3 different plots of the real data and the corresponding model
 
         :param joint: boolean for whether to plot p(t, y)
         :param marginal_hist: boolean for whether to plot the p(t) and p(y) histograms
         :param marginal_qq: boolean for whether to plot the p(t) and p(y) Q-Q plots
+        :param title: boolean for whether or not to include title in plots
         :param name: name to use in plot titles and saved files defaults to name of class
         :param file_ext: file extension to for saving plots (e.g. 'pdf', 'png', etc.)
         :param thin_model: thinning interval for the model data
         :param thin_true: thinning interval for the real data
         :param joint_kwargs: kwargs passed to sns.kdeplot() for p(t, y)
         :param test: if True, does not show or save plots
+        :param seed: seed for sample from generative model
         :return:
         """
         if name is None:
             name = self.__class__.__name__
 
-        _, t_model, y_model = to_np_vectors(self.sample(), thin_interval=thin_model)
+        _, t_model, y_model = to_np_vectors(self.sample(seed=seed), thin_interval=thin_model)
         t_true, y_true = to_np_vectors((self.t, self.y), thin_interval=thin_true)
 
         if joint:
@@ -148,13 +151,14 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
                                         save_qq_fname='{}_ty_marginal_qqplots.{}'.format(name, file_ext),
                                         title=title, name=name, test=test)
 
-    def get_univariate_quant_metrics(self, thin_model=None, thin_true=None):
+    def get_univariate_quant_metrics(self, thin_model=None, thin_true=None, seed=None):
         """
         Calculates quantitative metrics for the difference between p(t) and
         p_model(t) and the difference between p(y) and p_model(y)
 
         :param thin_model: thinning interval for the model data
         :param thin_true: thinning interval for the real data
+        :param seed: seed for sample from generative model
         :return: {
             't_ks_pval': ks p-value with null that t_model and t_true are from the same distribution
             'y_ks_pval': ks p-value with null that y_model and y_true are from the same distribution
@@ -162,7 +166,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             'y_wasserstein1_dist': wasserstein1 distance between y_true and y_model
         }
         """
-        _, t_model, y_model = to_np_vectors(self.sample(), thin_interval=thin_model)
+        _, t_model, y_model = to_np_vectors(self.sample(seed=seed), thin_interval=thin_model)
         t_true, y_true = to_np_vectors((self.t, self.y), thin_interval=thin_true)
         ks_label = '_ks_pval'
         wasserstein_label = '_wasserstein1_dist'
@@ -175,7 +179,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         return metrics
 
     def get_multivariate_quant_metrics(self, include_w=True, norm=2, k=1,
-                                       alphas=None, n_permutations=1000):
+                                       alphas=None, n_permutations=1000, seed=None):
         """
         Computes Wasserstein-1 and Wasserstein-2 distances. Also computes all the
         test statistics and p-values for the multivariate two sample tests from
@@ -188,6 +192,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         :param k: number of nearest neighbors to use for kNN test
         :param alphas: list of kernel parameters for MMD test
         :param n_permutations: number of permutations for each test
+        :param seed: seed for sample from generative model
         :return: {
             'wasserstein1_dist': wasserstein1 distance between p_true and p_model
             'wasserstein2_dist': wasserstein2 distance between p_true and p_model
@@ -208,7 +213,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(str(e) + ' ... Install: pip install git+git://github.com/josipd/torch-two-sample')
 
-        t_model, y_model = to_np_vectors(self.sample()[1:], column_vector=True)
+        t_model, y_model = to_np_vectors(self.sample(seed=seed)[1:], column_vector=True)
         t_true, y_true = to_np_vectors((self.t, self.y), column_vector=True)
         model_samples = np.hstack((t_model, y_model))
         true_samples = np.hstack((t_true, y_true))

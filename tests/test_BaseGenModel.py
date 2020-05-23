@@ -95,6 +95,26 @@ def test_multivariate_quant_metrics(linear_gen_model):
     linear_gen_model.get_multivariate_quant_metrics(include_w=False)
 
 
+def test_univariate_quant_metrics_random_without_seed(linear_gen_model):
+    assert linear_gen_model.get_univariate_quant_metrics() != \
+           linear_gen_model.get_univariate_quant_metrics()
+
+
+def test_univariate_quant_metrics_deterministic_with_seed(linear_gen_model):
+    assert linear_gen_model.get_univariate_quant_metrics(seed=0) == \
+           linear_gen_model.get_univariate_quant_metrics(seed=0)
+
+
+def test_multivariate_quant_metrics_random_without_seed(linear_gen_model):
+    assert linear_gen_model.get_multivariate_quant_metrics() != \
+           linear_gen_model.get_multivariate_quant_metrics()
+
+
+def test_multivariate_quant_metrics_deterministic_with_seed(linear_gen_model):
+    assert linear_gen_model.get_multivariate_quant_metrics(seed=0) == \
+           linear_gen_model.get_multivariate_quant_metrics(seed=0)
+
+
 @pytest.fixture(scope='module')
 def binary_treatment_linear_gen_model():
     w, t, y = generate_wty_linear_multi_w_data(N, binary_treatment=True, data_format='numpy', wdim=5, delta=ATE)
