@@ -6,11 +6,12 @@ import numpy as np
 
 FIGSIZE = [12, 5]
 DIR = 'plots'
+DPI = 300
 
 
 def compare_joints(x1, y1, x2, y2, xlabel1=None, ylabel1=None, xlabel2=None, ylabel2=None,
-                   xlabel=None, ylabel=None, label1=None, label2=None,
-                   name=None, save_fname=None, test=False, kwargs=None):
+                   xlabel=None, ylabel=None, label1=None, label2=None, title=True,
+                   name='', save_fname=None, test=False, kwargs=None):
     uniq1 = np.unique(x1)
     uniq2 = np.unique(x2)
     n_uniq1 = len(uniq1)
@@ -40,7 +41,7 @@ def compare_joints(x1, y1, x2, y2, xlabel1=None, ylabel1=None, xlabel2=None, yla
     else:
         raise ValueError('x1 and x2 have unexpected number of unique elements: {} and {}'
                          .format(n_uniq1, n_uniq2))
-    if name is not None:
+    if title:
         f.suptitle(name + ' Joint Kernel Density Estimate Plots')
     save_and_show(f, save_fname, test=test)
 
@@ -79,7 +80,8 @@ def compare_marginal_qqplots(x1, x2, label1=None, label2=None, ax=None):
 
 
 def compare_bivariate_marginals(x1, x2, y1, y2, xlabel=None, ylabel=None, label1=None, label2=None,
-                                hist=True, qqplot=True, name=None, save_hist_fname=None, save_qq_fname=None,
+                                hist=True, qqplot=True, title=True, name='',
+                                save_hist_fname=None, save_qq_fname=None,
                                 test=False):
     if not (hist or qqplot):
         print('Both hist and qqplot are False, so no plots were made.')
@@ -87,7 +89,7 @@ def compare_bivariate_marginals(x1, x2, y1, y2, xlabel=None, ylabel=None, label1
     plots = []
     if hist:
         f1, ax1 = plt.subplots(1, 2, figsize=FIGSIZE)
-        if name is not None:
+        if title:
             f1.suptitle(name + ' Marginal Histograms')
 
         compare_marginal_hists(x1, x2, label1=label1, label2=label2, ax=ax1[0])
@@ -103,7 +105,7 @@ def compare_bivariate_marginals(x1, x2, y1, y2, xlabel=None, ylabel=None, label1
 
     if qqplot:
         f2, ax2 = plt.subplots(1, 2, figsize=FIGSIZE)
-        if name is not None:
+        if title:
             f2.suptitle(name + ' Marginal Q-Q Plots')
 
         compare_marginal_qqplots(x1, x2, ax=ax2[0],
@@ -134,5 +136,5 @@ def save_and_show(f, save_fname, dir=DIR, test=False):
             os.makedirs(dir)
         if os.sep not in save_fname:
             save_fname = os.path.join(dir, save_fname)
-        f.savefig(save_fname, bbox_inches='tight')
+        f.savefig(save_fname, bbox_inches='tight', dpi=DPI)
     plt.show()

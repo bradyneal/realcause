@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from numbers import Number
 import numpy as np
+import torch
 from scipy import stats
 
 from plotting import compare_joints, compare_bivariate_marginals
@@ -103,7 +104,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             w = self.sample_w()
         return self.sample_interventional(t=t1, w=w) - self.sample_interventional(t=t0, w=w)
 
-    def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True, name=None,
+    def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True, title=True, name=None,
                       file_ext='pdf', thin_model=None, thin_true=None, joint_kwargs={}, test=False):
         """
         Creates up to 3 different plots of the real data and the corresponding model
@@ -132,7 +133,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
                            xlabel=T, ylabel=Y,
                            label1=MODEL_LABEL, label2=TRUE_LABEL,
                            save_fname='{}_ty_joints.{}'.format(name, file_ext),
-                           name=name, test=test, kwargs=joint_kwargs)
+                           title=title, name=name, test=test, kwargs=joint_kwargs)
 
         if marginal_hist or marginal_qq:
             compare_bivariate_marginals(t_true, t_model, y_true, y_model,
@@ -141,7 +142,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
                                         hist=marginal_hist, qqplot=marginal_qq,
                                         save_hist_fname='{}_ty_marginal_hists.{}'.format(name, file_ext),
                                         save_qq_fname='{}_ty_marginal_qqplots.{}'.format(name, file_ext),
-                                        name=name, test=test)
+                                        title=title, name=name, test=test)
 
     def get_univariate_quant_metrics(self, thin_model=None, thin_true=None):
         """
