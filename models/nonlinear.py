@@ -109,7 +109,7 @@ class CausalDataset(data.Dataset):
 # TODO: for more complex w, we might need to share parameters (dependent on the problem)
 class MLP(BaseGenModel):
 
-    def __init__(self, w, t, y,
+    def __init__(self, w, t, y, seed=1,
                  mlp_params_t_w=MLPParams(),
                  mlp_params_y_tw=MLPParams(),
                  training_params = TrainingParams(),
@@ -117,7 +117,7 @@ class MLP(BaseGenModel):
                  outcome_distribution='gaussian',
                  outcome_min=None,
                  outcome_max=None):
-        super(MLP, self).__init__(*self._matricize((w, t, y)))
+        super(MLP, self).__init__(*self._matricize((w, t, y)), seed=seed)
         self.binary_treatment = binary_treatment
         self.outcome_distribution = outcome_distribution
         self.outcome_min = outcome_min
@@ -202,7 +202,6 @@ class MLP(BaseGenModel):
                 if self.training_params.verbose and c % self.training_params.print_every_iters == 0:
                     print("Iteration {}: {}".format(c, loss))
                 c += 1
-
 
     def sample_t(self, w=None):
         if w is None:
@@ -296,7 +295,7 @@ if __name__ == '__main__':
               training_params=TrainingParams(lr=0.001, batch_size=256, num_epochs=2000),
               mlp_params_y_tw=MLPParams(n_hidden_layers=2, dim_h=256),
               binary_treatment=True, outcome_distribution='mixed_log_logistic',
-              outcome_min=0.0, outcome_max=1.0)
+              outcome_min=0.0, outcome_max=1.0, seed=1)
     data_samples = mlp.sample()
     # mlp.plot_ty_dists()
     uni_metrics = mlp.get_univariate_quant_metrics()

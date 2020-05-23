@@ -13,6 +13,7 @@ T_MODEL_LABEL = '{} ({})'.format(T, MODEL_LABEL)
 Y_MODEL_LABEL = '{} ({})'.format(Y, MODEL_LABEL)
 T_TRUE_LABEL = '{} ({})'.format(T, TRUE_LABEL)
 Y_TRUE_LABEL = '{} ({})'.format(Y, TRUE_LABEL)
+SEED = 42
 
 
 class BaseGenModelMeta(ABCMeta):
@@ -56,10 +57,12 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
     abstract_attributes = ['w', 't', 'y']
 
-    def __init__(self, w, t, y):
+    def __init__(self, w, t, y, seed=SEED):
         self.w = w
         self.t = t
         self.y = y
+        if seed is not None:
+            self.set_seed(seed)
 
     def sample_w(self):
         return self.w
@@ -72,12 +75,13 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
     def sample_y(self, t, w):
         pass
 
-    # @abstractmethod
-    # def set_seed(self, seed):
-    #     pass
+    def set_seed(self, seed=SEED):
+        torch.manual_seed(seed)
+        np.random.seed(seed)
 
-    def sample(self, seed=0):
-        # self.set_seed(seed)
+    def sample(self, seed=None):
+        if seed is not None:
+            self.set_seed(seed)
         w = self.sample_w()
         t = self.sample_t(w)
         y = self.sample_y(t, w)
