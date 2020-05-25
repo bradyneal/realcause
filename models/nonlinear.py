@@ -150,7 +150,8 @@ class MLP(BaseGenModel):
 
         # TODO: binary treatment -> long data type
         self.data_loader = data.DataLoader(CausalDataset(self.w, self.t, self.y),
-                                           batch_size=training_params.batch_size)
+                                           batch_size=training_params.batch_size,
+                                           shuffle=True)
 
         self._train()
 
