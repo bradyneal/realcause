@@ -256,6 +256,8 @@ if __name__ == '__main__':
     # multi_wty_metrics = mlp.get_multivariate_quant_metrics(include_w=True, n_permutations=10)
 
     w, t, y = load_lalonde()
+    # w, t, y = load_lalonde(rct=True)
+    # w, t, y = load_lalonde(obs_version='cps1')
 
     logit_pi = torch.zeros(1, requires_grad=True)
     log_alpha = torch.zeros(1, requires_grad=True)
@@ -293,7 +295,7 @@ if __name__ == '__main__':
     y_max = y.max()
 
     mlp = MLP((w-w_mean)/w_std, t, y/y_max,
-              training_params=TrainingParams(lr=0.001, batch_size=256, num_epochs=2000),
+              training_params=TrainingParams(lr=0.0005, batch_size=128, num_epochs=500),
               mlp_params_y_tw=MLPParams(n_hidden_layers=2, dim_h=256),
               binary_treatment=True, outcome_distribution='mixed_log_logistic',
               outcome_min=0.0, outcome_max=1.0, seed=1)
