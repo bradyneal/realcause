@@ -93,17 +93,110 @@ class TrainingParams:
         self.optim_args = optim_args
 
 
+class Preprocess(object):
+    def transform(self, x):
+        raise(NotImplementedError)
+
+    def untransform(self, x):
+        raise(NotImplementedError)
+
+
+class PlaceHolderTransform(Preprocess):
+    def transform(self, x):
+        return x
+
+    def untransform(self, x):
+        return x
+
+class Centering(Preprocess):
+    def __init__(self, data=None, mean=None):
+        assert data is not None or mean is not None, 'at least one of data or mean must be provided'
+        if data is not None:
+            self.m = data.mean(0).astype('float32')
+            if mean is not None:
+                assert np.isclose(self.m, mean), 'mean of data is not close to the provided value'
+        else:
+            self.m = np.cast['float32'](mean)
+
+    def transform(self, x):
+        return x - self.m
+
+    def untransform(self, x):
+        return x + self.m
+
+
+class Scaling(Preprocess):
+    def __init__(self, s):
+        self.s = np.cast['float32'](s)
+
+    def transform(self, x):
+        return x * self.s
+
+    def untransform(self, x):
+        return x / self.s
+
+
+class VarianceRescaling(Scaling):
+    def __init__(self, data=None, stdv=None, gain=1.0):
+        assert data is not None or stdv is not None, 'at least one of data or stdv must be provided'
+        if data is not None:
+            s = data.std(0)
+            if stdv is not None:
+                assert np.isclose(s, stdv), 'stdv of data is not close to the provided value'
+        else:
+            s = stdv
+        super(VarianceRescaling, self).__init__(gain/s)
+
+
+class SequentialTransforms(Preprocess):
+    def __init__(self, *transforms):
+        self.transforms = transforms
+
+    def transform(self, x):
+        for t in self.transforms:
+            x = t.transform(x)
+        return x
+
+    def untransform(self, x):
+        for t in reversed(self.transforms):
+            x = t.untransform(x)
+        return x
+
+class Standardize(Preprocess):
+    def __init__(self, data):
+        self.t = SequentialTransforms(
+            Centering(data),
+            VarianceRescaling(data)
+        )
+
+    def transform(self, x):
+        return self.t.transform(x)
+
+    def untransform(self, x):
+        return self.t.untransform(x)
+
+
 class CausalDataset(data.Dataset):
-    def __init__(self, w, t, y, wtype='float32', ttype='float32', ytype='float32'):
+    def __init__(self, w, t, y, wtype='float32', ttype='float32', ytype='float32',
+                 w_transform:Preprocess=PlaceHolderTransform(),
+                 t_transform:Preprocess=PlaceHolderTransform(),
+                 y_transform:Preprocess=PlaceHolderTransform()):
         self.w = w.astype(wtype)
         self.t = t.astype(ttype)
         self.y = y.astype(ytype)
+
+        self.w_transform = w_transform
+        self.t_transform = t_transform
+        self.y_transform = y_transform
 
     def __len__(self):
         return self.w.shape[0]
 
     def __getitem__(self, index):
-        return self.w[index], self.t[index], self.y[index]
+        return self.w_transform.transform(self.w[index]), \
+               self.t_transform.transform(self.t[index]), \
+               self.y_transform.transform(self.y[index])
+
 
 
 # TODO: for more complex w, we might need to share parameters (dependent on the problem)
@@ -116,7 +209,11 @@ class MLP(BaseGenModel):
                  binary_treatment=False,
                  outcome_distribution='gaussian',
                  outcome_min=None,
-                 outcome_max=None):
+                 outcome_max=None,
+                 w_transform:Preprocess=PlaceHolderTransform(),
+                 t_transform:Preprocess=PlaceHolderTransform(),
+                 y_transform:Preprocess=PlaceHolderTransform()
+                 ):
         super(MLP, self).__init__(*self._matricize((w, t, y)), seed=seed)
         self.binary_treatment = binary_treatment
         self.outcome_distribution = outcome_distribution
@@ -149,11 +246,19 @@ class MLP(BaseGenModel):
         )
 
         # TODO: binary treatment -> long data type
-        self.data_loader = data.DataLoader(CausalDataset(self.w, self.t, self.y),
+        self.data_loader = data.DataLoader(CausalDataset(self.w, self.t, self.y,
+                                                         w_transform=w_transform,
+                                                         t_transform=t_transform,
+                                                         y_transform=y_transform),
                                            batch_size=training_params.batch_size,
                                            shuffle=True)
 
         self._train()
+
+        # todo: remove this?
+        self.w = w_transform.transform(self.w)
+        self.y = y_transform.transform(self.y)
+        self.t = t_transform.transform(self.t)
 
     def _matricize(self, data):
         return [np.reshape(d, [d.shape[0], -1]) for d in data]
@@ -290,15 +395,12 @@ if __name__ == '__main__':
     plt.hist(y_samples, 50, density=True, alpha=0.5, range=(0,1))
     plt.legend(['data', 'density', 'samples'], loc=1)
 
-    w_mean = w.mean(0)
-    w_std = w.std(0)
-    y_max = y.max()
-
-    mlp = MLP((w-w_mean)/w_std, t, y/y_max,
+    mlp = MLP(w, t, y,
               training_params=TrainingParams(lr=0.0005, batch_size=128, num_epochs=500),
               mlp_params_y_tw=MLPParams(n_hidden_layers=2, dim_h=256),
               binary_treatment=True, outcome_distribution='mixed_log_logistic',
-              outcome_min=0.0, outcome_max=1.0, seed=1)
+              outcome_min=0.0, outcome_max=1.0, seed=1,
+              w_transform=Standardize(w), y_transform=Scaling(1/y.max()))
     data_samples = mlp.sample()
     # mlp.plot_ty_dists()
     uni_metrics = mlp.get_univariate_quant_metrics()
