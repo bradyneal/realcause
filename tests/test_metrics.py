@@ -24,18 +24,19 @@ def estimator(request):
 
 
 def test_ate_metrics(linear_gen_model, estimator):
-    metrics = calculate_metrics(gen_model=linear_gen_model, estimator=estimator, n_iters=10, conf_ints=False)
+    metrics = calculate_metrics(gen_model=linear_gen_model, estimator=estimator, n_seeds=10, conf_ints=False)
     assert metrics['ate_squared_bias'] + metrics['ate_variance'] == approx(metrics['ate_mse'])
     assert metrics['ate_bias'] == approx(0, abs=1)
 
 
 def test_mean_ite_metrics(linear_gen_model):
     metrics = calculate_metrics(gen_model=linear_gen_model, estimator=StandardizationEstimator(),
-                                n_iters=10, conf_ints=False)
+                                n_seeds=10, conf_ints=False)
     assert metrics['mean_ite_abs_bias'] == approx(0, abs=1.3)
+    assert metrics['mean_ite_mse'] == approx(metrics['mean_pehe_squared'])
 
 
 def test_vector_ite_metrics(linear_gen_model):
     metrics = calculate_metrics(gen_model=linear_gen_model, estimator=StandardizationEstimator(),
-                                n_iters=10, conf_ints=False, return_ite_vectors=True)
+                                n_seeds=10, conf_ints=False, return_ite_vectors=True)
     assert metrics['ite_squared_bias'] + metrics['ite_variance'] == approx(metrics['ite_mse'])

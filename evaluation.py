@@ -2,18 +2,89 @@ from typing import List
 from statistics import mean
 from math import sqrt
 import numpy as np
+import pandas as pd
+import sklearn
+from sklearn.model_selection import cross_validate, GridSearchCV
+from sklearn.model_selection._search import BaseSearchCV
 
 from models.base import BaseGenModel
 from causal_estimators.base import BaseEstimator, BaseIteEstimator
 
 STACK_AXIS = 0
 CONF = 0.95
+REGRESSION_SCORES = ['max_error', 'neg_mean_absolute_error', 'neg_median_absolute_error',
+                     'neg_mean_squared_error', 'neg_root_mean_squared_error', 'r2']
+REGRESSION_SCORE_DEF = 'r2'
+CLASSIFICATION_SCORES = []
+CLASSIFICATION_SCORE_DEF = 'accuracy'
+
+
+def run_outcome_model_cv(gen_model: BaseGenModel, model: sklearn.base.BaseEstimator,
+                         param_grid, n_seeds: int, n_folds=5,
+                         scoring=REGRESSION_SCORES, best_params=False, best_model=False):
+    cv = GridSearchCV(model, param_grid, scoring=scoring, cv=n_folds,refit=REGRESSION_SCORE_DEF)
+    dfs = []
+    for seed in range(n_seeds):
+        w, t, y = gen_model.sample(seed=seed)
+        if t.ndim == 1:
+            t = t[:, np.newaxis]
+        elif t.ndim == 2:
+            pass
+        else:
+            raise ValueError('Invalid dimension of t: {}'.format(t.ndim))
+        y = y.squeeze()
+        X = np.hstack((w, t))
+        cv.fit(X, y)
+        d = {k: v for k, v in cv.cv_results_.items() if 'split' not in k}
+        d['seed'] = seed
+        dfs.append(pd.DataFrame(d))
+
+    df = pd.concat(dfs, axis=0)
+    if best_params or best_model:
+        results = {'df': df}
+        best_cv_params = df[df['rank_test_{}'.format(REGRESSION_SCORE_DEF)] == 1].params.mode()[0]
+        best_cv_model = model.set_params(**best_cv_params)
+        if best_params:
+            results['best_params'] = best_cv_model.get_params()
+        if best_model:
+            results['best_model'] = best_cv_model
+        return results
+    else:
+        return df
+
+
+def calculate_outcome_model_scores(gen_model: BaseGenModel, estimator: sklearn.base.BaseEstimator,
+                                   n_seeds: int, n_folds=5, ret='mean'):
+
+    def result_key(score):
+        return '{}fold_{}'.format(n_folds, score)
+
+    results = {result_key(score): np.zeros(n_seeds) for score in REGRESSION_SCORES}
+    for seed in range(n_seeds):
+        w, t, y = gen_model.sample(seed=seed)
+        if t.ndim == 1:
+            t = t[:, np.newaxis]
+        elif t.ndim == 2:
+            pass
+        else:
+            raise ValueError('Invalid dimension of t {}'.format(t.ndim))
+        X = np.hstack((w, t))
+        cv_results = cross_validate(estimator, X, y, cv=n_folds, scoring=scores)
+        for score in REGRESSION_SCORES:
+            results[result_key(score)][seed] = cv_results['test_' + score].mean()
+
+    ret = ret.lower()
+    if ret == 'mean':
+        mean_results = {'mean_{}'.format(k): v.mean() for k, v in results.items()}
+        return mean_results
+    elif ret == 'all' or 'seeds' in ret:
+        return results
 
 
 def calculate_metrics(gen_model: BaseGenModel, estimator: BaseEstimator,
-                      n_iters: int, conf_ints=True, return_ite_vectors=False):
+                      n_seeds: int, conf_ints=True, return_ite_vectors=False):
     fitted_estimators = []
-    for seed in range(n_iters):
+    for seed in range(n_seeds):
         w, t, y = gen_model.sample(seed=seed)
         estimator.fit(w, t, y)
         fitted_estimators.append(estimator.copy())
@@ -72,7 +143,7 @@ def calculate_ite_metrics(ite: np.ndarray, fitted_estimators: List[BaseIteEstima
                               fitted_estimator in fitted_estimators],
                              axis=STACK_AXIS)
 
-    # Calulcated for each unit/individual, this is the a vector of num units
+    # Calculated for each unit/individual, this is the a vector of num units
     mean_ite_estimate = ite_estimates.mean(axis=STACK_AXIS)
     ite_bias = mean_ite_estimate - ite
     ite_abs_bias = np.abs(ite_bias)
@@ -133,6 +204,6 @@ def calc_vector_mse(estimates: np.ndarray, target: np.ndarray, reduce_axis=STACK
     assert isinstance(target, np.ndarray) and target.ndim == 1
     assert target.shape[0] == estimates.shape[1 - STACK_AXIS]
 
-    n_iters = estimates.shape[STACK_AXIS]
-    target = np.expand_dims(target, axis=STACK_AXIS).repeat(n_iters, axis=STACK_AXIS)
+    n_seeds = estimates.shape[STACK_AXIS]
+    target = np.expand_dims(target, axis=STACK_AXIS).repeat(n_seeds, axis=STACK_AXIS)
     return ((estimates - target) ** 2).mean(axis=reduce_axis)

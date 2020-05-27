@@ -27,6 +27,7 @@ def test_null_true_linear_data_linear_model(linear_gen_model):
     metrics = {**uni_metrics, **multi_metrics}
     for k, v in metrics.items():
         if 'pval' in k:
+            print(k, v)
             assert v > 0.2
 
 
