@@ -15,26 +15,46 @@ CONF = 0.95
 REGRESSION_SCORES = ['max_error', 'neg_mean_absolute_error', 'neg_median_absolute_error',
                      'neg_mean_squared_error', 'neg_root_mean_squared_error', 'r2']
 REGRESSION_SCORE_DEF = 'r2'
-CLASSIFICATION_SCORES = []
+CLASSIFICATION_SCORES = ['accuracy', 'balanced_accuracy', 'average_precision',
+                         'f1',
+                         'precision',
+                         'recall', 'roc_auc']
 CLASSIFICATION_SCORE_DEF = 'accuracy'
 
 
-def run_outcome_model_cv(gen_model: BaseGenModel, model: sklearn.base.BaseEstimator,
-                         param_grid, n_seeds: int, n_folds=5,
-                         scoring=REGRESSION_SCORES, best_params=False, best_model=False):
-    cv = GridSearchCV(model, param_grid, scoring=scoring, cv=n_folds,refit=REGRESSION_SCORE_DEF)
+def run_model_cv(gen_model: BaseGenModel, model: sklearn.base.BaseEstimator,
+                 param_grid, n_seeds: int, model_type: str, n_folds=5,
+                 scoring=None, rank_score=None, best_params=False, best_model=False):
+    model_type = model_type.lower()
+    if model_type == 'outcome':
+        if scoring is None:
+            scoring = REGRESSION_SCORES
+        if rank_score is None:
+            rank_score = REGRESSION_SCORE_DEF
+    elif model_type == 'prop_score' or model_type == 'ps':
+        if scoring is None:
+            scoring = CLASSIFICATION_SCORES
+        if rank_score is None:
+            rank_score = CLASSIFICATION_SCORE_DEF
+    else:
+        raise ValueError('Invalid model_type: {}'.format(model_type))
+    cv = GridSearchCV(model, param_grid, scoring=scoring, cv=n_folds, refit=rank_score)
     dfs = []
     for seed in range(n_seeds):
         w, t, y = gen_model.sample(seed=seed)
-        if t.ndim == 1:
-            t = t[:, np.newaxis]
-        elif t.ndim == 2:
-            pass
-        else:
-            raise ValueError('Invalid dimension of t: {}'.format(t.ndim))
-        y = y.squeeze()
-        X = np.hstack((w, t))
-        cv.fit(X, y)
+        if model_type == 'outcome':
+            if t.ndim == 1:
+                t = t[:, np.newaxis]
+            elif t.ndim == 2:
+                pass
+            else:
+                raise ValueError('Invalid dimension of t: {}'.format(t.ndim))
+            y = y.squeeze()
+            X = np.hstack((w, t))
+            cv.fit(X, y)
+        else:   # propensity score model_type
+            t = t.squeeze()
+            cv.fit(w, t)
         d = {k: v for k, v in cv.cv_results_.items() if 'split' not in k}
         d['seed'] = seed
         dfs.append(pd.DataFrame(d))
@@ -42,7 +62,7 @@ def run_outcome_model_cv(gen_model: BaseGenModel, model: sklearn.base.BaseEstima
     df = pd.concat(dfs, axis=0)
     if best_params or best_model:
         results = {'df': df}
-        best_cv_params = df[df['rank_test_{}'.format(REGRESSION_SCORE_DEF)] == 1].params.mode()[0]
+        best_cv_params = df[df['rank_test_{}'.format(rank_score)] == 1].params.mode()[0]
         best_cv_model = model.set_params(**best_cv_params)
         if best_params:
             results['best_params'] = best_cv_model.get_params()
