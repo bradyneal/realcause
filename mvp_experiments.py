@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from data.lalonde import load_lalonde
 from models.linear import LinearGenModel
@@ -38,53 +39,53 @@ max_depths = {'max_depth': list(range(2, 10 + 1)) + [None]}
 Ks = {'n_neighbors': [1, 2, 3, 5, 10, 15, 20, 30, 40, 50]}
 
 outcome_model_grid = [
-    (LinearRegression(), {}),
-    (Lasso(), alphas),
-    (Ridge(), alphas),
-    (ElasticNet(), alphas),
+    ('LinearRegression', LinearRegression(), {}),
+    ('Lasso', Lasso(), alphas),
+    ('Ridge', Ridge(), alphas),
+    ('ElasticNet', ElasticNet(), alphas),
 
-    (SVR(kernel='rbf'), d_Cs),
-    (SVR(kernel='sigmoid'), d_Cs),
-    (LinearSVR(), d_Cs),
+    ('SVM_rbf', SVR(kernel='rbf'), d_Cs),
+    ('SVM_sigmoid', SVR(kernel='sigmoid'), d_Cs),
+    ('LinearSVM', LinearSVR(), d_Cs),
     # (SVR(kernel='linear'), d_Cs), # doesn't seem to work (runs forever)
 
     # TODO: add tuning of SVM gamma, rather than using the default "scale" setting
     # SVMs are sensitive to input scale
-    (Pipeline([('standard', StandardScaler()), (SVM, SVR(kernel='rbf'))]),
+    ('Standardized_SVM_rbf', Pipeline([('standard', StandardScaler()), (SVM, SVR(kernel='rbf'))]),
      d_Cs_pipeline),
-    (Pipeline([('standard', StandardScaler()), (SVM, SVR(kernel='sigmoid'))]),
+    ('Standardized_SVM_sigmoid', Pipeline([('standard', StandardScaler()), (SVM, SVR(kernel='sigmoid'))]),
      d_Cs_pipeline),
-    (Pipeline([('standard', StandardScaler()), (SVM, LinearSVR())]),
+    ('Standardized_LinearSVM', Pipeline([('standard', StandardScaler()), (SVM, LinearSVR())]),
      d_Cs_pipeline),
 
-    (KernelRidge(), alphas),
+    ('KernelRidge', KernelRidge(), alphas),
     # MLPRegressor(max_iter=1000),
     # MLPRegressor(alpha=1, max_iter=1000),
 
     # NeighborsRegressor(),
     # GaussianProcessRegressor(),
     # TODO: choose better hyperparams to cross-validate over
-    (DecisionTreeRegressor(), max_depths),
-    (RandomForestRegressor(), max_depths),
+    ('DecisionTree', DecisionTreeRegressor(), max_depths),
+    ('RandomForest', RandomForestRegressor(), max_depths),
     # AdaBoostRegressor(),
 ]
 
 prop_score_model_grid = [
-    (LogisticRegression(penalty='l2'), d_Cs),
-    (LogisticRegression(penalty='none'), {}),
-    (LogisticRegression(penalty='l2', solver='liblinear'), d_Cs),
-    (LogisticRegression(penalty='l1', solver='liblinear'), d_Cs),
-    (LogisticRegression(penalty='l1', solver='saga'), d_Cs),
+    ('LogisticRegression_l2', LogisticRegression(penalty='l2'), d_Cs),
+    ('LogisticRegression', LogisticRegression(penalty='none'), {}),
+    ('LogisticRegression_l2_liblinear', LogisticRegression(penalty='l2', solver='liblinear'), d_Cs),
+    ('LogisticRegression_l1_liblinear', LogisticRegression(penalty='l1', solver='liblinear'), d_Cs),
+    ('LogisticRegression_l1_saga', LogisticRegression(penalty='l1', solver='saga'), d_Cs),
 
     # https://scikit-learn.org/stable/auto_examples/classification/plot_classifier_comparison.html
-    (KNeighborsClassifier(), Ks),
+    ('kNN', KNeighborsClassifier(), Ks),
     # GaussianProcessClassifier(),
-    (DecisionTreeClassifier(), max_depths),
-    (RandomForestClassifier(), max_depths),
+    ('DecisionTree', DecisionTreeClassifier(), max_depths),
+    ('RandomForest', RandomForestClassifier(), max_depths),
     # MLPClassifier(alpha=1, max_iter=1000),
     # AdaBoostClassifier(),
-    (GaussianNB(), {}),
-    (QuadraticDiscriminantAnalysis(), {})
+    ('GaussianNB', GaussianNB(), {}),
+    ('QDA', QuadraticDiscriminantAnalysis(), {})
 ]
 
 
@@ -96,16 +97,22 @@ lin_gen_model = LinearGenModel(w, t, y, binary_treatment=True)
 # and bundle all the statistical and causal metrics into a single DataFrame with a seed column
 # (bias/variance/etc. will need to be calculated from this DataFrame)
 # These DataFrames can be used as a dataset for predicting causal performance from predictive performance
-for outcome_model, param_grid in outcome_model_grid:
+metrics_list = []
+for name, outcome_model, param_grid in outcome_model_grid:
     results = run_model_cv(lin_gen_model, outcome_model, param_grid=param_grid, n_seeds=5, model_type='outcome', best_model=True)
     estimator = StandardizationEstimator(outcome_model=results['best_model'])
     metrics = calculate_metrics(lin_gen_model, estimator, n_seeds=5, conf_ints=False)
+    metrics_list.append({'name': name, **metrics})
     print(type(outcome_model))
     print(metrics)
+standardization_df = pd.DataFrame(metrics_list)
 
-for prop_score_model, param_grid in prop_score_model_grid:
+metrics_list = []
+for name, prop_score_model, param_grid in prop_score_model_grid:
     results = run_model_cv(lin_gen_model, prop_score_model, param_grid=param_grid, n_seeds=5, model_type='prop_score', best_model=True)
     estimator = IPWEstimator(prop_score_model=results['best_model'])
     metrics = calculate_metrics(lin_gen_model, estimator, n_seeds=5, conf_ints=False)
+    metrics_list.append({'name': name, **metrics})
     print(type(prop_score_model))
     print(metrics)
+ipw_df = pd.DataFrame(metrics_list)
