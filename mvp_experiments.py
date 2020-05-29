@@ -67,7 +67,7 @@ outcome_model_grid = [
     # GaussianProcessRegressor(),
     # TODO: choose better hyperparams to cross-validate over
     ('DecisionTree', DecisionTreeRegressor(), max_depths),
-    ('RandomForest', RandomForestRegressor(), max_depths),
+    # ('RandomForest', RandomForestRegressor(), max_depths),
     # AdaBoostRegressor(),
 ]
 
@@ -82,7 +82,7 @@ prop_score_model_grid = [
     ('kNN', KNeighborsClassifier(), Ks),
     # GaussianProcessClassifier(),
     ('DecisionTree', DecisionTreeClassifier(), max_depths),
-    ('RandomForest', RandomForestClassifier(), max_depths),
+    # ('RandomForest', RandomForestClassifier(), max_depths),
     # MLPClassifier(alpha=1, max_iter=1000),
     # AdaBoostClassifier(),
     ('GaussianNB', GaussianNB(), {}),
@@ -121,9 +121,22 @@ stratified_standardization_df = pd.DataFrame(metrics_list)
 metrics_list = []
 for name, prop_score_model, param_grid in prop_score_model_grid:
     results = run_model_cv(lin_gen_model, prop_score_model, param_grid=param_grid, n_seeds=5, model_type='prop_score', best_model=True)
+
     estimator = IPWEstimator(prop_score_model=results['best_model'])
-    metrics = calculate_metrics(lin_gen_model, estimator, n_seeds=5, conf_ints=False)
-    metrics_list.append({'name': name, **metrics})
+    metrics_list.append({'name': name,
+                         **calculate_metrics(lin_gen_model, estimator, n_seeds=5, conf_ints=False)})
+
+    estimator = IPWEstimator(prop_score_model=results['best_model'], trim_weights=True)
+    metrics_list.append({'name': name + '_trim_weights',
+                         **calculate_metrics(lin_gen_model, estimator, n_seeds=5, conf_ints=False)})
+
+    estimator = IPWEstimator(prop_score_model=results['best_model'], stabilized=True)
+    metrics_list.append({'name': name + '_stabilized_weights',
+                         **calculate_metrics(lin_gen_model, estimator, n_seeds=5, conf_ints=False)})
+
+    estimator = IPWEstimator(prop_score_model=results['best_model'], trim_weights=True, stabilized=True)
+    metrics_list.append({'name': name + '_trim_stabilized_weights',
+                         **calculate_metrics(lin_gen_model, estimator, n_seeds=5, conf_ints=False)})
     print(type(prop_score_model))
     print(metrics)
 ipw_df = pd.DataFrame(metrics_list)
