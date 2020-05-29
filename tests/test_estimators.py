@@ -6,6 +6,7 @@ from causallib.estimation import IPW, Standardization
 from causal_estimators.ipw_estimator import IPWEstimator
 from causal_estimators.standardization_estimator import \
     StandardizationEstimator, StratifiedStandardizationEstimator
+from causal_estimators.doubly_robust_estimator import DoublyRobustEstimator, DOUBLY_ROBUST_TYPES
 from utils import class_name
 
 from sklearn.linear_model import LogisticRegression, LinearRegression, Lasso, Ridge, ElasticNet
@@ -187,3 +188,127 @@ def test_stratified_standardization_different_models(standardization_estimator):
     outcome_models = {0: LinearRegression(), 1: ElasticNet(alpha=.01)}
     ate_est = standardization_estimator(StratifiedStandardizationEstimator, outcome_models).estimate_ate()
     assert ate_est == approx(ATE, rel=.1)
+
+
+@pytest.mark.parametrize('outcome_model', [
+    LinearRegression(),
+    Lasso(alpha=.1),
+    Ridge(alpha=.1),
+    ElasticNet(alpha=.01),
+    SVR(kernel='linear'),
+    LinearSVR(),
+    KernelRidge(alpha=.1),
+
+    # Commented for speed of tests
+    # MLPRegressor(max_iter=1000),
+    # MLPRegressor(alpha=1, max_iter=1000),
+], ids=class_name)
+@pytest.mark.parametrize('prop_score_model', [
+    LogisticRegression(penalty='l2'),
+    LogisticRegression(penalty='none'),
+    LogisticRegression(penalty='l2', solver='liblinear'),
+    LogisticRegression(penalty='l1', solver='liblinear'),
+    LogisticRegression(penalty='l1', solver='saga'),
+
+    # Below list comes from sklearn website:
+    # https://scikit-learn.org/stable/auto_examples/classification/plot_classifier_comparison.html
+    KNeighborsClassifier(3),
+    GaussianProcessClassifier(1.0 * RBF(1.0)),
+    DecisionTreeClassifier(max_depth=5),
+    RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
+    # MLPClassifier(alpha=1, max_iter=1000),
+    AdaBoostClassifier(),
+    GaussianNB(),
+    QuadraticDiscriminantAnalysis(),
+], ids=class_name)
+def test_doubly_robust_vanilla_estimate_near_ate(outcome_model, prop_score_model, linear_data):
+    w, t, y = linear_data
+    dr = DoublyRobustEstimator(outcome_model=outcome_model,
+                               prop_score_model=prop_score_model,
+                               doubly_robust_type='vanilla')
+    dr.fit(w, t, y)
+    assert dr.estimate_ate() == approx(ATE, rel=.1)
+
+
+@pytest.mark.parametrize('outcome_model', [
+    LinearRegression(),
+    Lasso(alpha=.1),
+    Ridge(alpha=.1),
+    ElasticNet(alpha=.01),
+    SVR(kernel='linear'),
+    LinearSVR(),
+    KernelRidge(alpha=.1),
+
+    # Commented for speed of tests
+    # MLPRegressor(max_iter=1000),
+    # MLPRegressor(alpha=1, max_iter=1000),
+], ids=class_name)
+@pytest.mark.parametrize('prop_score_model', [
+    LogisticRegression(penalty='l2'),
+    LogisticRegression(penalty='none'),
+    LogisticRegression(penalty='l2', solver='liblinear'),
+    LogisticRegression(penalty='l1', solver='liblinear'),
+    LogisticRegression(penalty='l1', solver='saga'),
+
+    # Below list comes from sklearn website:
+    # https://scikit-learn.org/stable/auto_examples/classification/plot_classifier_comparison.html
+    GaussianProcessClassifier(1.0 * RBF(1.0)),
+    GaussianNB(),
+    QuadraticDiscriminantAnalysis(),
+
+    # Commented because it gives bad ATE estimates
+    # AdaBoostClassifier(),
+
+    # Commented because the below give NaNs
+    # KNeighborsClassifier(3),
+    # DecisionTreeClassifier(max_depth=5),
+    # RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
+    # MLPClassifier(alpha=1, max_iter=1000),
+], ids=class_name)
+def test_doubly_robust_ipfeature_estimate_near_ate(outcome_model, prop_score_model, linear_data):
+    w, t, y = linear_data
+    dr = DoublyRobustEstimator(outcome_model=outcome_model,
+                               prop_score_model=prop_score_model,
+                               doubly_robust_type='ipfeature')
+    dr.fit(w, t, y)
+    assert dr.estimate_ate() == approx(ATE, rel=.1)
+
+
+@pytest.mark.parametrize('outcome_model', [
+    LinearRegression(),
+    Ridge(alpha=.1),
+    SVR(kernel='linear'),
+    LinearSVR(),
+    KernelRidge(alpha=.1),
+
+    # The below models' fit() methods do not support the 'sample_weight' keyword argument
+    # Lasso(alpha=.1),
+    # ElasticNet(alpha=.01),
+    # MLPRegressor(max_iter=1000),
+    # MLPRegressor(alpha=1, max_iter=1000),
+], ids=class_name)
+@pytest.mark.parametrize('prop_score_model', [
+    LogisticRegression(penalty='l2'),
+    LogisticRegression(penalty='none'),
+    LogisticRegression(penalty='l2', solver='liblinear'),
+    LogisticRegression(penalty='l1', solver='liblinear'),
+    LogisticRegression(penalty='l1', solver='saga'),
+
+    # Below list comes from sklearn website:
+    # https://scikit-learn.org/stable/auto_examples/classification/plot_classifier_comparison.html
+    KNeighborsClassifier(3),
+    GaussianProcessClassifier(1.0 * RBF(1.0)),
+    DecisionTreeClassifier(max_depth=5),
+    RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
+    # MLPClassifier(alpha=1, max_iter=1000),
+    AdaBoostClassifier(),
+    GaussianNB(),
+    QuadraticDiscriminantAnalysis(),
+], ids=class_name)
+def test_doubly_robust_joffe_estimate_near_ate(outcome_model, prop_score_model, linear_data):
+    w, t, y = linear_data
+    dr = DoublyRobustEstimator(outcome_model=outcome_model,
+                               prop_score_model=prop_score_model,
+                               doubly_robust_type='joffe')
+    dr.fit(w, t, y)
+    assert dr.estimate_ate() == approx(ATE, rel=.1)
