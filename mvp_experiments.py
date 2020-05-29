@@ -6,7 +6,8 @@ from models.linear import LinearGenModel
 from models.nonlinear import MLP, TrainingParams, MLPParams
 from evaluation import calculate_metrics
 from causal_estimators.ipw_estimator import IPWEstimator
-from causal_estimators.standardization_estimator import StandardizationEstimator
+from causal_estimators.standardization_estimator import \
+    StandardizationEstimator, StratifiedStandardizationEstimator
 from evaluation import run_model_cv
 
 from sklearn.linear_model import LogisticRegression, LinearRegression, Lasso, Ridge, ElasticNet
@@ -106,6 +107,16 @@ for name, outcome_model, param_grid in outcome_model_grid:
     print(type(outcome_model))
     print(metrics)
 standardization_df = pd.DataFrame(metrics_list)
+
+metrics_list = []
+for name, outcome_model, param_grid in outcome_model_grid:
+    results = run_model_cv(lin_gen_model, outcome_model, param_grid=param_grid, n_seeds=5, model_type='outcome', best_model=True)
+    estimator = StratifiedStandardizationEstimator(outcome_model=results['best_model'])
+    metrics = calculate_metrics(lin_gen_model, estimator, n_seeds=5, conf_ints=False)
+    metrics_list.append({'name': name, **metrics})
+    print(type(outcome_model))
+    print(metrics)
+stratified_standardization_df = pd.DataFrame(metrics_list)
 
 metrics_list = []
 for name, prop_score_model, param_grid in prop_score_model_grid:

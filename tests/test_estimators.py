@@ -4,7 +4,8 @@ import pandas as pd
 
 from causallib.estimation import IPW, Standardization
 from causal_estimators.ipw_estimator import IPWEstimator
-from causal_estimators.standardization_estimator import StandardizationEstimator
+from causal_estimators.standardization_estimator import \
+    StandardizationEstimator, StratifiedStandardizationEstimator
 from utils import class_name
 
 from sklearn.linear_model import LogisticRegression, LinearRegression, Lasso, Ridge, ElasticNet
@@ -130,9 +131,9 @@ def test_standardization_matches_causallib(linear_data):
 @pytest.fixture(scope='module')
 def standardization_estimator(linear_data):
 
-    def parametric_estimator(outcome_model):
+    def parametric_estimator(nonparam_estimator, outcome_model):
         w, t, y = linear_data
-        standardization_estimator = StandardizationEstimator(outcome_model=outcome_model)
+        standardization_estimator = nonparam_estimator(outcome_model)
         standardization_estimator.fit(w, t, y)
         return standardization_estimator
 
@@ -151,7 +152,7 @@ def standardization_estimator(linear_data):
     MLPRegressor(alpha=1, max_iter=1000),
 ], ids=class_name)
 def test_standardization_estimate_near_ate(standardization_estimator, outcome_model):
-    ate_est = standardization_estimator(outcome_model).estimate_ate()
+    ate_est = standardization_estimator(StandardizationEstimator, outcome_model).estimate_ate()
     assert ate_est == approx(ATE, rel=.1)
 
 
@@ -163,5 +164,26 @@ def test_standardization_estimate_near_ate(standardization_estimator, outcome_mo
     AdaBoostRegressor(),
 ], ids=class_name)
 def test_standardization_estimate_nearish_ate(standardization_estimator, outcome_model):
-    ate_est = standardization_estimator(outcome_model).estimate_ate()
+    ate_est = standardization_estimator(StandardizationEstimator, outcome_model).estimate_ate()
     assert ate_est == approx(ATE, rel=.25)
+
+
+@pytest.mark.parametrize('outcome_model', [
+    LinearRegression(),
+    Lasso(alpha=.1),
+    Ridge(alpha=.1),
+    ElasticNet(alpha=.01),
+    SVR(kernel='linear'),
+    LinearSVR(),
+    MLPRegressor(max_iter=1000),
+    MLPRegressor(alpha=1, max_iter=1000),
+], ids=class_name)
+def test_stratified_standardization_estimate_near_ate(standardization_estimator, outcome_model):
+    ate_est = standardization_estimator(StratifiedStandardizationEstimator, outcome_model).estimate_ate()
+    assert ate_est == approx(ATE, rel=.1)
+
+
+def test_stratified_standardization_different_models(standardization_estimator):
+    outcome_models = {0: LinearRegression(), 1: ElasticNet(alpha=.01)}
+    ate_est = standardization_estimator(StratifiedStandardizationEstimator, outcome_models).estimate_ate()
+    assert ate_est == approx(ATE, rel=.1)
