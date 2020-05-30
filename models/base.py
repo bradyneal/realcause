@@ -40,6 +40,23 @@ class BaseGenModelMeta(ABCMeta):
         return obj
 
 
+# Todo: move somewhere else?
+class Preprocess(object):
+    def transform(self, x):
+        raise(NotImplementedError)
+
+    def untransform(self, x):
+        raise(NotImplementedError)
+
+
+class PlaceHolderTransform(Preprocess):
+    def transform(self, x):
+        return x
+
+    def untransform(self, x):
+        return x
+
+
 class BaseGenModel(object, metaclass=BaseGenModelMeta):
     """
     Abstract class for generative models. Implementations of 2 methods and
@@ -57,23 +74,50 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
     abstract_attributes = ['w', 't', 'y']
 
-    def __init__(self, w, t, y, seed=SEED):
-        self.w = w
-        self.t = t
-        self.y = y
+    def __init__(self, w, t, y,
+                 seed=SEED,
+                 w_transform: Preprocess = PlaceHolderTransform(),
+                 t_transform: Preprocess = PlaceHolderTransform(),
+                 y_transform: Preprocess = PlaceHolderTransform()
+                 ):
+        self.w = w_transform.transform(w)
+        self.t = t_transform.transform(t)
+        self.y = y_transform.transform(y)
+        self.w_transform = w_transform
+        self.t_transform = t_transform
+        self.y_transform = y_transform
         if seed is not None:
             self.set_seed(seed)
 
-    def sample_w(self):
-        return self.w
+    def sample_w(self, untransform=True):
+        if untransform:
+            return self.w_transform.untransform(self.w)
+        else:
+            return self.w
 
     @abstractmethod
-    def sample_t(self, w):
+    def _sample_t(self, w):
         pass
 
     @abstractmethod
-    def sample_y(self, t, w):
+    def _sample_y(self, t, w):
         pass
+
+    def sample_t(self, w, untransform=True):
+        if w is None:
+            w = self.sample_w()
+        if untransform:
+            return self.t_transform.untransform(self._sample_t(w))
+        else:
+            return self._sample_t(w)
+
+    def sample_y(self, t, w, untransform=True):
+        if w is None:
+            w = self.sample_w()
+        if untransform:
+            return self.y_transform.untransform(self._sample_y(t, w))
+        else:
+            return self._sample_y(t, w)
 
     def set_seed(self, seed=SEED):
         torch.manual_seed(seed)

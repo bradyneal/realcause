@@ -47,9 +47,7 @@ class LinearGenModel(BaseGenModel):
         mean = self._pad_with_ones(X).dot(beta)
         return self.gaussian_sampler(mean, sigma)
 
-    def sample_t(self, w=None):
-        if w is None:
-            w = self.sample_w()
+    def _sample_t(self, w=None):
         t_samples = self.linear_gaussian_sampler(
             w,
             self.beta_t_w,
@@ -59,9 +57,7 @@ class LinearGenModel(BaseGenModel):
             t_samples = t_samples > .5
         return t_samples
 
-    def sample_y(self, t, w=None):
-        if w is None:
-            w = self.sample_w()
+    def _sample_y(self, t, w=None):
         y_samples = self.linear_gaussian_sampler(
             np.concatenate([w, t], 1),
             self.beta_y_tw,

@@ -1,5 +1,5 @@
 import numpy as np
-from models.base import BaseGenModel
+from models.base import BaseGenModel, Preprocess, PlaceHolderTransform
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -93,21 +93,6 @@ class TrainingParams:
         self.optim_args = optim_args
 
 
-class Preprocess(object):
-    def transform(self, x):
-        raise(NotImplementedError)
-
-    def untransform(self, x):
-        raise(NotImplementedError)
-
-
-class PlaceHolderTransform(Preprocess):
-    def transform(self, x):
-        return x
-
-    def untransform(self, x):
-        return x
-
 class Centering(Preprocess):
     def __init__(self, data=None, mean=None):
         assert data is not None or mean is not None, 'at least one of data or mean must be provided'
@@ -185,6 +170,7 @@ class CausalDataset(data.Dataset):
         self.t = t.astype(ttype)
         self.y = y.astype(ytype)
 
+        # todo: no need anymore, remove?
         self.w_transform = w_transform
         self.t_transform = t_transform
         self.y_transform = y_transform
@@ -214,7 +200,11 @@ class MLP(BaseGenModel):
                  t_transform:Preprocess=PlaceHolderTransform(),
                  y_transform:Preprocess=PlaceHolderTransform()
                  ):
-        super(MLP, self).__init__(*self._matricize((w, t, y)), seed=seed)
+        super(MLP, self).__init__(*self._matricize((w, t, y)), seed=seed,
+                                  w_transform=w_transform,
+                                  t_transform=t_transform,
+                                  y_transform=y_transform)
+
         self.binary_treatment = binary_treatment
         self.outcome_distribution = outcome_distribution
         self.outcome_min = outcome_min
@@ -247,18 +237,14 @@ class MLP(BaseGenModel):
 
         # TODO: binary treatment -> long data type
         self.data_loader = data.DataLoader(CausalDataset(self.w, self.t, self.y,
-                                                         w_transform=w_transform,
-                                                         t_transform=t_transform,
-                                                         y_transform=y_transform),
+                                                         # w_transform=w_transform,
+                                                         # t_transform=t_transform,
+                                                         # y_transform=y_transform
+                                                         ),
                                            batch_size=training_params.batch_size,
                                            shuffle=True)
 
         self._train()
-
-        # todo: remove this?
-        self.w = w_transform.transform(self.w)
-        self.y = y_transform.transform(self.y)
-        self.t = t_transform.transform(self.t)
 
     def _matricize(self, data):
         return [np.reshape(d, [d.shape[0], -1]) for d in data]
@@ -309,9 +295,7 @@ class MLP(BaseGenModel):
                     print("Iteration {}: {}".format(c, loss))
                 c += 1
 
-    def sample_t(self, w=None):
-        if w is None:
-            w = self.sample_w()
+    def _sample_t(self, w=None):
         t_ = self.mlp_t_w(torch.from_numpy(w).float())
         if self.binary_treatment:
             t_samples = (torch.sigmoid(t_) > torch.rand_like(t_)).float().data.cpu().numpy()
@@ -319,9 +303,7 @@ class MLP(BaseGenModel):
             t_samples = gaussian_sampler(*torch.chunk(t_, chunks=2, dim=1)).data.cpu().numpy()
         return t_samples
 
-    def sample_y(self, t, w=None):
-        if w is None:
-            w = self.sample_w()
+    def _sample_y(self, t, w=None):
         wt = np.concatenate([w, t], 1)
         y_ = self.mlp_y_tw(torch.from_numpy(wt).float())
         if self.outcome_distribution in ['normal', 'gaussian']:
