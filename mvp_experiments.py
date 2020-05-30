@@ -24,9 +24,9 @@ from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
 from data.synthetic import generate_wty_linear_multi_w_data
 
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.model_selection import GridSearchCV
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.model_selection import cross_val_score, cross_validate
 
 
@@ -41,10 +41,18 @@ Ks = {'n_neighbors': [1, 2, 3, 5, 10, 15, 20, 30, 40, 50]}
 
 outcome_model_grid = [
     ('LinearRegression', LinearRegression(), {}),
+    ('LinearRegression_interact',
+     make_pipeline(PolynomialFeatures(degree=2, interaction_only=True),
+                   LinearRegression()),
+     {}),
+    ('LinearRegression_degree2',
+     make_pipeline(PolynomialFeatures(degree=2), LinearRegression()), {}),
+    ('LinearRegression_degree3',
+     make_pipeline(PolynomialFeatures(degree=3), LinearRegression()), {}),
+
     ('Lasso', Lasso(), alphas),
     ('Ridge', Ridge(), alphas),
     ('ElasticNet', ElasticNet(), alphas),
-
     ('SVM_rbf', SVR(kernel='rbf'), d_Cs),
     ('SVM_sigmoid', SVR(kernel='sigmoid'), d_Cs),
     ('LinearSVM', LinearSVR(), d_Cs),
