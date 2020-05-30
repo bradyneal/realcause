@@ -105,7 +105,8 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
     def sample_t(self, w, untransform=True):
         if w is None:
-            w = self.sample_w(untransform=untransform)
+            # note: input to the model need to be transformed
+            w = self.sample_w(untransform=False)
         if untransform:
             return self.t_transform.untransform(self._sample_t(w))
         else:
@@ -113,7 +114,8 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
     def sample_y(self, t, w, untransform=True):
         if w is None:
-            w = self.sample_w(untransform=untransform)
+            # note: input to the model need to be transformed
+            w = self.sample_w(untransform=False)
         if untransform:
             return self.y_transform.untransform(self._sample_y(t, w))
         else:
@@ -123,13 +125,16 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         torch.manual_seed(seed)
         np.random.seed(seed)
 
-    def sample(self, seed=None):
+    def sample(self, seed=None, untransform=True):
         if seed is not None:
             self.set_seed(seed)
-        w = self.sample_w()
-        t = self.sample_t(w)
-        y = self.sample_y(t, w)
-        return w, t, y
+        w = self.sample_w(untransform=False)
+        t = self.sample_t(w, untransform=False)
+        y = self.sample_y(t, w, untransform=False)
+        if untransform:
+            return self.w_transform.untransform(w), self.t_transform.untransform(t), self.y_transform.untransform(y)
+        else:
+            return w, t, y
 
     def sample_interventional(self, t, w=None):
         if w is None:
