@@ -105,7 +105,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
     def sample_t(self, w, untransform=True):
         if w is None:
-            w = self.sample_w()
+            w = self.sample_w(untransform=untransform)
         if untransform:
             return self.t_transform.untransform(self._sample_t(w))
         else:
@@ -113,7 +113,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
     def sample_y(self, t, w, untransform=True):
         if w is None:
-            w = self.sample_w()
+            w = self.sample_w(untransform=untransform)
         if untransform:
             return self.y_transform.untransform(self._sample_y(t, w))
         else:
