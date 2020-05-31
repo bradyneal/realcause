@@ -138,7 +138,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
     def sample_interventional(self, t, w=None):
         if w is None:
-            w = self.sample_w()
+            w = self.sample_w(untransform=False)
         if not isinstance(w, np.ndarray):
             raise ValueError('Unsupported data type: {} ... only numpy is currently supported'.format(type(w)))
         if isinstance(t, Number):
@@ -154,7 +154,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
     def ite(self, t1=1, t0=0, w=None):
         if w is None:
-            w = self.sample_w()
+            w = self.sample_w(untransform=False)
         return self.sample_interventional(t=t1, w=w) - self.sample_interventional(t=t0, w=w)
 
     def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True,
