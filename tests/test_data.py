@@ -1,4 +1,5 @@
 import pytest
+from pytest import approx
 import numpy as np
 import pandas as pd
 import torch
@@ -44,51 +45,143 @@ def test_lalonde_defaults():
 
 
 def test_lalonde_dw_rct():
-    (w, t, y) = load_lalonde(rct_version='dw', rct=True, data_format=TORCH)
+    (w, t, y) = load_lalonde(rct_version='dw', rct=True)
     n = 260 + 185
     assert w.shape == (n, 8)
     assert t.shape == (n,)
-    assert y.shape ==(n,)
+    assert y.shape == (n,)
+    ate = y[t == 1].mean() - y[t == 0].mean()
+    assert round(ate) == 1794
 
 
 def test_lalonde_original_rct():
-    (w, t, y) = load_lalonde(rct_version='lalonde', rct=True, data_format=TORCH)
+    (w, t, y) = load_lalonde(rct_version='lalonde', rct=True)
     n = 425 + 297
     assert w.shape == (n, 7)
     assert t.shape == (n,)
-    assert y.shape ==(n,)
+    assert y.shape == (n,)
+    ate = y[t == 1].mean() - y[t == 0].mean()
+    assert round(ate) == 886
 
 
 def test_lalonde_psid1():
-    (w, t, y) = load_lalonde(rct_version='dw', obs_version='psid1', data_format=TORCH)
+    (w, t, y) = load_lalonde(rct_version='dw', obs_version='psid1')
     n = 2490 + 185
     assert w.shape == (n, 8)
     assert t.shape == (n,)
-    assert y.shape ==(n,)
+    assert y.shape == (n,)
+    ate = y[t == 1].mean() - y[t == 0].mean()
+    assert round(ate) == -15205
 
 
 def test_lalonde_cps1():
-    (w, t, y) = load_lalonde(rct_version='dw', obs_version='cps1', data_format=TORCH)
+    (w, t, y) = load_lalonde(rct_version='dw', obs_version='cps1')
     n = 15992 + 185
     assert w.shape == (n, 8)
     assert t.shape == (n,)
     assert y.shape == (n,)
+    ate = y[t == 1].mean() - y[t == 0].mean()
+    assert round(ate) == -8498
 
 
 def test_lalonde_original_psid1():
-    (w, t, y) = load_lalonde(rct_version='lalonde', obs_version='psid1', data_format=TORCH)
+    (w, t, y) = load_lalonde(rct_version='lalonde', obs_version='psid1')
     n = 2490 + 297
     assert w.shape == (n, 7)
     assert t.shape == (n,)
     assert y.shape == (n,)
+    ate = y[t == 1].mean() - y[t == 0].mean()
+    assert round(ate) == -15578
 
 
 def test_lalonde_original_cps1():
-    (w, t, y) = load_lalonde(rct_version='lalonde', obs_version='cps1', data_format=TORCH)
+    (w, t, y) = load_lalonde(rct_version='lalonde', obs_version='cps1')
     n = 15992 + 297
     assert w.shape == (n, 7)
     assert t.shape == (n,)
     assert y.shape == (n,)
+    ate = y[t == 1].mean() - y[t == 0].mean()
+    assert round(ate) == -8870
+
+
+def test_lalonde_psid2():
+    (w, t, y) = load_lalonde(rct_version='dw', obs_version='psid2')
+    n = 253 + 185
+    assert w.shape == (n, 8)
+    assert t.shape == (n,)
+    assert y.shape == (n,)
+    ate = y[t == 1].mean() - y[t == 0].mean()
+    assert round(ate) == -3647
+
+
+def test_lalonde_cps2():
+    (w, t, y) = load_lalonde(rct_version='dw', obs_version='cps2')
+    n = 2369 + 185
+    assert w.shape == (n, 8)
+    assert t.shape == (n,)
+    assert y.shape == (n,)
+    ate = y[t == 1].mean() - y[t == 0].mean()
+    assert round(ate) == -3822
+
+
+def test_lalonde_original_psid2():
+    (w, t, y) = load_lalonde(rct_version='lalonde', obs_version='psid2')
+    n = 253 + 297
+    assert w.shape == (n, 7)
+    assert t.shape == (n,)
+    assert y.shape == (n,)
+    ate = y[t == 1].mean() - y[t == 0].mean()
+    assert round(ate) == -4020
+
+
+def test_lalonde_original_cps2():
+    (w, t, y) = load_lalonde(rct_version='lalonde', obs_version='cps2')
+    n = 2369 + 297
+    assert w.shape == (n, 7)
+    assert t.shape == (n,)
+    assert y.shape == (n,)
+    ate = y[t == 1].mean() - y[t == 0].mean()
+    assert round(ate) == -4195
+
+
+def test_lalonde_psid3():
+    (w, t, y) = load_lalonde(rct_version='dw', obs_version='psid3')
+    n = 128 + 185
+    assert w.shape == (n, 8)
+    assert t.shape == (n,)
+    assert y.shape == (n,)
+    ate = y[t == 1].mean() - y[t == 0].mean()
+    assert round(ate) == 1070
+
+
+def test_lalonde_cps3():
+    (w, t, y) = load_lalonde(rct_version='dw', obs_version='cps3')
+    n = 429 + 185
+    assert w.shape == (n, 8)
+    assert t.shape == (n,)
+    assert y.shape == (n,)
+    ate = y[t == 1].mean() - y[t == 0].mean()
+    assert round(ate) == -635
+
+
+def test_lalonde_original_psid3():
+    (w, t, y) = load_lalonde(rct_version='lalonde', obs_version='psid3')
+    n = 128 + 297
+    assert w.shape == (n, 7)
+    assert t.shape == (n,)
+    assert y.shape == (n,)
+    ate = y[t == 1].mean() - y[t == 0].mean()
+    assert round(ate) == 697
+
+
+def test_lalonde_original_cps3():
+    (w, t, y) = load_lalonde(rct_version='lalonde', obs_version='cps3')
+    n = 429 + 297
+    assert w.shape == (n, 7)
+    assert t.shape == (n,)
+    assert y.shape == (n,)
+    ate = y[t == 1].mean() - y[t == 0].mean()
+    assert round(ate) == -1008
 
 
 def test_lalonde_random_outcome_data_pandas():

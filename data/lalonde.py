@@ -99,7 +99,7 @@ def load_lalonde_obs(version=PSID):
         'psid': 'psid_controls.dta',
         'psid1': 'psid_controls.dta',
         'psid2': 'psid_controls2.dta',
-        'psid3': 'psid_control3.dta',
+        'psid3': 'psid_controls3.dta',
         'cps': 'cps_control.dta',
         'cps1': 'cps_controls.dta',
         'cps2': 'cps_controls2.dta',
