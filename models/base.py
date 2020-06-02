@@ -103,6 +103,10 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
     def _sample_y(self, t, w):
         pass
 
+    @abstractmethod
+    def mean_y(self, t, w):
+        pass
+
     def sample_t(self, w, untransform=True):
         if w is None:
             # note: input to the model need to be transformed
