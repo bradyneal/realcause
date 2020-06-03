@@ -14,6 +14,7 @@ dependencies:
   - seaborn
   - statsmodels
   - torchvision
+  - rpy2
   - r-base        # not necessary if not using whynot_estimators
   - r-essentials  # not necessary if not using whynot_estimators
   - pip:

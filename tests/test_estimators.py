@@ -7,6 +7,7 @@ from causal_estimators.ipw_estimator import IPWEstimator
 from causal_estimators.standardization_estimator import \
     StandardizationEstimator, StratifiedStandardizationEstimator
 from causal_estimators.doubly_robust_estimator import DoublyRobustEstimator, DOUBLY_ROBUST_TYPES
+from causal_estimators.matching import MatchingEstimator
 from utils import class_name
 
 from sklearn.linear_model import LogisticRegression, LinearRegression, Lasso, Ridge, ElasticNet
@@ -30,6 +31,12 @@ N = 50
 
 @pytest.fixture(scope='module')
 def linear_data():
+    w, t, y = generate_wty_linear_multi_w_data(n=N, wdim=5, binary_treatment=True, delta=ATE)
+    return w, t, y
+
+
+@pytest.fixture(scope='module')
+def linear_data_pandas():
     w, t, y = generate_wty_linear_multi_w_data(n=N, wdim=5, binary_treatment=True, delta=ATE, data_format='pandas')
     return w, t, y
 
@@ -60,11 +67,11 @@ def ipw_estimator(request, linear_data):
     return ipw
 
 
-def test_ipw_matches_causallib(linear_data):
-    w, t, y = linear_data
+def test_ipw_matches_causallib(linear_data_pandas):
+    w, t, y = linear_data_pandas
     causallib_ipw = IPW(learner=LogisticRegression())
     causallib_ipw.fit(w, t)
-    potential_outcomes = causallib_ipw .estimate_population_outcome(w, t, y, treatment_values=[0, 1])
+    potential_outcomes = causallib_ipw.estimate_population_outcome(w, t, y, treatment_values=[0, 1])
     causallib_effect = causallib_ipw.estimate_effect(potential_outcomes[1], potential_outcomes[0])[0]
 
     ipw = IPWEstimator()
@@ -114,8 +121,8 @@ def test_ipw_numpy_data():
     assert ipw.estimate_ate() == approx(ATE, rel=.2)
 
 
-def test_standardization_matches_causallib(linear_data):
-    w, t, y = linear_data
+def test_standardization_matches_causallib(linear_data_pandas):
+    w, t, y = linear_data_pandas
     causallib_standardization = Standardization(LinearRegression())
     causallib_standardization.fit(w, t, y)
     individual_potential_outcomes = causallib_standardization.estimate_individual_outcome(w, t)
@@ -312,3 +319,27 @@ def test_doubly_robust_joffe_estimate_near_ate(outcome_model, prop_score_model, 
                                doubly_robust_type='joffe')
     dr.fit(w, t, y)
     assert dr.estimate_ate() == approx(ATE, rel=.1)
+
+
+def test_vanilla_matching(linear_data):
+    w, t, y = linear_data
+    match = MatchingEstimator()
+    match.fit(w, t, y)
+    assert match.estimate_ate() == approx(ATE, abs=1)
+    lower, upper = match.ate_conf_int()
+    assert lower < ATE < upper
+
+
+@pytest.mark.parametrize('prop_score_model', [
+    LogisticRegression(penalty='l2'),
+    LogisticRegression(penalty='none'),
+    GaussianNB(),
+    QuadraticDiscriminantAnalysis(),
+],  ids=class_name)
+def test_prop_score_matching(prop_score_model, linear_data):
+    w, t, y = linear_data
+    match = MatchingEstimator(prop_score_model=prop_score_model)
+    match.fit(w, t, y)
+    assert match.estimate_ate() == approx(ATE, abs=1)
+    lower, upper = match.ate_conf_int()
+    assert lower < ATE < upper
