@@ -338,9 +338,10 @@ def test_vanilla_matching(weighting, linear_data):
     GaussianNB(),
     QuadraticDiscriminantAnalysis(),
 ],  ids=class_name)
-def test_prop_score_matching(prop_score_model, linear_data):
+@pytest.mark.parametrize('weighting', [INVERSE_VAR, MAHALANOBIS, GENETIC])
+def test_prop_score_matching(prop_score_model, weighting, linear_data):
     w, t, y = linear_data
-    match = MatchingEstimator(prop_score_model=prop_score_model)
+    match = MatchingEstimator(prop_score_model=prop_score_model, weighting=weighting)
     match.fit(w, t, y)
     assert match.estimate_ate() == approx(ATE, abs=1)
     lower, upper = match.ate_conf_int()
