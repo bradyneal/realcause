@@ -1,6 +1,7 @@
 name: gen
 channels:
   - defaults
+  - conda-forge
   - pytorch
 dependencies:
   - cython        # needs to be installed before POT
@@ -15,8 +16,9 @@ dependencies:
   - statsmodels
   - torchvision
   - rpy2
-  - r-base        # not necessary if not using whynot_estimators
-  - r-essentials  # not necessary if not using whynot_estimators
+  - r-base
+  - r-essentials
+  - r-matching
   - pip:
     - causallib
     - git+git://github.com/bradyneal/torch-two-sample
