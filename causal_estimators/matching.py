@@ -15,14 +15,27 @@ from exceptions import NotFittedError
 
 MATCHING = 'Matching'
 
+INVERSE_VAR = 'inverse_var'
+MAHALANOBIS = 'mahalanobis'
+GENETIC = 'genetic'
+WEIGHT_STR_TO_INDEX = {
+    INVERSE_VAR: 1,
+    MAHALANOBIS: 2,
+    GENETIC: 3,
+}
+
 
 class MatchingEstimator(BaseEstimator):
 
-    def __init__(self, prop_score_model=None, estimand='ATE'):
+    def __init__(self, prop_score_model=None, estimand='ATE', weighting=INVERSE_VAR):
         self.use_prop_scores = prop_score_model is not None
         self.prop_score_model = prop_score_model
         self.estimand = estimand
+        self.weighting = weighting.lower()
         self.match_out = None
+        if self.weighting not in WEIGHT_STR_TO_INDEX.keys():
+            raise ValueError('Invalid weighting: {} ... Valid options: {}'
+                             .format(weighting, list(WEIGHT_STR_TO_INDEX.keys())))
 
     def fit(self, w, t, y):
         if self.use_prop_scores:
@@ -30,7 +43,12 @@ class MatchingEstimator(BaseEstimator):
             match_var = self.prop_score_model.predict(w)
         else:
             match_var = w
-        self.match_out = match(Y=y, Tr=t, X=match_var, estimand=self.estimand)
+        weight_idx = WEIGHT_STR_TO_INDEX[self.weighting]
+        weight_matrix = None
+        if self.weighting == GENETIC:
+            raise NotImplementedError
+        self.match_out = match(Y=y, Tr=t, X=match_var, estimand=self.estimand,
+                               Weight=weight_idx, Weight_matrix=weight_matrix)
 
     def estimate_ate(self, t1=1, t0=0, w=None):
         self._error_if_not_fitted()
@@ -55,7 +73,7 @@ class MatchingEstimator(BaseEstimator):
             raise NotFittedError()
 
 
-def match(Y, Tr, X, Z=None, V=None, estimand="ATT", M=1,
+def match(Y, Tr, X, Z=None, V=None, estimand='ATT', M=1,
           BiasAdjust=False, exact=None, caliper=None, replace=True, ties=True,
           CommonSupport=False, Weight=1, Weight_matrix=None, weights=None,
           Var_calc=0, sample=False, restrict=None, match_out=None,
@@ -76,7 +94,7 @@ def match(Y, Tr, X, Z=None, V=None, estimand="ATT", M=1,
     if not rpackages.isinstalled(MATCHING):
         utils = importr('utils')
         utils.chooseCRANmirror(ind=1)  # select the first mirror in the list
-        utils.install_packages(StrVector(MATCHING))
+        utils.install_packages(MATCHING)
     matching = importr(MATCHING)
 
     # Set argument defaults that were not already set
@@ -106,7 +124,7 @@ def match(Y, Tr, X, Z=None, V=None, estimand="ATT", M=1,
 
 if __name__ == '__main__':
     w, t, y = generate_wty_linear_multi_w_data(100, wdim=5, binary_treatment=True, delta=5)
-    m = MatchingEstimator()
+    m = MatchingEstimator(weighting=MAHALANOBIS)
     m.fit(w, t, y)
     est = m.estimate_ate()
     conf_int = m.ate_conf_int()

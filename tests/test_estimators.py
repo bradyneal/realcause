@@ -7,7 +7,7 @@ from causal_estimators.ipw_estimator import IPWEstimator
 from causal_estimators.standardization_estimator import \
     StandardizationEstimator, StratifiedStandardizationEstimator
 from causal_estimators.doubly_robust_estimator import DoublyRobustEstimator, DOUBLY_ROBUST_TYPES
-from causal_estimators.matching import MatchingEstimator
+from causal_estimators.matching import MatchingEstimator, INVERSE_VAR, MAHALANOBIS
 from utils import class_name
 
 from sklearn.linear_model import LogisticRegression, LinearRegression, Lasso, Ridge, ElasticNet
@@ -321,12 +321,14 @@ def test_doubly_robust_joffe_estimate_near_ate(outcome_model, prop_score_model, 
     assert dr.estimate_ate() == approx(ATE, rel=.1)
 
 
-def test_vanilla_matching(linear_data):
+@pytest.mark.parametrize('weighting', [INVERSE_VAR, MAHALANOBIS])
+def test_vanilla_matching(weighting, linear_data):
     w, t, y = linear_data
-    match = MatchingEstimator()
+    match = MatchingEstimator(weighting=weighting)
     match.fit(w, t, y)
     assert match.estimate_ate() == approx(ATE, abs=1)
     lower, upper = match.ate_conf_int()
+    print(match.estimate_ate(), (lower, upper))
     assert lower < ATE < upper
 
 
