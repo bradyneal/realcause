@@ -3,6 +3,7 @@ channels:
   - defaults
   - conda-forge
   - pytorch
+  - r
 dependencies:
   - cython        # needs to be installed before POT
   - matplotlib
@@ -18,6 +19,7 @@ dependencies:
   - rpy2
   - r-base
   - r-essentials
+  - r-rgenoud
   - r-matching
   - pip:
     - causallib

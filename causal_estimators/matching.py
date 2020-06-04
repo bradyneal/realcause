@@ -14,6 +14,7 @@ from data.synthetic import generate_wty_linear_multi_w_data
 from exceptions import NotFittedError
 
 MATCHING = 'Matching'
+RGENOUD = 'rgenoud'
 
 INVERSE_VAR = 'inverse_var'
 MAHALANOBIS = 'mahalanobis'
@@ -46,7 +47,7 @@ class MatchingEstimator(BaseEstimator):
         weight_idx = WEIGHT_STR_TO_INDEX[self.weighting]
         weight_matrix = None
         if self.weighting == GENETIC:
-            raise NotImplementedError
+            weight_matrix = gen_match(Tr=t, X=match_var)
         self.match_out = match(Y=y, Tr=t, X=match_var, estimand=self.estimand,
                                Weight=weight_idx, Weight_matrix=weight_matrix)
 
@@ -122,9 +123,22 @@ def match(Y, Tr, X, Z=None, V=None, estimand='ATT', M=1,
                           tolerance=tolerance, version=version)
 
 
+def gen_match(Tr, X, estimand='ATT'):
+    # Install the Matching and rgenoud R packages, if not already installed
+    to_install = [x for x in [MATCHING, RGENOUD] if not rpackages.isinstalled(x)]
+    if len(to_install) > 0:
+        utils = importr('utils')
+        utils.chooseCRANmirror(ind=1)  # select the first mirror in the list
+        utils.install_packages(StrVector(to_install))
+    matching = importr(MATCHING)    # import Matching R package
+    importr(RGENOUD)
+
+    return matching.GenMatch(Tr=Tr, X=X, estimand=estimand)
+
+
 if __name__ == '__main__':
     w, t, y = generate_wty_linear_multi_w_data(100, wdim=5, binary_treatment=True, delta=5)
-    m = MatchingEstimator(weighting=MAHALANOBIS)
+    m = MatchingEstimator(weighting=GENETIC)
     m.fit(w, t, y)
     est = m.estimate_ate()
     conf_int = m.ate_conf_int()
