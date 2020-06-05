@@ -20,7 +20,7 @@ class BaseGenModelMeta(ABCMeta):
     """
     Forces subclasses to implement abstract_attributes
     """
-    required_attributes = []
+    abstract_attributes = []
 
     def __call__(cls, *args, **kwargs):
         obj = super(BaseGenModelMeta, cls).__call__(*args, **kwargs)
@@ -72,7 +72,8 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         y - outcomes from real data
     """
 
-    abstract_attributes = ['w', 't', 'y']
+    abstract_attributes = ['w', 't', 'y',
+                           'w_transformed', 't_transformed', 'y_transformed']
 
     def __init__(self, w, t, y,
                  seed=SEED,
@@ -80,9 +81,12 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
                  t_transform: Preprocess = PlaceHolderTransform(),
                  y_transform: Preprocess = PlaceHolderTransform()
                  ):
-        self.w = w_transform.transform(w)
-        self.t = t_transform.transform(t)
-        self.y = y_transform.transform(y)
+        self.w = w
+        self.t = t
+        self.y = y
+        self.w_transformed = w_transform.transform(w)
+        self.t_transformed = t_transform.transform(t)
+        self.y_transformed = y_transform.transform(y)
         self.w_transform = w_transform
         self.t_transform = t_transform
         self.y_transform = y_transform
@@ -91,9 +95,9 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
     def sample_w(self, untransform=True):
         if untransform:
-            return self.w_transform.untransform(self.w)
-        else:
             return self.w
+        else:
+            return self.w_transformed
 
     @abstractmethod
     def _sample_t(self, w):
@@ -103,27 +107,29 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
     def _sample_y(self, t, w):
         pass
 
-    @abstractmethod
-    def mean_y(self, t, w):
-        pass
+    # @abstractmethod
+    # def mean_y(self, t, w):
+    #     pass
 
     def sample_t(self, w, untransform=True):
         if w is None:
             # note: input to the model need to be transformed
             w = self.sample_w(untransform=False)
+        t = self._sample_t(w)
         if untransform:
-            return self.t_transform.untransform(self._sample_t(w))
+            return self.t_transform.untransform(t)
         else:
-            return self._sample_t(w)
+            return t
 
     def sample_y(self, t, w, untransform=True):
         if w is None:
             # note: input to the model need to be transformed
             w = self.sample_w(untransform=False)
+        y = self._sample_y(t, w)
         if untransform:
-            return self.y_transform.untransform(self._sample_y(t, w))
+            return self.y_transform.untransform(y)
         else:
-            return self._sample_y(t, w)
+            return y
 
     def set_seed(self, seed=SEED):
         torch.manual_seed(seed)
@@ -184,7 +190,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             name = self.__class__.__name__
 
         _, t_model, y_model = to_np_vectors(self.sample(seed=seed), thin_interval=thin_model)
-        t_true, y_true = to_np_vectors((self.t, self.y), thin_interval=thin_true)
+        t_true, y_true = to_np_vectors((self.t_transformed, self.y_transformed), thin_interval=thin_true)
 
         if joint:
             compare_joints(t_model, y_model, t_true, y_true,
@@ -204,7 +210,8 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
                                         save_qq_fname='{}_ty_marginal_qqplots.{}'.format(name, file_ext),
                                         title=title, name=name, test=test)
 
-    def get_univariate_quant_metrics(self, thin_model=None, thin_true=None, seed=None):
+    def get_univariate_quant_metrics(self, thin_model=None, thin_true=None, seed=None,
+                                     untransform=True):
         """
         Calculates quantitative metrics for the difference between p(t) and
         p_model(t) and the difference between p(y) and p_model(y)
@@ -219,8 +226,12 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             'y_wasserstein1_dist': wasserstein1 distance between y_true and y_model
         }
         """
-        _, t_model, y_model = to_np_vectors(self.sample(seed=seed), thin_interval=thin_model)
-        t_true, y_true = to_np_vectors((self.t, self.y), thin_interval=thin_true)
+        _, t_model, y_model = to_np_vectors(self.sample(seed=seed, untransform=untransform), thin_interval=thin_model)
+        if untransform:
+            t_true, y_true = to_np_vectors((self.t, self.y), thin_interval=thin_true)
+        else:
+            t_true, y_true = to_np_vectors((self.t_transformed, self.y_transformed), thin_interval=thin_true)
+
         ks_label = '_ks_pval'
         wasserstein_label = '_wasserstein1_dist'
         metrics = {
@@ -232,7 +243,8 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         return metrics
 
     def get_multivariate_quant_metrics(self, include_w=True, norm=2, k=1,
-                                       alphas=None, n_permutations=1000, seed=None):
+                                       alphas=None, n_permutations=1000,
+                                       seed=None, untransform=True):
         """
         Computes Wasserstein-1 and Wasserstein-2 distances. Also computes all the
         test statistics and p-values for the multivariate two sample tests from
@@ -266,14 +278,21 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(str(e) + ' ... Install: pip install git+git://github.com/josipd/torch-two-sample')
 
-        t_model, y_model = to_np_vectors(self.sample(seed=seed)[1:], column_vector=True)
-        t_true, y_true = to_np_vectors((self.t, self.y), column_vector=True)
+        w_model, t_model, y_model = self.sample(seed=seed, untransform=untransform)
+        t_model, y_model = to_np_vectors((t_model, y_model), column_vector=True)
+        if untransform:
+            t_true, y_true = to_np_vectors((self.t, self.y), column_vector=True)
+        else:
+            t_true, y_true = to_np_vectors((self.t_transformed, self.y_transformed), column_vector=True)
         model_samples = np.hstack((t_model, y_model))
         true_samples = np.hstack((t_true, y_true))
 
         if include_w:
-            model_samples = np.hstack((self.w, model_samples))
-            true_samples = np.hstack((self.w, true_samples))
+            model_samples = np.hstack((w_model, model_samples))
+            if untransform:
+                true_samples = np.hstack((self.w, true_samples))
+            else:
+                true_samples = np.hstack((self.w_transformed, true_samples))
 
         assert model_samples.shape[0] == true_samples.shape[0]
         n = model_samples.shape[0]

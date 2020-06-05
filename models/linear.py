@@ -20,7 +20,7 @@ class LinearGenModel(BaseGenModel):
         # where x and y are input and output respectively
         # TODO: learning different sigma for each output feature
 
-        w, t, y = self.w, self.t, self.y
+        w, t, y = self.w_transformed, self.t_transformed, self.y_transformed
 
         # t | w
         self.beta_t_w, self.sigma_t_w = self.linear_gaussian_solver(w, t, lambda0_t_w)

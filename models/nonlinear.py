@@ -210,9 +210,9 @@ class MLP(BaseGenModel):
         self.outcome_min = outcome_min
         self.outcome_max = outcome_max
 
-        self.dim_w = self.w.shape[1]
-        self.dim_t = self.t.shape[1]
-        self.dim_y = self.y.shape[1]
+        self.dim_w = self.w_transformed.shape[1]
+        self.dim_t = self.t_transformed.shape[1]
+        self.dim_y = self.y_transformed.shape[1]
 
         self.MLP_params_t_w = mlp_params_t_w
         self.MLP_params_y_tw = mlp_params_y_tw
@@ -236,7 +236,7 @@ class MLP(BaseGenModel):
         )
 
         # TODO: binary treatment -> long data type
-        self.data_loader = data.DataLoader(CausalDataset(self.w, self.t, self.y,
+        self.data_loader = data.DataLoader(CausalDataset(self.w_transformed, self.t_transformed, self.y_transformed,
                                                          # w_transform=w_transform,
                                                          # t_transform=t_transform,
                                                          # y_transform=y_transform
