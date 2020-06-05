@@ -1,7 +1,7 @@
 from sklearn.linear_model import LogisticRegression
 from causallib.estimation import IPW
-from causal_estimators.base import BaseEstimator
 
+from causal_estimators.base import BaseEstimator
 from utils import to_pandas
 
 TRIM_EPS = 0.01

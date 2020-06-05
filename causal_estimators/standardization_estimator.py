@@ -1,8 +1,7 @@
 from sklearn.linear_model import LinearRegression
-
 from causallib.estimation import Standardization, StratifiedStandardization
+
 from causal_estimators.base import BaseCausallibIteEstimator
-from utils import to_pandas
 
 
 class StandardizationEstimator(BaseCausallibIteEstimator):

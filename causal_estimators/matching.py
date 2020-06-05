@@ -4,7 +4,7 @@ import warnings
 
 import rpy2.robjects.packages as rpackages
 from rpy2.robjects.packages import importr
-from rpy2.robjects.vectors import StrVector, FloatVector
+from rpy2.robjects.vectors import StrVector
 from rpy2.robjects import r
 import rpy2.robjects as ro
 from rpy2.robjects import numpy2ri; numpy2ri.activate()

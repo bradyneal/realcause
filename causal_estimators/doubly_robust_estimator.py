@@ -1,12 +1,9 @@
 from sklearn.linear_model import LinearRegression, LogisticRegression
-
 from causallib.estimation import Standardization, StratifiedStandardization, IPW,\
     DoublyRobustVanilla, DoublyRobustIpFeature, DoublyRobustJoffe
+
 from causal_estimators.base import BaseCausallibIteEstimator
-from causal_estimators.standardization_estimator import \
-    StandardizationEstimator, StratifiedStandardizationEstimator
-from causal_estimators.ipw_estimator import IPWEstimator
-from utils import to_pandas
+
 
 STR_TO_DOUBLY_ROBUST = {
     'vanilla': DoublyRobustVanilla,
@@ -49,6 +46,3 @@ class DoublyRobustEstimator(BaseCausallibIteEstimator):
             outcome_model=standardization, weight_model=ipw)
 
         super().__init__(causallib_estimator=doubly_robust)
-
-
-DoublyRobustEstimator()
