@@ -12,11 +12,11 @@ class SLearner(BaseEconMLEstimator):
 
 class TLearner(BaseEconMLEstimator):
 
-    def __init__(self, outcome_model=LinearRegression()):
+    def __init__(self, outcome_models=LinearRegression()):
         """
 
         :param outcome_models: either a single sklearn-like model or a tuple
             of models, with one for each value of treatment:
             (T=0 model, T=1 model, ...)
         """
-        super().__init__(econml.metalearners.TLearner(outcome_model))
+        super().__init__(econml.metalearners.TLearner(outcome_models))

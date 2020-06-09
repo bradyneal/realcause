@@ -403,7 +403,7 @@ def test_slearner_ate_matches_standardization(outcome_model, linear_data):
 ], ids=class_name)
 def test_tlearner_estimate_near_ate(outcome_model, linear_data):
     w, t, y = linear_data
-    tlearner = TLearner(outcome_model=outcome_model)
+    tlearner = TLearner(outcome_models=outcome_model)
     tlearner.fit(w, t, y)
     ate_est = tlearner.estimate_ate()
     assert ate_est == approx(ATE, rel=.1)
@@ -418,14 +418,14 @@ def test_tlearner_estimate_near_ate(outcome_model, linear_data):
     # LinearSVR(),
     KernelRidge(alpha=.1),
 ], ids=class_name)
-def test_slearner_ate_matches_standardization(outcome_model, linear_data):
+def test_tlearner_ate_matches_standardization(outcome_model, linear_data):
     w, t, y = linear_data
 
-    tlearner = TLearner(outcome_model=outcome_model)
+    tlearner = TLearner(outcome_models=outcome_model)
     tlearner.fit(w, t, y)
     tlearner_ate_est = tlearner.estimate_ate()
 
-    strat_standard = StratifiedStandardizationEstimator(outcome_model=outcome_model)
+    strat_standard = StratifiedStandardizationEstimator(outcome_models=outcome_model)
     strat_standard.fit(w, t, y)
     strat_standard_ate_est = strat_standard.estimate_ate()
 
