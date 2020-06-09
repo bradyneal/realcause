@@ -9,6 +9,7 @@ from causal_estimators.standardization_estimator import \
 from causal_estimators.doubly_robust_estimator import DoublyRobustEstimator, DOUBLY_ROBUST_TYPES
 from causal_estimators.matching import MatchingEstimator, INVERSE_VAR, MAHALANOBIS, GENETIC
 from utils import class_name
+from causal_estimators.metalearners import SLearner, TLearner
 
 from sklearn.linear_model import LogisticRegression, LinearRegression, Lasso, Ridge, ElasticNet
 from sklearn.svm import SVR, LinearSVR
@@ -346,3 +347,87 @@ def test_prop_score_matching(prop_score_model, weighting, linear_data):
     assert match.estimate_ate() == approx(ATE, abs=1)
     lower, upper = match.ate_conf_int()
     assert lower < ATE < upper
+
+
+@pytest.mark.parametrize('outcome_model', [
+    LinearRegression(),
+    Lasso(alpha=.1),
+    Ridge(alpha=.1),
+    ElasticNet(alpha=.01),
+    SVR(kernel='linear'),
+    LinearSVR(),
+    KernelRidge(alpha=.1),
+    MLPRegressor(max_iter=1000),
+], ids=class_name)
+def test_slearner_estimate_near_ate(outcome_model, linear_data):
+    w, t, y = linear_data
+    slearner = SLearner(outcome_model=outcome_model)
+    slearner.fit(w, t, y)
+    ate_est = slearner.estimate_ate()
+    assert ate_est == approx(ATE, rel=.1)
+
+
+@pytest.mark.parametrize('outcome_model', [
+    LinearRegression(),
+    Lasso(alpha=.1),
+    Ridge(alpha=.1),
+    ElasticNet(alpha=.01),
+    SVR(kernel='linear'),
+    LinearSVR(),
+    KernelRidge(alpha=.1),
+], ids=class_name)
+def test_slearner_ate_matches_standardization(outcome_model, linear_data):
+    w, t, y = linear_data
+
+    slearner = SLearner(outcome_model=outcome_model)
+    slearner.fit(w, t, y)
+    slearner_ate_est = slearner.estimate_ate()
+
+    standardization = StandardizationEstimator(outcome_model=outcome_model)
+    standardization.fit(w, t, y)
+    standardization_ate_est = standardization.estimate_ate()
+
+    # NOTE: they are not actually the same
+    assert slearner_ate_est == approx(standardization_ate_est, abs=0.3)
+
+
+@pytest.mark.parametrize('outcome_model', [
+    LinearRegression(),
+    Lasso(alpha=.1),
+    Ridge(alpha=.1),
+    ElasticNet(alpha=.01),
+    SVR(kernel='linear'),
+    LinearSVR(),
+    # KernelRidge(alpha=.1),
+    MLPRegressor(max_iter=1000),
+], ids=class_name)
+def test_tlearner_estimate_near_ate(outcome_model, linear_data):
+    w, t, y = linear_data
+    tlearner = TLearner(outcome_model=outcome_model)
+    tlearner.fit(w, t, y)
+    ate_est = tlearner.estimate_ate()
+    assert ate_est == approx(ATE, rel=.1)
+
+
+@pytest.mark.parametrize('outcome_model', [
+    LinearRegression(),
+    Lasso(alpha=.1),
+    Ridge(alpha=.1),
+    ElasticNet(alpha=.01),
+    SVR(kernel='linear'),
+    # LinearSVR(),
+    KernelRidge(alpha=.1),
+], ids=class_name)
+def test_slearner_ate_matches_standardization(outcome_model, linear_data):
+    w, t, y = linear_data
+
+    tlearner = TLearner(outcome_model=outcome_model)
+    tlearner.fit(w, t, y)
+    tlearner_ate_est = tlearner.estimate_ate()
+
+    strat_standard = StratifiedStandardizationEstimator(outcome_model=outcome_model)
+    strat_standard.fit(w, t, y)
+    strat_standard_ate_est = strat_standard.estimate_ate()
+
+    # NOTE: they ARE actually roughly the same
+    assert tlearner_ate_est == approx(strat_standard_ate_est)
