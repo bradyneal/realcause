@@ -1,5 +1,6 @@
 name: gen
 channels:
+  - r
   - conda-forge
   - defaults
 dependencies:
@@ -14,7 +15,7 @@ dependencies:
   - ca-certificates=2020.4.5.1=hecc5488_0
   - cairo=1.14.12=hc4e6be7_4
   - cctools=895=1
-  - certifi=2020.4.5.1=py37hc8dfbb8_0
+  - certifi=2020.4.5.1=py37_0
   - clang=4.0.1=1
   - clang_osx-64=4.0.1=h1ce6c1d_18
   - clangxx=4.0.1=1
@@ -211,6 +212,7 @@ dependencies:
   - r-repr=0.19.2=r36h6115d3f_0
   - r-reprex=0.2.1=r36h6115d3f_0
   - r-reshape2=1.4.3=r36h466af19_0
+  - r-rgenoud=5.8_3.0=r36h466af19_0
   - r-rlang=0.3.4=r36h46e59ec_0
   - r-rmarkdown=1.12=r36h6115d3f_0
   - r-rpart=4.1_15=r36h46e59ec_0
@@ -267,8 +269,10 @@ dependencies:
   - zlib=1.2.11=h1de35cc_3
   - zstd=1.3.7=h5bba6e5_0
   - pip:
+    - absl-py==0.9.0
     - appdirs==1.4.3
     - arrow==0.15.5
+    - astor==0.8.1
     - autograd==1.3
     - binaryornot==0.4.4
     - causallib==0.6.0
@@ -278,36 +282,57 @@ dependencies:
     - cloudpickle==1.3.0
     - cookiecutter==1.7.0
     - cython==0.29.16
+    - econml==0.7.0
     - future==0.18.2
+    - gast==0.2.2
+    - google-pasta==0.2.0
+    - grpcio==1.29.0
     - gym==0.17.1
+    - h5py==2.10.0
     - idna==2.9
     - jinja2-time==0.2.0
     - joblib==0.14.1
+    - keras==2.3.1
+    - keras-applications==1.0.8
+    - keras-preprocessing==1.1.2
+    - llvmlite==0.32.1
+    - markdown==3.2.2
     - mesa==0.8.6
     - networkx==2.4
     - nose==1.3.7
+    - numba==0.49.1
     - opt-einsum==3.2.0
     - ply==3.11
     - poyo==0.5.0
+    - protobuf==3.12.2
     - py-mini-racer==0.2.0
     - pycparser==2.20
     - pyglet==1.5.0
     - pyomo==5.6.9
     - pyro-api==0.1.1
     - pyro-ppl==1.3.1
+    - python-graphviz==0.14
     - pyutilib==5.8.0
+    - pyyaml==5.3.1
     - requests==2.23.0
     - rpy2==3.1.0
-    - scikit-learn==0.22.2.post1
+    - scikit-learn==0.21.3
     - simplegeneric==0.8.1
     - sklearn==0.0
+    - sparse==0.10.0
+    - tensorboard==1.15.0
+    - tensorflow==1.15.3
+    - tensorflow-estimator==1.15.1
+    - termcolor==1.1.0
     - torch==1.4.0
     - torch-two-sample==0.1
     - tqdm==4.45.0
     - tzlocal==2.0.0
     - urllib3==1.25.8
+    - werkzeug==1.0.1
     - whichcraft==0.6.1
     - whynot==0.12.0
     - whynot-estimators==0.11.0
+    - wrapt==1.12.1
 prefix: /anaconda3/envs/gen
 

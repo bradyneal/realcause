@@ -44,7 +44,8 @@ class BaseIteEstimator(BaseEstimator):
     def estimate_ite(self, t1=1, t0=0, w=None):
         pass
 
-    # TODO: ITE confidence interval
+    def ite_conf_int(self):
+        raise NotImplementedError
 
 
 class BaseCausallibIteEstimator(BaseIteEstimator):
@@ -70,7 +71,7 @@ class BaseCausallibIteEstimator(BaseIteEstimator):
     #     t = self.t if t is None else t
     #     y = self.y if y is None else y
     #     if w is None or t is None:
-    #         raise RuntimeError('Must run .fit(w, t, y) before running .estimate_ate()')
+    #         raise NotFittedError('Must run .fit(w, t, y) before running .estimate_ate()')
     #     w, t, y = to_pandas(w, t, y)
     #     mean_potential_outcomes = self.causallib_estimator.estimate_population_outcome(w, t, agg_func="mean")
     #     ate_estimate = mean_potential_outcomes[1] - mean_potential_outcomes[0]
@@ -85,8 +86,43 @@ class BaseCausallibIteEstimator(BaseIteEstimator):
         t = self.t if t is None else t
         y = self.y if y is None else y
         if w is None or t is None:
-            raise NotFittedError('Must run .fit(w, t, y) before running .estimate_ate()')
+            raise NotFittedError('Must run .fit(w, t, y) before running .estimate_ite()')
         w, t, y = to_pandas(w, t, y)
         individual_potential_outcomes = self.causallib_estimator.estimate_individual_outcome(w, t)
         ite_estimates = individual_potential_outcomes[1] - individual_potential_outcomes[0]
         return ite_estimates
+
+
+class BaseEconMLEstimator(BaseIteEstimator):
+
+    def __init__(self, econml_estimator):
+        self.econml_estimator = econml_estimator
+        self.fitted = False
+        self.w = None
+        self.t = None
+        self.y = None
+
+    def fit(self, w, t, y, conf_int_type=None):
+        self.econml_estimator.fit(Y=y, T=t, X=w, inference=conf_int_type)
+        self.fitted = True
+        self.w = w
+        self.t = t
+        self.y = y
+
+    def predict_outcome(self, t, w):
+        raise NotImplementedError
+
+    def ate_conf_int(self, t1=1, t0=0, w=None, percentile=.95):
+        raise NotImplementedError
+
+    def estimate_ite(self, t1=1, t0=0, w=None):
+        w = self.w if w is None else w
+        if not self.fitted:
+            raise NotFittedError('Must run .fit(w, t, y) before running .estimate_ite()')
+        return self.econml_estimator.effect(T0=t0, T1=t1, X=w)
+
+    def ite_conf_int(self, t1=1, t0=0, w=None, percentile=.95):
+        w = self.w if w is None else w
+        if not self.fitted:
+            raise NotFittedError('Must run .fit(w, t, y) before running .estimate_ite()')
+        return self.econml_estimator.effect_interval(T0=t0, T1=t1, X=w, alpha=(1 - percentile))

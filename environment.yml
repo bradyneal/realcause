@@ -23,6 +23,7 @@ dependencies:
   - r-matching
   - pip:
     - causallib
+    - econml
     - git+git://github.com/bradyneal/torch-two-sample
     - POT
     - pyro-ppl    # not necessary if not using Pyro
