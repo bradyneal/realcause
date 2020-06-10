@@ -9,7 +9,7 @@ from causal_estimators.standardization_estimator import \
 from causal_estimators.doubly_robust_estimator import DoublyRobustEstimator, DOUBLY_ROBUST_TYPES
 from causal_estimators.matching import MatchingEstimator, INVERSE_VAR, MAHALANOBIS, GENETIC
 from utils import class_name
-from causal_estimators.metalearners import SLearner, TLearner
+from causal_estimators.metalearners import SLearner, TLearner, XLearner
 
 from sklearn.linear_model import LogisticRegression, LinearRegression, Lasso, Ridge, ElasticNet
 from sklearn.svm import SVR, LinearSVR
@@ -431,3 +431,59 @@ def test_tlearner_ate_matches_standardization(outcome_model, linear_data):
 
     # NOTE: they ARE actually roughly the same
     assert tlearner_ate_est == approx(strat_standard_ate_est)
+
+
+@pytest.mark.parametrize('outcome_model', [
+    LinearRegression(),
+    Lasso(alpha=.1),
+    Ridge(alpha=.1),
+    ElasticNet(alpha=.01),
+    SVR(kernel='linear'),
+    LinearSVR(),
+    # KernelRidge(alpha=.1),
+], ids=class_name)
+@pytest.mark.parametrize('prop_score_model', [
+    LogisticRegression(penalty='l2'),
+    LogisticRegression(penalty='none'),
+    LogisticRegression(penalty='l2', solver='liblinear'),
+    LogisticRegression(penalty='l1', solver='liblinear'),
+    LogisticRegression(penalty='l1', solver='saga'),
+
+    # Below list comes from sklearn website:
+    # https://scikit-learn.org/stable/auto_examples/classification/plot_classifier_comparison.html
+    KNeighborsClassifier(3),
+    GaussianProcessClassifier(1.0 * RBF(1.0)),
+    DecisionTreeClassifier(max_depth=5),
+    GaussianNB(),
+    QuadraticDiscriminantAnalysis(),
+], ids=class_name)
+def test_xlearner_estimate_near_ate(outcome_model, prop_score_model, linear_data):
+    w, t, y = linear_data
+    xlearner = XLearner(outcome_models=outcome_model, prop_score_model=prop_score_model)
+    xlearner.fit(w, t, y)
+    assert xlearner.estimate_ate() == approx(ATE, rel=.1)
+
+
+def test_xlearner_different_outcome_models(linear_data):
+    w, t, y = linear_data
+    xlearner = XLearner(outcome_models=(LinearRegression(), Lasso(alpha=.1)),
+                        prop_score_model=LogisticRegression())
+    xlearner.fit(w, t, y)
+    assert xlearner.estimate_ate() == approx(ATE, rel=.1)
+
+
+def test_xlearner_different_cate_models(linear_data):
+    w, t, y = linear_data
+    xlearner = XLearner(cate_models=(LinearRegression(), Lasso(alpha=.1)),
+                        prop_score_model=LogisticRegression())
+    xlearner.fit(w, t, y)
+    assert xlearner.estimate_ate() == approx(ATE, rel=.1)
+
+
+def test_xlearner_different_outcome_models_and_cate_models(linear_data):
+    w, t, y = linear_data
+    xlearner = XLearner(outcome_models=(LinearRegression(), Lasso(alpha=.1)),
+                        cate_models=(Ridge(alpha=.1), ElasticNet(alpha=.01)),
+                        prop_score_model=LogisticRegression())
+    xlearner.fit(w, t, y)
+    assert xlearner.estimate_ate() == approx(ATE, rel=.1)

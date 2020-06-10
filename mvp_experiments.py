@@ -179,7 +179,7 @@ metrics_list = []
 for name, outcome_model, param_grid in outcome_model_grid:
     results = run_model_cv(gen_model, outcome_model, param_grid=param_grid, n_seeds=N_SEEDS, model_type='outcome',
                            best_model=True)
-    estimator = StratifiedStandardizationEstimator(outcome_model=results['best_model'])
+    estimator = StratifiedStandardizationEstimator(outcome_models=results['best_model'])
     metrics = calculate_metrics(gen_model, estimator, n_seeds=N_SEEDS, conf_ints=False)
     metrics_list.append({'name': name, **metrics})
     print(type(outcome_model))
