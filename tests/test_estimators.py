@@ -10,6 +10,7 @@ from causal_estimators.doubly_robust_estimator import DoublyRobustEstimator, DOU
 from causal_estimators.matching import MatchingEstimator, INVERSE_VAR, MAHALANOBIS, GENETIC
 from utils import class_name
 from causal_estimators.metalearners import SLearner, TLearner, XLearner
+from causal_estimators.double_ml import DoubleML
 
 from sklearn.linear_model import LogisticRegression, LinearRegression, Lasso, Ridge, ElasticNet
 from sklearn.svm import SVR, LinearSVR
@@ -487,3 +488,26 @@ def test_xlearner_different_outcome_models_and_cate_models(linear_data):
                         prop_score_model=LogisticRegression())
     xlearner.fit(w, t, y)
     assert xlearner.estimate_ate() == approx(ATE, rel=.1)
+
+
+@pytest.mark.parametrize('outcome_model', [
+    LinearRegression(),
+    Lasso(alpha=.1),
+    Ridge(alpha=.1),
+    ElasticNet(alpha=.01),
+    LinearSVR(),
+], ids=class_name)
+@pytest.mark.parametrize('prop_score_model', [
+    LogisticRegression(penalty='l2'),
+    GaussianNB(),
+    QuadraticDiscriminantAnalysis(),
+], ids=class_name)
+@pytest.mark.parametrize('final_model', [
+    LinearRegression(),
+    Ridge(alpha=.1),
+], ids=class_name)
+def test_double_ml_estimate_near_ate(outcome_model, prop_score_model, final_model, linear_data):
+    w, t, y = linear_data
+    double_ml = DoubleML(outcome_model=outcome_model, prop_score_model=prop_score_model, final_model=final_model)
+    double_ml.fit(w, t, y)
+    assert double_ml.estimate_ate() == approx(ATE, rel=0.5)
