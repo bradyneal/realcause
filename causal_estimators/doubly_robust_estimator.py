@@ -1,8 +1,9 @@
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from causallib.estimation import Standardization, StratifiedStandardization, IPW,\
     DoublyRobustVanilla, DoublyRobustIpFeature, DoublyRobustJoffe
+from econml.drlearner import DRLearner
 
-from causal_estimators.base import BaseCausallibIteEstimator
+from causal_estimators.base import BaseCausallibIteEstimator, BaseEconMLEstimator
 
 
 STR_TO_DOUBLY_ROBUST = {
@@ -46,3 +47,15 @@ class DoublyRobustEstimator(BaseCausallibIteEstimator):
             outcome_model=standardization, weight_model=ipw)
 
         super().__init__(causallib_estimator=doubly_robust)
+
+
+class DoublyRobustLearner(BaseEconMLEstimator):
+
+    def __init__(self, outcome_model=LinearRegression(),
+                 prop_score_model=LogisticRegression(),
+                 final_model=LinearRegression(), trim_eps=1e-6):
+        # TODO: add other options that DRLearner allows?
+        drlearner = DRLearner(model_propensity=prop_score_model,
+                              model_regression=outcome_model,
+                              model_final=final_model, min_propensity=trim_eps)
+        super().__init__(econml_estimator=drlearner)
