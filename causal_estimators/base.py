@@ -117,12 +117,14 @@ class BaseEconMLEstimator(BaseIteEstimator):
 
     def estimate_ite(self, t1=1, t0=0, w=None):
         w = self.w if w is None else w
-        if not self.fitted:
-            raise NotFittedError('Must run .fit(w, t, y) before running .estimate_ite()')
+        self._raise_exception_if_not_fitted()
         return self.econml_estimator.effect(T0=t0, T1=t1, X=w)
 
     def ite_conf_int(self, t1=1, t0=0, w=None, percentile=.95):
         w = self.w if w is None else w
+        self._raise_exception_if_not_fitted()
+        return self.econml_estimator.effect_interval(T0=t0, T1=t1, X=w, alpha=(1 - percentile))
+
+    def _raise_exception_if_not_fitted(self):
         if not self.fitted:
             raise NotFittedError('Must run .fit(w, t, y) before running .estimate_ite()')
-        return self.econml_estimator.effect_interval(T0=t0, T1=t1, X=w, alpha=(1 - percentile))
