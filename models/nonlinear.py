@@ -150,6 +150,10 @@ class MLP(BaseGenModel):
         else:
             return y_samples
 
+    def mean_y_tw(self, t, w):
+        wt = np.concatenate([w, t], 1)
+        return self.outcome_distribution.mean(self.mlp_y_tw(torch.from_numpy(wt).float()))
+
 
 if __name__ == '__main__':
     from data.synthetic import generate_wty_linear_multi_w_data

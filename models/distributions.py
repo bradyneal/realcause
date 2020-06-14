@@ -92,6 +92,9 @@ class BaseDistribution(object):
     def num_params(self):
         raise NotImplementedError
 
+    def mean(self, params):
+        raise NotImplementedError
+
 
 class Bernoulli(BaseDistribution):
     def likelihood(self, x, params):
@@ -103,6 +106,9 @@ class Bernoulli(BaseDistribution):
     @property
     def num_params(self):
         return 1
+
+    def mean(self, params):
+        return torch.sigmoid(params)
 
 
 class FactorialGaussian(BaseDistribution):
@@ -116,6 +122,9 @@ class FactorialGaussian(BaseDistribution):
     def num_params(self):
         return 2
 
+    def mean(self, params):
+        return torch.chunk(params, chunks=2, dim=1)[0]
+
 
 class LogLogistic(BaseDistribution):
     def likelihood(self, x, params):
@@ -128,6 +137,14 @@ class LogLogistic(BaseDistribution):
     def num_params(self):
         return 2
 
+    def mean(self, params):
+        log_alpha, log_beta_ = torch.chunk(params, chunks=2, dim=1)
+        log_beta = F.softplus(log_beta_)  # log(beta) > 0 => beta > 1
+        beta = torch.exp(log_beta)
+        alpha = torch.exp(log_alpha)
+        pi_beta = np.pi / beta
+        return alpha * pi_beta / torch.sin(pi_beta)
+
 
 class LogNormal(BaseDistribution):
     def likelihood(self, x, params):
@@ -139,6 +156,11 @@ class LogNormal(BaseDistribution):
     @property
     def num_params(self):
         return 2
+
+    def mean(self, params):
+        mean, log_var = torch.chunk(params, chunks=2, dim=1)
+        var = torch.exp(log_var)
+        return torch.exp(mean + var / 2)
 
 
 class MixedDistribution(BaseDistribution):
@@ -204,6 +226,17 @@ class MixedDistribution(BaseDistribution):
         # num_atoms + 1 classes (last one being continuous)
         return self.num_atoms + 1 + self.dist.num_params
 
+    def mean(self, params):
+        slc = [slice(None)] * len(params.shape)
+        slc[-1] = slice(0, self.num_atoms + 1)
+        logit_pi = params[slc]
+        pi = F.softmax(logit_pi, dim=-1)
+        mean = 0
+        for j, atom in enumerate(self.atoms):
+            mean += pi[:, j] * atom
+
+        return mean + pi[:, -1] * self.dist.mean(params[:, self.num_atoms + 1:])
+
 
 def quick_test():
     import matplotlib.pyplot as plt
@@ -211,3 +244,13 @@ def quick_test():
     dist.likelihood(torch.randn(1000, 1), torch.randn(1000, 5))
     dist.sample(torch.randn(100, 5))
     plt.hist(dist.sample(torch.randn(1000, 5)), 20)
+
+
+def quick_test_mean():
+    n = 100000
+    for dist in [FactorialGaussian(), LogNormal(), LogLogistic(), MixedDistribution([1.0, 5.5], FactorialGaussian())]:
+        num_params = dist.num_params
+        params = torch.randn(1, num_params)
+        mean = dist.mean(params)
+        mean_ = dist.sample(params.expand(n, -1)).mean(0)
+        print(mean.item(), mean_.item())
