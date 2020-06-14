@@ -1,6 +1,7 @@
 import numpy as np
 from models import distributions
-from models.base import BaseGenModel, Preprocess, PlaceHolderTransform
+from models.base import BaseGenModel
+from models import preprocess
 import torch
 from torch import nn
 from torch.utils import data
@@ -26,79 +27,13 @@ class TrainingParams:
         self.optim_args = optim_args
 
 
-class Centering(Preprocess):
-    def __init__(self, data=None, mean=None):
-        assert data is not None or mean is not None, 'at least one of data or mean must be provided'
-        if data is not None:
-            self.m = data.mean(0).astype('float32')
-            if mean is not None:
-                assert np.isclose(self.m, mean), 'mean of data is not close to the provided value'
-        else:
-            self.m = np.cast['float32'](mean)
-
-    def transform(self, x):
-        return x - self.m
-
-    def untransform(self, x):
-        return x + self.m
-
-
-class Scaling(Preprocess):
-    def __init__(self, s):
-        self.s = np.cast['float32'](s)
-
-    def transform(self, x):
-        return x * self.s
-
-    def untransform(self, x):
-        return x / self.s
-
-
-class VarianceRescaling(Scaling):
-    def __init__(self, data=None, stdv=None, gain=1.0):
-        assert data is not None or stdv is not None, 'at least one of data or stdv must be provided'
-        if data is not None:
-            s = data.std(0)
-            if stdv is not None:
-                assert np.isclose(s, stdv), 'stdv of data is not close to the provided value'
-        else:
-            s = stdv
-        super(VarianceRescaling, self).__init__(gain/s)
-
-
-class SequentialTransforms(Preprocess):
-    def __init__(self, *transforms):
-        self.transforms = transforms
-
-    def transform(self, x):
-        for t in self.transforms:
-            x = t.transform(x)
-        return x
-
-    def untransform(self, x):
-        for t in reversed(self.transforms):
-            x = t.untransform(x)
-        return x
-
-class Standardize(Preprocess):
-    def __init__(self, data):
-        self.t = SequentialTransforms(
-            Centering(data),
-            VarianceRescaling(data)
-        )
-
-    def transform(self, x):
-        return self.t.transform(x)
-
-    def untransform(self, x):
-        return self.t.untransform(x)
 
 
 class CausalDataset(data.Dataset):
     def __init__(self, w, t, y, wtype='float32', ttype='float32', ytype='float32',
-                 w_transform:Preprocess=PlaceHolderTransform(),
-                 t_transform:Preprocess=PlaceHolderTransform(),
-                 y_transform:Preprocess=PlaceHolderTransform()):
+                 w_transform:preprocess.Preprocess=preprocess.PlaceHolderTransform(),
+                 t_transform:preprocess.Preprocess=preprocess.PlaceHolderTransform(),
+                 y_transform:preprocess.Preprocess=preprocess.PlaceHolderTransform()):
         self.w = w.astype(wtype)
         self.t = t.astype(ttype)
         self.y = y.astype(ytype)
@@ -129,9 +64,9 @@ class MLP(BaseGenModel):
                  outcome_distribution:distributions.BaseDistribution=distributions.FactorialGaussian(),
                  outcome_min=None,
                  outcome_max=None,
-                 w_transform:Preprocess=PlaceHolderTransform(),
-                 t_transform:Preprocess=PlaceHolderTransform(),
-                 y_transform:Preprocess=PlaceHolderTransform()
+                 w_transform:preprocess.Preprocess=preprocess.PlaceHolderTransform(),
+                 t_transform:preprocess.Preprocess=preprocess.PlaceHolderTransform(),
+                 y_transform:preprocess.Preprocess=preprocess.PlaceHolderTransform()
                  ):
         super(MLP, self).__init__(*self._matricize((w, t, y)), seed=seed,
                                   w_transform=w_transform,
@@ -237,16 +172,28 @@ if __name__ == '__main__':
     # multi_ty_metrics = mlp.get_multivariate_quant_metrics(include_w=False, n_permutations=10)
     # multi_wty_metrics = mlp.get_multivariate_quant_metrics(include_w=True, n_permutations=10)
 
-    w, t, y = load_lalonde()
-    # w, t, y = load_lalonde(rct=True)
-    # w, t, y = load_lalonde(obs_version='cps1')
+    dataset = 1
+    if dataset == 1:
+        w, t, y = load_lalonde()
+        dist = distributions.MixedDistribution([0.0], distributions.LogLogistic())
+        training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=500)
+        mlp_params_y_tw = MLPParams(n_hidden_layers=2, dim_h=256)
+    elif dataset == 2:
+        w, t, y = load_lalonde(rct=True)
+        dist = distributions.MixedDistribution([0.0], distributions.LogLogistic())
+        training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=500)
+        mlp_params_y_tw = MLPParams(n_hidden_layers=2, dim_h=256)
+    elif dataset == 3:
+        w, t, y = load_lalonde(obs_version='cps1')
+        dist = distributions.MixedDistribution([0.0, 25564.669921875/y.max()], distributions.LogNormal())
+        training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=1000)
+        mlp_params_y_tw = MLPParams(n_hidden_layers=3, dim_h=512, activation=torch.nn.LeakyReLU())
+    else:
+        raise(Exception('dataset {} not implemented'.format(dataset)))
 
-    # logit_pi = torch.zeros(1, requires_grad=True)
-    # log_alpha = torch.zeros(1, requires_grad=True)
-    # log_beta_ = torch.zeros(1, requires_grad=True)
-    param = torch.zeros(1, 4, requires_grad=True)
+
+    param = torch.zeros(1, dist.num_params, requires_grad=True)
     y_torch = torch.from_numpy(y/y.max()).float()[:,None]
-    dist = distributions.MixedDistribution([0.0], distributions.LogLogistic())
     for i in range(500):
         param.grad = None
         nll = - dist.likelihood(y_torch, param.expand(len(y), -1)).mean()
@@ -265,15 +212,15 @@ if __name__ == '__main__':
     plt.legend(['data', 'density', 'samples'], loc=1)
 
     mlp = MLP(w, t, y,
-              training_params=TrainingParams(lr=0.0005, batch_size=128, num_epochs=500),
-              mlp_params_y_tw=MLPParams(n_hidden_layers=2, dim_h=256),
+              training_params=training_params,
+              mlp_params_y_tw=mlp_params_y_tw,
               binary_treatment=True, outcome_distribution=dist,
               outcome_min=0.0, outcome_max=1.0, seed=1,
-              w_transform=Standardize(w), y_transform=Scaling(1/y.max()))
+              w_transform=preprocess.Standardize(w), y_transform=preprocess.Normalize(y))
     mlp._train()
     data_samples = mlp.sample()
     # mlp.plot_ty_dists()
     uni_metrics = mlp.get_univariate_quant_metrics()
     pp.pprint(uni_metrics)
     # multi_ty_metrics = mlp.get_multivariate_quant_metrics(include_w=False, n_permutations=10)
-    multi_wty_metrics = mlp.get_multivariate_quant_metrics(include_w=True, n_permutations=10)
+    # multi_wty_metrics = mlp.get_multivariate_quant_metrics(include_w=True, n_permutations=10)

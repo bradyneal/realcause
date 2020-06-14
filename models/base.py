@@ -3,6 +3,7 @@ from numbers import Number
 import numpy as np
 import torch
 from scipy import stats
+from models.preprocess import Preprocess, PlaceHolderTransform
 
 from plotting import compare_joints, compare_bivariate_marginals
 from utils import T, Y, to_np_vectors, to_torch_variable, permutation_test
@@ -40,21 +41,6 @@ class BaseGenModelMeta(ABCMeta):
         return obj
 
 
-# Todo: move somewhere else?
-class Preprocess(object):
-    def transform(self, x):
-        raise(NotImplementedError)
-
-    def untransform(self, x):
-        raise(NotImplementedError)
-
-
-class PlaceHolderTransform(Preprocess):
-    def transform(self, x):
-        return x
-
-    def untransform(self, x):
-        return x
 
 
 class BaseGenModel(object, metaclass=BaseGenModelMeta):
