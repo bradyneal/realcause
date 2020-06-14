@@ -11,6 +11,10 @@ def log_normal(x, mean, log_var, eps=0.00001):
     return - (x - mean) ** 2 / (2. * torch.exp(log_var) + eps) - log_var / 2. + z
 
 
+def log_log_normal(x, mean, log_var, eps=0.00001):
+    return log_normal(torch.log(x), mean, log_var, eps) - torch.log(x)
+
+
 def log_log_logistic(x, log_alpha, log_beta_):
     """log density of log-logistic with alpha > 0 and beta > 1 (log beta > 0)
     log_beta_ is reparameterization of the shape parameter, beta = exp(softplus(log_beta_)) > 1
@@ -119,6 +123,18 @@ class LogLogistic(BaseDistribution):
 
     def sample(self, params):
         return log_logistic_sampler(*torch.chunk(params, chunks=2, dim=1)).data.cpu().numpy()
+
+    @property
+    def num_params(self):
+        return 2
+
+
+class LogNormal(BaseDistribution):
+    def likelihood(self, x, params):
+        return log_log_normal(x, *torch.chunk(params, chunks=2, dim=1)).sum(-1)
+
+    def sample(self, params):
+        return torch.exp(gaussian_sampler(*torch.chunk(params, chunks=2, dim=1))).data.cpu().numpy()
 
     @property
     def num_params(self):
