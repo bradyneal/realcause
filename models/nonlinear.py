@@ -2,6 +2,7 @@ import numpy as np
 from models import distributions
 from models.base import BaseGenModel
 from models import preprocess
+from models.preprocess import PlaceHolderTransform
 import torch
 from torch import nn
 from torch.utils import data
@@ -64,11 +65,14 @@ class MLP(BaseGenModel):
                  outcome_distribution:distributions.BaseDistribution=distributions.FactorialGaussian(),
                  outcome_min=None,
                  outcome_max=None,
-                 w_transform:preprocess.Preprocess=preprocess.PlaceHolderTransform(),
-                 t_transform:preprocess.Preprocess=preprocess.PlaceHolderTransform(),
-                 y_transform:preprocess.Preprocess=preprocess.PlaceHolderTransform()
+                 train_perc=None,
+                 shuffle=True,
+                 w_transform=PlaceHolderTransform,
+                 t_transform=PlaceHolderTransform,
+                 y_transform=PlaceHolderTransform
                  ):
         super(MLP, self).__init__(*self._matricize((w, t, y)), seed=seed,
+                                  train_perc=train_perc, shuffle=shuffle,
                                   w_transform=w_transform,
                                   t_transform=t_transform,
                                   y_transform=y_transform)
@@ -220,7 +224,7 @@ if __name__ == '__main__':
               mlp_params_y_tw=mlp_params_y_tw,
               binary_treatment=True, outcome_distribution=dist,
               outcome_min=0.0, outcome_max=1.0, seed=1,
-              w_transform=preprocess.Standardize(w), y_transform=preprocess.Normalize(y))
+              w_transform=preprocess.Standardize, y_transform=preprocess.Normalize)
     mlp._train()
     data_samples = mlp.sample()
     # mlp.plot_ty_dists()

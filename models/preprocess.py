@@ -2,6 +2,9 @@ import numpy as np
 
 
 class Preprocess(object):
+    def __init__(self, data=None):
+        pass
+
     def transform(self, x):
         raise NotImplementedError
 
