@@ -251,8 +251,10 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         Calculates quantitative metrics for the difference between p(t) and
         p_model(t) and the difference between p(y) and p_model(y)
 
-        :param train: TODO
-        :param transformed: TODO
+        :param train: If True, evaluate on training data.
+            If False, evaluate on test data.
+        :param transformed: If True, use transformed version of data.
+            If False, use original (non-transformed) version of data.
         :param thin_model: thinning interval for the model data
         :param thin_true: thinning interval for the real data
         :param seed: seed for sample from generative model
@@ -290,8 +292,10 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
         :param include_w: If False, test if p(t, y) = p_model(t, y).
             If True, test if p(w, t, y) = p(w, t, y).
-        :param train: TODO
-        :param transformed: TODO
+        :param train: If True, evaluate on training data.
+            If False, evaluate on test data.
+        :param transformed: If True, use transformed version of data.
+            If False, use original (non-transformed) version of data.
         :param norm: norm used for Friedman-Rafsky test and kNN test
         :param k: number of nearest neighbors to use for kNN test
         :param alphas: list of kernel parameters for MMD test
