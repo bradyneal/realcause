@@ -329,10 +329,10 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             model_samples = np.hstack((w_model, model_samples))
             true_samples = np.hstack((w_true, true_samples))
 
-        assert model_samples.shape[0] == true_samples.shape[0]
-        n = model_samples.shape[0]
+        n_model = model_samples.shape[0]
+        n_true = true_samples.shape[0]
 
-        a, b = np.ones((n,)) / n, np.ones((n,)) / n  # uniform distribution on samples
+        a, b = np.ones((n_model,)) / n_model, np.ones((n_true,)) / n_true  # uniform distribution on samples
 
         def calculate_wasserstein1_dist(x, y):
             M_wasserstein1 = ot.dist(x, y, metric='euclidean')
@@ -364,20 +364,20 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         model_samples_var = to_torch_variable(model_samples)
         true_samples_var = to_torch_variable(true_samples)
 
-        fr = FRStatistic(n, n)
+        fr = FRStatistic(n_model, n_true)
         matrix = fr(model_samples_var, true_samples_var, norm=norm, ret_matrix=True)[1]
         results['Friedman-Rafsky pval'] = fr.pval(matrix, n_permutations=n_permutations)
 
-        knn = KNNStatistic(n, n, k)
+        knn = KNNStatistic(n_model, n_true, k)
         matrix = knn(model_samples_var, true_samples_var, norm=norm, ret_matrix=True)[1]
         results['kNN pval'] = knn.pval(matrix, n_permutations=n_permutations)
 
         if alphas is not None:
-            mmd = MMDStatistic(n, n)
+            mmd = MMDStatistic(n_model, n_true)
             matrix = mmd(model_samples_var, true_samples_var, alphas=None, ret_matrix=True)[1]
             results['MMD pval'] = mmd.pval(matrix, n_permutations=n_permutations)
 
-        energy = EnergyStatistic(n, n)
+        energy = EnergyStatistic(n_model, n_true)
         matrix = energy(model_samples_var, true_samples_var, ret_matrix=True)[1]
         results['Energy pval'] = energy.pval(matrix, n_permutations=n_permutations)
 
