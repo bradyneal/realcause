@@ -65,6 +65,10 @@ class LinearGenModel(BaseGenModel):
         )
         return y_samples
 
+    def mean_y(self, t, w):
+        X = np.concatenate([w, t], 1)
+        return self._pad_with_ones(X).dot(self.beta_y_tw)
+
 
 if __name__ == '__main__':
     from data.synthetic import generate_wty_linear_multi_w_data

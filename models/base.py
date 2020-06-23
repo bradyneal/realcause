@@ -142,9 +142,9 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
     def _sample_y(self, t, w):
         pass
 
-    # @abstractmethod
-    # def mean_y(self, t, w):
-    #     pass
+    @abstractmethod
+    def mean_y(self, t, w):
+        pass
 
     def sample_t(self, w, untransform=True):
         if w is None:
@@ -184,23 +184,24 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
     def sample_interventional(self, t, w=None):
         if w is None:
             w = self.sample_w(untransform=False)
-        if not isinstance(w, np.ndarray):
+        if isinstance(w, Number):
             raise ValueError('Unsupported data type: {} ... only numpy is currently supported'.format(type(w)))
         if isinstance(t, Number):
             t = np.full_like(self.t, t)
         return self.sample_y(t, w)
 
-    def interventional_mean(self, t, w=None):
-        samples = self.sample_interventional(t=t, w=w)
-        return samples.mean()
-
     def ate(self, t1=1, t0=0, w=None):
-        return self.interventional_mean(t=t1, w=w) - self.interventional_mean(t=t0, w=w)
+        return self.ite(t1=t1, t0=t0, w=w).mean()
 
     def ite(self, t1=1, t0=0, w=None):
         if w is None:
             w = self.sample_w(untransform=False)
-        return self.sample_interventional(t=t1, w=w) - self.sample_interventional(t=t0, w=w)
+        if isinstance(t1, Number) or isinstance(t0, Number):
+            t_shape = list(self.t.shape)
+            t_shape[0] = w.shape[0]
+            t1 = np.full(t_shape, t1)
+            t0 = np.full(t_shape, t0)
+        return self.mean_y(t=t1, w=w) - self.mean_y(t=t0, w=w)
 
     def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True,
                       title=True, name=None, file_ext='pdf', thin_model=None,
