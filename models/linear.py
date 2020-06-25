@@ -4,11 +4,11 @@ from models.base import BaseGenModel
 
 class LinearGenModel(BaseGenModel):
 
-    def __init__(self, w, t, y, lambda0_t_w=1e-5, lambda0_y_tw=1e-5, binary_treatment=False):
-        super(LinearGenModel, self).__init__(*self._matricize((w, t, y)))
+    def __init__(self, w, t, y, lambda0_t_w=1e-5, lambda0_y_tw=1e-5,
+                 binary_treatment=False, **kwargs):
+        super(LinearGenModel, self).__init__(*self._matricize((w, t, y)), **kwargs)
         self._train(lambda0_t_w, lambda0_y_tw)
         self.binary_treatment = binary_treatment
-        # TODO:
 
     def _matricize(self, data):
         return [np.reshape(d, [d.shape[0], -1]) for d in data]
@@ -64,6 +64,10 @@ class LinearGenModel(BaseGenModel):
             self.sigma_y_tw
         )
         return y_samples
+
+    def mean_y(self, t, w):
+        X = np.concatenate([w, t], 1)
+        return self._pad_with_ones(X).dot(self.beta_y_tw)
 
 
 if __name__ == '__main__':

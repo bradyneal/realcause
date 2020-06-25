@@ -87,12 +87,36 @@ def test_plot_ty(linear_gen_model):
 
 
 def test_univariate_quant_metrics(linear_gen_model):
-    linear_gen_model.get_univariate_quant_metrics()
+    linear_gen_model.get_univariate_quant_metrics(transformed=False)
+
+
+def test_univariate_quant_metrics_transformed(linear_gen_model):
+    linear_gen_model.get_univariate_quant_metrics(transformed=True)
 
 
 def test_multivariate_quant_metrics(linear_gen_model):
-    linear_gen_model.get_multivariate_quant_metrics(include_w=True)
-    linear_gen_model.get_multivariate_quant_metrics(include_w=False)
+    linear_gen_model.get_multivariate_quant_metrics(include_w=True, transformed=False)
+    linear_gen_model.get_multivariate_quant_metrics(include_w=False, transformed=False)
+
+
+def test_multivariate_quant_metrics_transformed(linear_gen_model):
+    linear_gen_model.get_multivariate_quant_metrics(include_w=True, transformed=True)
+    linear_gen_model.get_multivariate_quant_metrics(include_w=False, transformed=True)
+
+
+@pytest.fixture(scope='module')
+def linear_gen_model_train_test():
+    w, t, y = generate_wty_linear_multi_w_data(N, data_format='numpy', wdim=5, delta=ATE)
+    return LinearGenModel(w, t, y, train_perc=.5)
+
+
+def test_univariate_quant_metrics_test_set(linear_gen_model_train_test):
+    linear_gen_model_train_test.get_univariate_quant_metrics()
+
+
+def test_multivariate_quant_metrics(linear_gen_model_train_test):
+    linear_gen_model_train_test.get_multivariate_quant_metrics(include_w=True, transformed=False)
+    linear_gen_model_train_test.get_multivariate_quant_metrics(include_w=False, transformed=False)
 
 
 def test_univariate_quant_metrics_random_without_seed(linear_gen_model):
