@@ -7,7 +7,7 @@ from typing import Type
 
 from models.preprocess import Preprocess, PlaceHolderTransform
 from plotting import compare_joints, compare_bivariate_marginals
-from utils import T, Y, to_np_vectors, to_torch_variable, permutation_test
+from utils import T, Y, to_np_vectors, to_np_vector, to_torch_variable, permutation_test
 
 MODEL_LABEL = 'model'
 TRUE_LABEL = 'true'
@@ -190,18 +190,27 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             t = np.full_like(self.t, t)
         return self.sample_y(t, w)
 
-    def ate(self, t1=1, t0=0, w=None):
-        return self.ite(t1=t1, t0=t0, w=w).mean()
+    def ate(self, t1=1, t0=0, w=None, untransform=True, transform_t=True):
+        return self.ite(t1=t1, t0=t0, w=w, untransform=untransform,
+                        transform_t=transform_t).mean()
 
-    def ite(self, t1=1, t0=0, w=None):
+    def ite(self, t1=1, t0=0, w=None, untransform=True, transform_t=True):
         if w is None:
             w = self.sample_w(untransform=False)
+        if transform_t:
+            t1 = self.t_transform.transform(t1)
+            t0 = self.t_transform.transform(t0)
         if isinstance(t1, Number) or isinstance(t0, Number):
             t_shape = list(self.t.shape)
             t_shape[0] = w.shape[0]
             t1 = np.full(t_shape, t1)
             t0 = np.full(t_shape, t0)
-        return self.mean_y(t=t1, w=w) - self.mean_y(t=t0, w=w)
+        y_1 = to_np_vector(self.mean_y(t=t1, w=w))
+        y_0 = to_np_vector(self.mean_y(t=t0, w=w))
+        if untransform:
+            y_1 = self.y_transform.untransform(y_1)
+            y_0 = self.y_transform.untransform(y_0)
+        return y_1 - y_0
 
     def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True,
                       title=True, name=None, file_ext='pdf', thin_model=None,
