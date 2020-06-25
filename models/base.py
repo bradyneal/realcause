@@ -213,6 +213,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         return y_1 - y_0
 
     def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True,
+                      train=False, transformed=False,
                       title=True, name=None, file_ext='pdf', thin_model=None,
                       thin_true=None, joint_kwargs={}, test=False, seed=None):
         """
@@ -221,6 +222,10 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         :param joint: boolean for whether to plot p(t, y)
         :param marginal_hist: boolean for whether to plot the p(t) and p(y) histograms
         :param marginal_qq: boolean for whether to plot the p(t) and p(y) Q-Q plots
+        :param train: If True, evaluate on training data.
+            If False, evaluate on test data.
+        :param transformed: If True, use transformed version of data.
+            If False, use original (non-transformed) version of data.
         :param title: boolean for whether or not to include title in plots
         :param name: name to use in plot titles and saved files defaults to name of class
         :param file_ext: file extension to for saving plots (e.g. 'pdf', 'png', etc.)
@@ -234,8 +239,10 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         if name is None:
             name = self.__class__.__name__
 
-        _, t_model, y_model = to_np_vectors(self.sample(seed=seed), thin_interval=thin_model)
-        t_true, y_true = to_np_vectors((self.t_transformed, self.y_transformed), thin_interval=thin_true)
+        _, t_model, y_model = to_np_vectors(self.sample(seed=seed, untransform=(not transformed)),
+                                            thin_interval=thin_model)
+        _, t_true, y_true = self.get_data(transformed=transformed, train=train)
+        t_true, y_true = to_np_vectors((t_true, y_true), thin_interval=thin_true)
 
         if joint:
             compare_joints(t_model, y_model, t_true, y_true,
