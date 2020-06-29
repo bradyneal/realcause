@@ -107,7 +107,7 @@ def test_multivariate_quant_metrics_transformed(linear_gen_model):
 @pytest.fixture(scope='module')
 def linear_gen_model_train_test():
     w, t, y = generate_wty_linear_multi_w_data(N, data_format='numpy', wdim=5, delta=ATE)
-    return LinearGenModel(w, t, y, train_perc=.5)
+    return LinearGenModel(w, t, y, train_prop=.5, test_prop=.5)
 
 
 def test_univariate_quant_metrics_test_set(linear_gen_model_train_test):

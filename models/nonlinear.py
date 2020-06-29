@@ -65,14 +65,17 @@ class MLP(BaseGenModel):
                  outcome_distribution:distributions.BaseDistribution=distributions.FactorialGaussian(),
                  outcome_min=None,
                  outcome_max=None,
-                 train_perc=None,
+                 train_prop=1,
+                 val_prop=0,
+                 test_prop=0,
                  shuffle=True,
                  w_transform=PlaceHolderTransform,
                  t_transform=PlaceHolderTransform,
                  y_transform=PlaceHolderTransform
                  ):
         super(MLP, self).__init__(*self._matricize((w, t, y)), seed=seed,
-                                  train_perc=train_perc, shuffle=shuffle,
+                                  train_prop=train_prop, val_prop=val_prop,
+                                  test_prop=test_prop, shuffle=shuffle,
                                   w_transform=w_transform,
                                   t_transform=t_transform,
                                   y_transform=y_transform)

@@ -11,6 +11,7 @@ import requests
 import os
 from urllib.parse import urlparse
 import zipfile
+from decimal import Decimal, ROUND_HALF_UP
 
 W = 'w'
 T = 't'
@@ -305,3 +306,7 @@ def unzip(path_to_zip_file, unzip_dir=None):
         zip_ref.extractall(unzip_dir)
     print('DONE')
     return unzip_path
+
+
+def regular_round(x):
+    return int(Decimal(x).to_integral_value(rounding=ROUND_HALF_UP))

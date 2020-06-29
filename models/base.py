@@ -7,7 +7,8 @@ from typing import Type
 
 from models.preprocess import Preprocess, PlaceHolderTransform
 from plotting import compare_joints, compare_bivariate_marginals
-from utils import T, Y, to_np_vectors, to_np_vector, to_torch_variable, permutation_test
+from utils import T, Y, to_np_vectors, to_np_vector, to_torch_variable,\
+    permutation_test, regular_round
 
 MODEL_LABEL = 'model'
 TRUE_LABEL = 'true'
@@ -16,6 +17,9 @@ Y_MODEL_LABEL = '{} ({})'.format(Y, MODEL_LABEL)
 T_TRUE_LABEL = '{} ({})'.format(T, TRUE_LABEL)
 Y_TRUE_LABEL = '{} ({})'.format(Y, TRUE_LABEL)
 SEED = 42
+TRAIN = 'train'
+VAL = 'val'
+TEST = 'test'
 
 
 class BaseGenModelMeta(ABCMeta):
@@ -60,34 +64,72 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
     abstract_attributes = ['w', 't', 'y',
                            'w_transformed', 't_transformed', 'y_transformed']
 
-    def __init__(self, w, t, y, seed=SEED, train_perc=None, shuffle=True,
+    def __init__(self, w, t, y, train_prop=1, val_prop=0, test_prop=0,
+                 shuffle=True, seed=SEED,
                  w_transform: Type[Preprocess] = PlaceHolderTransform,
                  t_transform: Type[Preprocess] = PlaceHolderTransform,
                  y_transform: Type[Preprocess] = PlaceHolderTransform,
                  verbose=True):
+        """
+        Initialize the generative model. Split the data up according to the
+        splits specified by train_prop, val_prop, and test_prop. These can add
+        to 1, or they can just be arbitary numbers that correspond to the
+        unnormalized fraction of the dataset for each subsample.
+
+        :param w: ndarray of covariates
+        :param t: ndarray for vector of treatment
+        :param y: ndarray for vector of outcome
+        :param train_prop: number to use for proportion of the whole dataset
+            that is in the training set
+        :param val_prop: number to use for proportion of the whole dataset that
+            is in the validation set
+        :param test_prop: number to use for proportion of the whole dataset that
+            is in the test set
+        :param shuffle: boolean for whether to shuffle the data
+        :param seed: random seed for pytorch and numpy
+        :param w_transform: transform for covariates
+        :param t_transform: transform for treatment
+        :param y_transform: transform for outcome
+        :param verbose: boolean
+        """
         if seed is not None:
             self.set_seed(seed)
 
         # Split the data into train and test
         n = w.shape[0]
         idxs = np.arange(n)
+
+        total = train_prop + val_prop + test_prop
+        n_train = regular_round(n * train_prop / total)
+        n_val = regular_round(n * val_prop / total)
+        n_test = n - n_train - n_val
+
+        if verbose:
+            print('n_train: {}\tn_val: {}\tn_test: {}'.format(n_train, n_val, n_test))
+
         if shuffle:
             np.random.shuffle(idxs)
-        if train_perc is not None and train_perc < 1.0:
-            n_train = round(train_perc * n)
-            if verbose:
-                print('n_train: {}\tn_test: {}'.format(n_train, n - n_train))
-            train_idxs = idxs[:n_train]
-            test_idxs = idxs[n_train:]
-        else:
-            train_idxs = idxs
-            test_idxs = idxs
+        train_idxs = idxs[:n_train]
+        val_idxs = idxs[n_train:n_train+n_val]
+        test_idxs = idxs[n_train+n_val:]
+
+        # if train_prop is not None and train_prop < 1.0:
+        #     n_train = round(train_prop * n)
+        #     train_idxs = idxs[:n_train]
+        #     test_idxs = idxs[n_train:]
+        # else:
+        #     train_idxs = idxs
+        #     test_idxs = idxs
 
         self.train_idxs = train_idxs
+        self.val_idxs = val_idxs
         self.test_idxs = test_idxs
         self.w = w[train_idxs]
         self.t = t[train_idxs]
         self.y = y[train_idxs]
+        self.w_val = w[val_idxs]
+        self.t_val = t[val_idxs]
+        self.y_val = y[val_idxs]
         self.w_test = w[test_idxs]
         self.t_test = t[test_idxs]
         self.y_test = y[test_idxs]
@@ -100,21 +142,41 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         self.w_transformed = self.w_transform.transform(self.w)
         self.t_transformed = self.t_transform.transform(self.t)
         self.y_transformed = self.y_transform.transform(self.y)
-
+        self.w_val_transformed = self.w_transform.transform(self.w_val)
+        self.t_val_transformed = self.t_transform.transform(self.t_val)
+        self.y_val_transformed = self.y_transform.transform(self.y_val)
         self.w_test_transformed = self.w_transform.transform(self.w_test)
         self.t_test_transformed = self.t_transform.transform(self.t_test)
         self.y_test_transformed = self.y_transform.transform(self.y_test)
 
-    def get_data(self, transformed=False, train=True, verbose=False):
+    def get_data(self, transformed=False, dataset=TRAIN, verbose=False):
+        """
+        Get the specific dataset. Splits were determined in the constructor.
+
+        :param transformed: If True, use transformed version of data.
+            If False, use original (non-transformed) version of data.
+        :param dataset: dataset subset to use (train, val, or test)
+        :param verbose:
+        :return: (covariates, treatment, outcome)
+        """
         verbose = True
-        if train:
+        dataset = dataset.lower()
+        if verbose:
+            print(dataset, end=' ')
+        if dataset == TRAIN:
             w, t, y = self.w, self.t, self.y
-            if verbose:
-                print('Train', end=' ')
-        else:
+        elif dataset == VAL or dataset == 'validation':
+            w, t, y = self.w_val, self.t_val, self.y_val
+        elif dataset == TEST:
             w, t, y = self.w_test, self.t_test, self.y_test
-            if verbose:
-                print('Test', end=' ')
+        else:
+            raise ValueError('Invalid dataset: {}'.format(dataset))
+
+        assert w.shape[0] == t.shape[0] == y.shape[0]
+        if w.shape[0] == 0:
+            raise ValueError('Dataset "{}" has 0 examples in it. Please '
+                             'increase the value of the corresponding argument '
+                             'in the constructor.'.format(dataset))
 
         if transformed:
             w = self.w_transform.transform(w)
@@ -194,9 +256,26 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         return self.ite(t1=t1, t0=t0, w=w, untransform=untransform,
                         transform_t=transform_t).mean()
 
-    def ite(self, t1=1, t0=0, w=None, untransform=True, transform_t=True):
+    def att(self, t1=1, t0=0, w=None, untransform=True, transform_t=True):
+        pass
+        # TODO
+        # return self.ite(t1=t1, t0=t0, w=w, untransform=untransform,
+        #                 transform_t=transform_t).mean()
+
+    def ite(self, t1=1, t0=0, w=None, t=None, untransform=True, transform_t=True, estimand='all'):
         if w is None:
-            w = self.sample_w(untransform=False)
+            w = self.w_transformed
+            # w = self.sample_w(untransform=False)
+            t = self.t
+        estimand = estimand.lower()
+        if estimand == 'all' or estimand == 'ate':
+            pass
+        elif estimand == 'treated' or estimand == 'att':
+            w = w[t == 1]
+        elif estimand == 'control' or estimand == 'atc':
+            w = w[t == 0]
+        else:
+            raise ValueError('Invalid estimand: {}'.format(estimand))
         if transform_t:
             t1 = self.t_transform.transform(t1)
             t0 = self.t_transform.transform(t0)
@@ -213,7 +292,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         return y_1 - y_0
 
     def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True,
-                      train=False, transformed=False,
+                      dataset=TRAIN, transformed=False,
                       title=True, name=None, file_ext='pdf', thin_model=None,
                       thin_true=None, joint_kwargs={}, test=False, seed=None):
         """
@@ -222,8 +301,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         :param joint: boolean for whether to plot p(t, y)
         :param marginal_hist: boolean for whether to plot the p(t) and p(y) histograms
         :param marginal_qq: boolean for whether to plot the p(t) and p(y) Q-Q plots
-        :param train: If True, evaluate on training data.
-            If False, evaluate on test data.
+        :param dataset: dataset subset to use (train, val, or test)
         :param transformed: If True, use transformed version of data.
             If False, use original (non-transformed) version of data.
         :param title: boolean for whether or not to include title in plots
@@ -241,7 +319,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
         _, t_model, y_model = to_np_vectors(self.sample(seed=seed, untransform=(not transformed)),
                                             thin_interval=thin_model)
-        _, t_true, y_true = self.get_data(transformed=transformed, train=train)
+        _, t_true, y_true = self.get_data(transformed=transformed, dataset=dataset)
         t_true, y_true = to_np_vectors((t_true, y_true), thin_interval=thin_true)
 
         if joint:
@@ -262,14 +340,13 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
                                         save_qq_fname='{}_ty_marginal_qqplots.{}'.format(name, file_ext),
                                         title=title, name=name, test=test)
 
-    def get_univariate_quant_metrics(self, train=False, transformed=False,
+    def get_univariate_quant_metrics(self, dataset=TRAIN, transformed=False,
                                      thin_model=None, thin_true=None, seed=None):
         """
         Calculates quantitative metrics for the difference between p(t) and
         p_model(t) and the difference between p(y) and p_model(y)
 
-        :param train: If True, evaluate on training data.
-            If False, evaluate on test data.
+        :param dataset: dataset subset to evaluate on (train, val, or test)
         :param transformed: If True, use transformed version of data.
             If False, use original (non-transformed) version of data.
         :param thin_model: thinning interval for the model data
@@ -284,7 +361,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         """
         _, t_model, y_model = to_np_vectors(self.sample(seed=seed, untransform=(not transformed)),
                                             thin_interval=thin_model)
-        _, t_true, y_true = self.get_data(transformed=transformed, train=train)
+        _, t_true, y_true = self.get_data(transformed=transformed, dataset=dataset)
         t_true, y_true = to_np_vectors((t_true, y_true), thin_interval=thin_true)
 
         ks_label = '_ks_pval'
@@ -297,7 +374,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         }
         return metrics
 
-    def get_multivariate_quant_metrics(self, include_w=True, train=False,
+    def get_multivariate_quant_metrics(self, include_w=True, dataset=TRAIN,
                                        transformed=False, norm=2, k=1,
                                        alphas=None, n_permutations=1000,
                                        seed=None):
@@ -309,8 +386,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
         :param include_w: If False, test if p(t, y) = p_model(t, y).
             If True, test if p(w, t, y) = p(w, t, y).
-        :param train: If True, evaluate on training data.
-            If False, evaluate on test data.
+        :param dataset: dataset subset to evaluate on (train, val, or test)
         :param transformed: If True, use transformed version of data.
             If False, use original (non-transformed) version of data.
         :param norm: norm used for Friedman-Rafsky test and kNN test
@@ -342,7 +418,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         t_model, y_model = to_np_vectors((t_model, y_model), column_vector=True)
         model_samples = np.hstack((t_model, y_model))
 
-        w_true, t_true, y_true = self.get_data(transformed=transformed, train=train)
+        w_true, t_true, y_true = self.get_data(transformed=transformed, dataset=dataset)
         t_true, y_true = to_np_vectors((t_true, y_true), column_vector=True)
         true_samples = np.hstack((t_true, y_true))
 
