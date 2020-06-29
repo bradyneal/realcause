@@ -113,14 +113,6 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         val_idxs = idxs[n_train:n_train+n_val]
         test_idxs = idxs[n_train+n_val:]
 
-        # if train_prop is not None and train_prop < 1.0:
-        #     n_train = round(train_prop * n)
-        #     train_idxs = idxs[:n_train]
-        #     test_idxs = idxs[n_train:]
-        # else:
-        #     train_idxs = idxs
-        #     test_idxs = idxs
-
         self.train_idxs = train_idxs
         self.val_idxs = val_idxs
         self.test_idxs = test_idxs
@@ -149,7 +141,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         self.t_test_transformed = self.t_transform.transform(self.t_test)
         self.y_test_transformed = self.y_transform.transform(self.y_test)
 
-    def get_data(self, transformed=False, dataset=TRAIN, verbose=False):
+    def get_data(self, transformed=False, dataset=TRAIN, verbose=True):
         """
         Get the specific dataset. Splits were determined in the constructor.
 
@@ -159,7 +151,6 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         :param verbose:
         :return: (covariates, treatment, outcome)
         """
-        verbose = True
         dataset = dataset.lower()
         if verbose:
             print(dataset, end=' ')
