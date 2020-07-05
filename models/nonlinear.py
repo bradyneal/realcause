@@ -18,6 +18,7 @@ class MLPParams:
 
 class TrainingParams:
     def __init__(self, batch_size=32, lr=0.001, num_epochs=100, verbose=True, print_every_iters=100,
+                 eval_every=1000,
                  optim=torch.optim.Adam, **optim_args):
         self.batch_size = batch_size
         self.lr = lr
@@ -25,7 +26,9 @@ class TrainingParams:
         self.verbose = verbose
         self.print_every_iters = print_every_iters
         self.optim = optim
+        self.eval_every = eval_every
         self.optim_args = optim_args
+
 
 
 
@@ -108,9 +111,18 @@ class MLP(BaseGenModel):
         )
 
         # TODO: binary treatment -> long data type
-        self.data_loader = data.DataLoader(CausalDataset(self.w_transformed, self.t_transformed, self.y_transformed),
+        self.data_loader = data.DataLoader(CausalDataset(self.w_transformed,
+                                                         self.t_transformed,
+                                                         self.y_transformed),
                                            batch_size=training_params.batch_size,
                                            shuffle=True)
+
+        if len(self.val_idxs)>0:
+            self.data_loader_val = data.DataLoader(CausalDataset(self.w_val_transformed,
+                                                                 self.t_val_transformed,
+                                                                 self.y_val_transformed),
+                                                   batch_size=training_params.batch_size,
+                                                   shuffle=True)
 
         # self._train()
 
@@ -139,9 +151,31 @@ class MLP(BaseGenModel):
                 loss.backward()
                 self.optim.step()
 
+                c += 1
                 if self.training_params.verbose and c % self.training_params.print_every_iters == 0:
                     print("Iteration {}: {} {}".format(c, loss_t, loss_y))
-                c += 1
+
+                if c % self.training_params.eval_every == 0 and len(self.val_idxs) > 0:
+                    loss_val = self.evaluate(self.data_loader_val)
+                    print("Iteration {} valid loss {}".format(c, loss_val))
+
+    @torch.no_grad()
+    def evaluate(self, data_loader):
+        loss = 0
+        n = 0
+        self.mlp_t_w.eval()
+        self.mlp_y_tw.eval()
+        for w, t, y in data_loader:
+            t_ = self.mlp_t_w(w)
+            y_ = self.mlp_y_tw(torch.cat([w, t], dim=1))
+            loss_t = self.treatment_distribution.loss(t, t_)
+            loss_y = self.outcome_distribution.loss(y, y_)
+            loss += (loss_t + loss_y) * w.size(0)
+            n += w.size(0)
+
+        self.mlp_t_w.train()
+        self.mlp_y_tw.train()
+        return loss / n
 
     def _sample_t(self, w=None):
         t_ = self.mlp_t_w(torch.from_numpy(w).float())
@@ -187,7 +221,7 @@ if __name__ == '__main__':
     if dataset == 1:
         w, t, y = load_lalonde()
         dist = distributions.MixedDistribution([0.0], distributions.LogLogistic())
-        training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=500)
+        training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=500, verbose=True)
         mlp_params_y_tw = MLPParams(n_hidden_layers=2, dim_h=256)
     elif dataset == 2:
         w, t, y = load_lalonde(rct=True)
@@ -226,7 +260,11 @@ if __name__ == '__main__':
               training_params=training_params,
               mlp_params_y_tw=mlp_params_y_tw,
               binary_treatment=True, outcome_distribution=dist,
-              outcome_min=0.0, outcome_max=1.0, seed=1,
+              outcome_min=0.0, outcome_max=1.0,
+              train_prop=0.8,
+              val_prop=0.1,
+              test_prop=0.1,
+              seed=1,
               w_transform=preprocess.Standardize, y_transform=preprocess.Normalize)
     mlp._train()
     data_samples = mlp.sample()
