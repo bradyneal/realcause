@@ -18,7 +18,7 @@ class MLPParams:
 
 class TrainingParams:
     def __init__(self, batch_size=32, lr=0.001, num_epochs=100, verbose=True, print_every_iters=100,
-                 eval_every=1000,
+                 eval_every=100,
                  optim=torch.optim.Adam, **optim_args):
         self.batch_size = batch_size
         self.lr = lr
@@ -139,6 +139,7 @@ class MLP(BaseGenModel):
 
     def _train(self):
         c = 0
+        best_val_loss = float('inf')
         for _ in range(self.training_params.num_epochs):
             for w, t, y in self.data_loader:
                 self.optim.zero_grad()
@@ -156,8 +157,21 @@ class MLP(BaseGenModel):
                     print("Iteration {}: {} {}".format(c, loss_t, loss_y))
 
                 if c % self.training_params.eval_every == 0 and len(self.val_idxs) > 0:
-                    loss_val = self.evaluate(self.data_loader_val)
+                    loss_val = self.evaluate(self.data_loader_val).item()
                     print("Iteration {} valid loss {}".format(c, loss_val))
+                    if loss_val < best_val_loss:
+                        best_val_loss = loss_val
+                        print('saving best-val-loss model')
+                        torch.save([self.mlp_t_w.state_dict(), self.mlp_y_tw.state_dict()],
+                                   '.cache_best_model.pt')
+                        # todo: this is not ideal since we cannot run multiple experiments at the same time
+                        #       without overwriting the saved model
+
+        if len(self.val_idxs) > 0:
+            print('loading best-val-loss model (early stopping checkpoint)')
+            mlp_t_w_params, mlp_y_tw_params = torch.load('.cache_best_model.pt')
+            self.mlp_t_w.load_state_dict(mlp_t_w_params)
+            self.mlp_y_tw.load_state_dict(mlp_y_tw_params)
 
     @torch.no_grad()
     def evaluate(self, data_loader):
@@ -221,7 +235,7 @@ if __name__ == '__main__':
     if dataset == 1:
         w, t, y = load_lalonde()
         dist = distributions.MixedDistribution([0.0], distributions.LogLogistic())
-        training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=500, verbose=True)
+        training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=100, verbose=False)
         mlp_params_y_tw = MLPParams(n_hidden_layers=2, dim_h=256)
     elif dataset == 2:
         w, t, y = load_lalonde(rct=True)
@@ -261,15 +275,15 @@ if __name__ == '__main__':
               mlp_params_y_tw=mlp_params_y_tw,
               binary_treatment=True, outcome_distribution=dist,
               outcome_min=0.0, outcome_max=1.0,
-              train_prop=0.8,
+              train_prop=0.5,
               val_prop=0.1,
-              test_prop=0.1,
+              test_prop=0.4,
               seed=1,
               w_transform=preprocess.Standardize, y_transform=preprocess.Normalize)
     mlp._train()
     data_samples = mlp.sample()
     # mlp.plot_ty_dists()
-    uni_metrics = mlp.get_univariate_quant_metrics()
+    uni_metrics = mlp.get_univariate_quant_metrics(dataset='test')
     pp.pprint(uni_metrics)
     # multi_ty_metrics = mlp.get_multivariate_quant_metrics(include_w=False, n_permutations=10)
     # multi_wty_metrics = mlp.get_multivariate_quant_metrics(include_w=True, n_permutations=10)
