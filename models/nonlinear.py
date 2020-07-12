@@ -192,6 +192,7 @@ class MLP(BaseGenModel):
         return loss / n
 
     def _sample_t(self, w=None, positivity=0):
+        # todo: this (positivity) is only for binary treatment though. do we have to deal with different types of treatments?
         t_ = self.mlp_t_w(torch.from_numpy(w).float())
         return self.treatment_distribution.sample(t_ + positivity)
 
