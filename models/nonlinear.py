@@ -191,9 +191,9 @@ class MLP(BaseGenModel):
         self.mlp_y_tw.train()
         return loss / n
 
-    def _sample_t(self, w=None):
+    def _sample_t(self, w=None, positivity=0):
         t_ = self.mlp_t_w(torch.from_numpy(w).float())
-        return self.treatment_distribution.sample(t_)
+        return self.treatment_distribution.sample(t_ + positivity)
 
     def _sample_y(self, t, w=None):
         wt = np.concatenate([w, t], 1)

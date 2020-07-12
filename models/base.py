@@ -188,7 +188,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             return self.w_transformed
 
     @abstractmethod
-    def _sample_t(self, w):
+    def _sample_t(self, w, positivity=0):
         pass
 
     @abstractmethod
@@ -199,11 +199,11 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
     def mean_y(self, t, w):
         pass
 
-    def sample_t(self, w, untransform=True):
+    def sample_t(self, w, untransform=True, positivity=0):
         if w is None:
             # note: input to the model need to be transformed
             w = self.sample_w(untransform=False)
-        t = self._sample_t(w)
+        t = self._sample_t(w, positivity=positivity)
         if untransform:
             return self.t_transform.untransform(t)
         else:
