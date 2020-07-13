@@ -247,6 +247,9 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         return self.ite(t1=t1, t0=t0, w=w, untransform=untransform,
                         transform_t=transform_t).mean()
 
+    def noisy_ate(self, t1=1, t0=0, w=None):
+        return (self.sample_interventional(t=t1, w=w) - self.sample_interventional(t=t0, w=w)).mean()
+
     def att(self, t1=1, t0=0, w=None, untransform=True, transform_t=True):
         pass
         # TODO
