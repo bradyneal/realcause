@@ -72,6 +72,7 @@ class MLP(BaseGenModel):
                  val_prop=0,
                  test_prop=0,
                  shuffle=True,
+                 early_stop=True,
                  w_transform=PlaceHolderTransform,
                  t_transform=PlaceHolderTransform,
                  y_transform=PlaceHolderTransform
@@ -91,6 +92,7 @@ class MLP(BaseGenModel):
         self.outcome_distribution = outcome_distribution
         self.outcome_min = outcome_min
         self.outcome_max = outcome_max
+        self.early_stop = early_stop
 
         self.dim_w = self.w_transformed.shape[1]
         self.dim_t = self.t_transformed.shape[1]
@@ -137,7 +139,10 @@ class MLP(BaseGenModel):
         hidden_layers += [nn.Linear(dim_h, dim_y * output_multiplier)]
         return nn.Sequential(*hidden_layers)
 
-    def _train(self):
+    def _train(self, early_stop=None):
+        if early_stop is None:
+            early_stop = self.early_stop
+
         c = 0
         best_val_loss = float('inf')
         for _ in range(self.training_params.num_epochs):
@@ -167,7 +172,7 @@ class MLP(BaseGenModel):
                         # todo: this is not ideal since we cannot run multiple experiments at the same time
                         #       without overwriting the saved model
 
-        if len(self.val_idxs) > 0:
+        if early_stop and len(self.val_idxs) > 0:
             print('loading best-val-loss model (early stopping checkpoint)')
             mlp_t_w_params, mlp_y_tw_params = torch.load('.cache_best_model.pt')
             self.mlp_t_w.load_state_dict(mlp_t_w_params)
