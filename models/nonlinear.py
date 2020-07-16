@@ -73,6 +73,7 @@ class MLP(BaseGenModel):
                  test_prop=0,
                  shuffle=True,
                  early_stop=True,
+                 ignore_w=False,
                  w_transform=PlaceHolderTransform,
                  t_transform=PlaceHolderTransform,
                  y_transform=PlaceHolderTransform
@@ -93,6 +94,7 @@ class MLP(BaseGenModel):
         self.outcome_min = outcome_min
         self.outcome_max = outcome_max
         self.early_stop = early_stop
+        self.ignore_w = ignore_w
 
         self.dim_w = self.w_transformed.shape[1]
         self.dim_t = self.t_transformed.shape[1]
@@ -149,6 +151,8 @@ class MLP(BaseGenModel):
             for w, t, y in self.data_loader:
                 self.optim.zero_grad()
                 t_ = self.mlp_t_w(w)
+                if self.ignore_w:
+                    w = torch.zeros_like(w)
                 y_ = self.mlp_y_tw(torch.cat([w,t], dim=1))
                 loss_t = self.treatment_distribution.loss(t, t_)
                 loss_y = self.outcome_distribution.loss(y, y_)
@@ -186,6 +190,8 @@ class MLP(BaseGenModel):
         self.mlp_y_tw.eval()
         for w, t, y in data_loader:
             t_ = self.mlp_t_w(w)
+            if self.ignore_w:
+                w = torch.zeros_like(w)
             y_ = self.mlp_y_tw(torch.cat([w, t], dim=1))
             loss_t = self.treatment_distribution.loss(t, t_)
             loss_y = self.outcome_distribution.loss(y, y_)
@@ -202,6 +208,8 @@ class MLP(BaseGenModel):
         return self.treatment_distribution.sample(t_ + positivity)
 
     def _sample_y(self, t, w=None):
+        if self.ignore_w:
+            w = torch.zeros_like(w)
         wt = np.concatenate([w, t], 1)
         y_ = self.mlp_y_tw(torch.from_numpy(wt).float())
         y_samples = self.outcome_distribution.sample(y_)
@@ -212,6 +220,8 @@ class MLP(BaseGenModel):
             return y_samples
 
     def mean_y(self, t, w):
+        if self.ignore_w:
+            w = torch.zeros_like(w)
         wt = np.concatenate([w, t], 1)
         return self.outcome_distribution.mean(self.mlp_y_tw(torch.from_numpy(wt).float()))
 
