@@ -181,7 +181,9 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
         return w, t, y
 
-    def sample_w(self, untransform=True):
+    def sample_w(self, untransform=True, seed=None):
+        if seed is not None:
+            self.set_seed(seed)
         if untransform:
             return self.w
         else:
@@ -199,7 +201,9 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
     def mean_y(self, t, w):
         pass
 
-    def sample_t(self, w, untransform=True, positivity=0):
+    def sample_t(self, w, untransform=True, positivity=0, seed=None):
+        if seed is not None:
+            self.set_seed(seed)
         if w is None:
             # note: input to the model need to be transformed
             w = self.sample_w(untransform=False)
@@ -209,7 +213,9 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         else:
             return t
 
-    def sample_y(self, t, w, untransform=True):
+    def sample_y(self, t, w, untransform=True, seed=None):
+        if seed is not None:
+            self.set_seed(seed)
         if w is None:
             # note: input to the model need to be transformed
             w = self.sample_w(untransform=False)
@@ -223,7 +229,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         torch.manual_seed(seed)
         np.random.seed(seed)
 
-    def sample(self, seed=None, untransform=True):
+    def sample(self, untransform=True, seed=None):
         if seed is not None:
             self.set_seed(seed)
         w = self.sample_w(untransform=False)
@@ -234,21 +240,24 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         else:
             return w, t, y
 
-    def sample_interventional(self, t, w=None):
+    def sample_interventional(self, t, w=None, seed=None):
+        if seed is not None:
+            self.set_seed(seed)
         if w is None:
-            w = self.sample_w(untransform=False)
+            w = self.sample_w(untransform=False, seed=seed)
         if isinstance(w, Number):
             raise ValueError('Unsupported data type: {} ... only numpy is currently supported'.format(type(w)))
         if isinstance(t, Number):
             t = np.full_like(self.t, t)
-        return self.sample_y(t, w)
+        return self.sample_y(t, w, seed=seed)
 
     def ate(self, t1=1, t0=0, w=None, untransform=True, transform_t=True):
         return self.ite(t1=t1, t0=t0, w=w, untransform=untransform,
                         transform_t=transform_t).mean()
 
-    def noisy_ate(self, t1=1, t0=0, w=None):
-        return (self.sample_interventional(t=t1, w=w) - self.sample_interventional(t=t0, w=w)).mean()
+    def noisy_ate(self, t1=1, t0=0, w=None, seed=None):
+        return (self.sample_interventional(t=t1, w=w, seed=seed) -
+                self.sample_interventional(t=t0, w=w, seed=seed)).mean()
 
     def att(self, t1=1, t0=0, w=None, untransform=True, transform_t=True):
         pass
