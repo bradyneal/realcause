@@ -244,20 +244,25 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         if seed is not None:
             self.set_seed(seed)
         if w is None:
-            w = self.sample_w(untransform=False, seed=seed)
+            w = self.sample_w(untransform=False)
         if isinstance(w, Number):
             raise ValueError('Unsupported data type: {} ... only numpy is currently supported'.format(type(w)))
         if isinstance(t, Number):
             t = np.full_like(self.t, t)
-        return self.sample_y(t, w, seed=seed)
+        return self.sample_y(t, w)
 
     def ate(self, t1=1, t0=0, w=None, untransform=True, transform_t=True):
         return self.ite(t1=t1, t0=t0, w=w, untransform=untransform,
                         transform_t=transform_t).mean()
 
-    def noisy_ate(self, t1=1, t0=0, w=None, seed=None):
-        return (self.sample_interventional(t=t1, w=w, seed=seed) -
-                self.sample_interventional(t=t0, w=w, seed=seed)).mean()
+    def noisy_ate(self, t1=1, t0=0, w=None, n_y_per_w=100, seed=None):
+        if seed is not None:
+            self.set_seed(seed)
+        total = 0
+        for _ in range(n_y_per_w):
+            total += (self.sample_interventional(t=t1, w=w) -
+                      self.sample_interventional(t=t0, w=w)).mean()
+        return total / n_y_per_w
 
     def att(self, t1=1, t0=0, w=None, untransform=True, transform_t=True):
         pass

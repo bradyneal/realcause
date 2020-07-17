@@ -15,6 +15,7 @@ elif dataset == 2:
     w, t, y = load_lalonde(rct=True)
     dist = distributions.MixedDistribution([0.0], distributions.LogLogistic())
     training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=500)
+    # training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=50, eval_every=1)
     mlp_params_y_tw = MLPParams(n_hidden_layers=2, dim_h=256)
 elif dataset == 3:
     w, t, y = load_lalonde(obs_version='cps1')
@@ -30,11 +31,14 @@ mlp = MLP(w, t, y,
           binary_treatment=True, outcome_distribution=dist,
           outcome_min=0.0, outcome_max=1.0,
           train_prop=0.5, val_prop=0.1, test_prop=0.4,
-          seed=1, early_stop=False,
+          seed=1,
+          # early_stop=True,
+          early_stop=False,
+          ignore_w=True,
           w_transform=preprocess.Standardize, y_transform=preprocess.Normalize)
 mlp._train()
 
 naive = y[t == 1].mean() - y[t == 0].mean()
 print('Naive ATE:', naive)
-print('Noisy ATE est (using sample_y):', mlp.noisy_ate())
+print('Noisy ATE est (using sample_y):', mlp.noisy_ate(n_y_per_w=10000))
 print('ATE est (using mean_y):', mlp.ate())
