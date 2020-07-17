@@ -209,7 +209,7 @@ class MLP(BaseGenModel):
 
     def _sample_y(self, t, w=None):
         if self.ignore_w:
-            w = torch.zeros_like(w)
+            w = np.zeros_like(w)
         wt = np.concatenate([w, t], 1)
         y_ = self.mlp_y_tw(torch.from_numpy(wt).float())
         y_samples = self.outcome_distribution.sample(y_)
@@ -221,7 +221,7 @@ class MLP(BaseGenModel):
 
     def mean_y(self, t, w):
         if self.ignore_w:
-            w = torch.zeros_like(w)
+            w = np.zeros_like(w)
         wt = np.concatenate([w, t], 1)
         return self.outcome_distribution.mean(self.mlp_y_tw(torch.from_numpy(wt).float()))
 
