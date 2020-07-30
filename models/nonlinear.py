@@ -247,22 +247,29 @@ if __name__ == '__main__':
     # multi_ty_metrics = mlp.get_multivariate_quant_metrics(include_w=False, n_permutations=10)
     # multi_wty_metrics = mlp.get_multivariate_quant_metrics(include_w=True, n_permutations=10)
 
-    dataset = 1
+    dataset = 2
     if dataset == 1:
         w, t, y = load_lalonde()
         dist = distributions.MixedDistribution([0.0], distributions.LogLogistic())
         training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=100, verbose=False)
         mlp_params_y_tw = MLPParams(n_hidden_layers=2, dim_h=256)
+        early_stop = True
+        ignore_w = False
     elif dataset == 2:
         w, t, y = load_lalonde(rct=True)
-        dist = distributions.MixedDistribution([0.0], distributions.LogLogistic())
-        training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=500)
-        mlp_params_y_tw = MLPParams(n_hidden_layers=2, dim_h=256)
+        # dist = distributions.MixedDistribution([0.0], distributions.LogLogistic())
+        dist = distributions.FactorialGaussian()
+        training_params = TrainingParams(lr=0.001, batch_size=64, num_epochs=200)
+        mlp_params_y_tw = MLPParams(n_hidden_layers=2, dim_h=1024)
+        early_stop = True
+        ignore_w = False
     elif dataset == 3:
         w, t, y = load_lalonde(obs_version='cps1')
         dist = distributions.MixedDistribution([0.0, 25564.669921875/y.max()], distributions.LogNormal())
         training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=1000)
         mlp_params_y_tw = MLPParams(n_hidden_layers=3, dim_h=512, activation=torch.nn.LeakyReLU())
+        early_stop = True
+        ignore_w = False
     else:
         raise(Exception('dataset {} not implemented'.format(dataset)))
 
@@ -295,6 +302,8 @@ if __name__ == '__main__':
               val_prop=0.1,
               test_prop=0.4,
               seed=1,
+              early_stop=early_stop,
+              ignore_w=ignore_w,
               w_transform=preprocess.Standardize, y_transform=preprocess.Normalize)
     mlp._train()
     data_samples = mlp.sample()
