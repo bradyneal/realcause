@@ -43,6 +43,7 @@ params_path = os.path.join(scaling_folder, 'params.csv')
 counterfactuals_folder = os.path.join(scaling_folder, 'counterfactuals')
 factuals_folder = os.path.join(scaling_folder, 'factuals')
 
+N_DATASETS = 2592
 N_DATASETS_PER_SIZE = 432
 N_STR_TO_INT = {
     '1k': 1000,
@@ -59,9 +60,11 @@ N_STR_TO_INT = {
     '50000': 50000,
 }
 VALID_N = N_STR_TO_INT.keys()
+VALID_LINKS = {'poly', 'log', 'exp'}
 
 
-def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, i=0):
+def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, return_params_df=False,
+               link='poly', degree_y=2, degree_t=2, n_shared_parents='max', i=0):
     """
     Load the LBIDD dataset that is specified
 
@@ -69,9 +72,16 @@ def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, i=0):
     :param observe_counterfactuals: if True, return double-sized dataset with
         both y0 (first half) and y1 (second half) observed
     :param return_ites: if True, return ITEs
-    :param i: which parametrization to choose (0 <= i < 432)
+    :param return_params_df: if True, return the DataFrame of dataset parameters
+        that match
+    :param link: link function (poly, log, or exp)
+    :param degree_y: degree of function for Y (e.g. 1, 2, 3, etc.)
+    :param degree_t: degree of function for T (e.g. 1, 2, 3, etc.)
+    :param n_shared_parents: number covariates that T and Y share as causal parents
+    :param i: index of parametrization to choose among the ones that match
     :return: dictionary of results
     """
+
     # Check if files exist
     if not (os.path.isfile(scaling_zip) and os.path.isfile(covariates_path)):
         raise FileNotFoundError(
@@ -82,16 +92,12 @@ def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, i=0):
         )
 
     # Process dataset size (n)
-    if not isinstance(n, str):
-        n = str(n)
-    n = n.lower()
-    if n.lower() not in VALID_N:
-        raise ValueError('Invalid n: {} ... Valid n: {}'.format(n, list(VALID_N)))
-    n = N_STR_TO_INT[n]
-
-    # Make sure arguments are valid
-    if not (isinstance(i, int) and 0 <= i < N_DATASETS_PER_SIZE):
-        raise ValueError('Invalid i: {} ... Valid i: 0 <= i < {}'.format(i, N_DATASETS_PER_SIZE))
+    if n is not None:
+        if not isinstance(n, str):
+            n = str(n)
+        if n.lower() not in VALID_N:
+            raise ValueError('Invalid n: {} ... Valid n: {}'.format(n, list(VALID_N)))
+        n = N_STR_TO_INT[n]
 
     # Unzip 'scaling.tar.gz' if not already unzipped
     if not os.path.exists(scaling_folder):
@@ -101,17 +107,52 @@ def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, i=0):
         tar.close()
         print('DONE')
 
+    # Load and filter the params DataFrame
     params_df = pd.read_csv(params_path)
+    if n is not None:
+        params_df = params_df[params_df['size'] == n]   # Select dataset size
+    if link is not None:
+        if link not in VALID_LINKS:
+            raise ValueError('Invalid link function type: {} ... Valid links: {}'
+                             .format(link, VALID_LINKS))
+        params_df = params_df[params_df['link_type'] == link]   # Select link function
+    if degree_y is not None:
+        params_df = params_df[params_df['deg(y)'] == degree_y]  # Select degree Y
+    if degree_t is not None:
+        params_df = params_df[params_df['deg(z)'] == degree_t]  # Select degree T
 
-    # Take ith dataset that has the right size
-    ufid = params_df[params_df['size'] == n]['ufid'].iloc[i]
+    # Filter by number of parents that T and Y share
+    valid_n_shared_parents = params_df['n_conf(yz)'].unique().tolist()
+    if n_shared_parents in valid_n_shared_parents:
+        params_df = params_df[params_df['n_conf(yz)'] == n_shared_parents]
+    elif isinstance(n_shared_parents, str) and n_shared_parents.lower() == 'max':
+        max_shared_parents = params_df['n_conf(yz)'].max()
+        params_df = params_df[params_df['n_conf(yz)'] == max_shared_parents]
+    elif n_shared_parents is None:
+        pass
+    else:
+        raise ValueError('Invalid n_shared_parents ... must be either None, "max" or in {}'
+                         .format(valid_n_shared_parents))
+
+    if params_df.empty:
+        raise ValueError('No datasets have that combination of parameters.')
+
+    output = {}
+    if return_params_df:
+        output['params_df'] = params_df
+
+    # Get ith dataset that has the right parameters
+    if i < len(params_df):
+        ufid = params_df['ufid'].iloc[i]
+    else:
+        raise ValueError('Invalid i: {} ... with that parameter combination, i must be an int such that 0 <= i < {}'
+                         .format(i, len(params_df)))
 
     covariates_df = pd.read_csv(covariates_path, index_col=INDEX_COL_NAME)
     factuals_path = os.path.join(factuals_folder, ufid + FILE_EXT)
     factuals_df = pd.read_csv(factuals_path, index_col=INDEX_COL_NAME)
     joint_factuals_df = covariates_df.join(factuals_df, how='inner')
 
-    output = {}
     output['t'] = joint_factuals_df['z'].to_numpy()
     output['y'] = joint_factuals_df['y'].to_numpy()
     output['w'] = joint_factuals_df.drop(['z', 'y'], axis='columns').to_numpy()
@@ -138,3 +179,40 @@ def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, i=0):
             output['ites'] = ites.to_numpy()
 
     return output
+
+
+def lbidd_iter(n=None, observe_counterfactuals=False, return_ites=False, return_params_df=False):
+    """
+    Iterator for LBIDD datasets of a given size of just all of them
+
+    :param n: size of datasets to iterate over (1k, 2.5k, 5k, 10k, 25k, or 50k)
+        if None, iterate over all 2592 datasets
+    :param observe_counterfactuals: if True, return double-sized dataset with
+        both y0 (first half) and y1 (second half) observed
+    :param return_ites: if True, return ITEs
+    :param return_params_df: if True, return the DataFrame of dataset parameters
+        that match
+    :yield: dictionary of results
+    """
+    if n is None:
+        n_datasets = N_DATASETS
+    else:
+        if not isinstance(n, str):
+            n = str(n)
+        if n.lower() not in VALID_N:
+            raise ValueError('Invalid n: {} ... Valid n: {}'.format(n, list(VALID_N)))
+        n = N_STR_TO_INT[n]
+    params_df = pd.read_csv(params_path)
+
+    if n is not None:
+        params_df = params_df[params_df['size'] == n]
+        n_datasets = N_DATASETS_PER_SIZE
+    for i in range(n_datasets):
+        yield load_lbidd(n=n, observe_counterfactuals=observe_counterfactuals,
+                         return_ites=return_ites, return_params_df=return_params_df,
+                         link=None, degree_y=None, degree_t=None, n_shared_parents=None,
+                         i=i)
+
+
+for i, d in enumerate(lbidd_iter()):
+    print(i)
