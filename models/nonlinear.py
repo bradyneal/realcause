@@ -16,6 +16,9 @@ class MLPParams:
         self.activation = activation
 
 
+_DEFAULT_MLP = dict(mlp_params_t_w=MLPParams(), mlp_params_y_tw=MLPParams())
+
+
 class TrainingParams:
     def __init__(self, batch_size=32, lr=0.001, num_epochs=100, verbose=True, print_every_iters=100,
                  eval_every=100,
@@ -61,8 +64,7 @@ class CausalDataset(data.Dataset):
 class MLP(BaseGenModel):
 
     def __init__(self, w, t, y, seed=1,
-                 mlp_params_t_w=MLPParams(),
-                 mlp_params_y_tw=MLPParams(),
+                 network_params=None,
                  training_params = TrainingParams(),
                  binary_treatment=False,
                  outcome_distribution:distributions.BaseDistribution=distributions.FactorialGaussian(),
@@ -76,7 +78,7 @@ class MLP(BaseGenModel):
                  ignore_w=False,
                  w_transform=PlaceHolderTransform,
                  t_transform=PlaceHolderTransform,
-                 y_transform=PlaceHolderTransform
+                 y_transform=PlaceHolderTransform,
                  ):
         super(MLP, self).__init__(*self._matricize((w, t, y)), seed=seed,
                                   train_prop=train_prop, val_prop=val_prop,
@@ -100,17 +102,14 @@ class MLP(BaseGenModel):
         self.dim_t = self.t_transformed.shape[1]
         self.dim_y = self.y_transformed.shape[1]
 
-        self.MLP_params_t_w = mlp_params_t_w
-        self.MLP_params_y_tw = mlp_params_y_tw
-        output_multiplier_t = 1 if binary_treatment else 2
-        self.mlp_t_w = self._build_mlp(self.dim_w, self.dim_t, mlp_params_t_w, output_multiplier_t)
-        self.mlp_y_tw = self._build_mlp(self.dim_w+self.dim_t, self.dim_y, mlp_params_y_tw,
-                                        outcome_distribution.num_params)
+        if network_params is None: network_params=_DEFAULT_MLP
+        self.network_params = network_params
+        self.build_networks()
 
         # TODO: multiple optimizers ?
         self.training_params = training_params
         self.optim = training_params.optim(
-            chain(self.mlp_t_w.parameters(), self.mlp_y_tw.parameters()),
+            chain(*[net.parameters() for net in self.networks]),
             training_params.lr, **training_params.optim_args
         )
 
@@ -128,7 +127,6 @@ class MLP(BaseGenModel):
                                                    batch_size=training_params.batch_size,
                                                    shuffle=True)
 
-        # self._train()
 
     def _matricize(self, data):
         return [np.reshape(d, [d.shape[0], -1]) for d in data]
@@ -141,22 +139,35 @@ class MLP(BaseGenModel):
         hidden_layers += [nn.Linear(dim_h, dim_y * output_multiplier)]
         return nn.Sequential(*hidden_layers)
 
+    def build_networks(self):
+        self.MLP_params_t_w = self.network_params['mlp_params_t_w']
+        self.MLP_params_y_tw = self.network_params['mlp_params_y_tw']
+        output_multiplier_t = 1 if self.binary_treatment else 2
+        self.mlp_t_w = self._build_mlp(self.dim_w, self.dim_t, self.MLP_params_t_w, output_multiplier_t)
+        self.mlp_y_tw = self._build_mlp(self.dim_w + self.dim_t, self.dim_y, self.MLP_params_y_tw ,
+                                        self.outcome_distribution.num_params)
+        self.networks = [self.mlp_t_w, self.mlp_y_tw]
+
+    def _get_loss(self, w, t, y):
+        t_ = self.mlp_t_w(w)
+        if self.ignore_w:
+            w = torch.zeros_like(w)
+        y_ = self.mlp_y_tw(torch.cat([w, t], dim=1))
+        loss_t = self.treatment_distribution.loss(t, t_)
+        loss_y = self.outcome_distribution.loss(y, y_)
+        loss = loss_t + loss_y
+        return loss, loss_t, loss_y
+
     def _train(self, early_stop=None):
         if early_stop is None:
             early_stop = self.early_stop
 
         c = 0
-        best_val_loss = float('inf')
+        self.best_val_loss = float('inf')
         for _ in range(self.training_params.num_epochs):
             for w, t, y in self.data_loader:
                 self.optim.zero_grad()
-                t_ = self.mlp_t_w(w)
-                if self.ignore_w:
-                    w = torch.zeros_like(w)
-                y_ = self.mlp_y_tw(torch.cat([w,t], dim=1))
-                loss_t = self.treatment_distribution.loss(t, t_)
-                loss_y = self.outcome_distribution.loss(y, y_)
-                loss = loss_t + loss_y
+                loss, loss_t, loss_y = self._get_loss(w, t, y)
                 # TODO: learning rate can be separately adjusted by weighting the losses here
                 loss.backward()
                 self.optim.step()
@@ -168,19 +179,18 @@ class MLP(BaseGenModel):
                 if c % self.training_params.eval_every == 0 and len(self.val_idxs) > 0:
                     loss_val = self.evaluate(self.data_loader_val).item()
                     print("Iteration {} valid loss {}".format(c, loss_val))
-                    if loss_val < best_val_loss:
-                        best_val_loss = loss_val
+                    if loss_val < self.best_val_loss:
+                        self.best_val_loss = loss_val
                         print('saving best-val-loss model')
-                        torch.save([self.mlp_t_w.state_dict(), self.mlp_y_tw.state_dict()],
+                        torch.save([net.state_dict() for net in self.networks],
                                    '.cache_best_model.pt')
                         # todo: this is not ideal since we cannot run multiple experiments at the same time
                         #       without overwriting the saved model
 
         if early_stop and len(self.val_idxs) > 0:
             print('loading best-val-loss model (early stopping checkpoint)')
-            mlp_t_w_params, mlp_y_tw_params = torch.load('.cache_best_model.pt')
-            self.mlp_t_w.load_state_dict(mlp_t_w_params)
-            self.mlp_y_tw.load_state_dict(mlp_y_tw_params)
+            for net, params in zip(self.networks, torch.load('.cache_best_model.pt')):
+                net.load_state_dict(params)
 
     @torch.no_grad()
     def evaluate(self, data_loader):
@@ -189,13 +199,7 @@ class MLP(BaseGenModel):
         self.mlp_t_w.eval()
         self.mlp_y_tw.eval()
         for w, t, y in data_loader:
-            t_ = self.mlp_t_w(w)
-            if self.ignore_w:
-                w = torch.zeros_like(w)
-            y_ = self.mlp_y_tw(torch.cat([w, t], dim=1))
-            loss_t = self.treatment_distribution.loss(t, t_)
-            loss_y = self.outcome_distribution.loss(y, y_)
-            loss += (loss_t + loss_y) * w.size(0)
+            loss += self._get_loss(w, t, y)[0] * w.size(0)
             n += w.size(0)
 
         self.mlp_t_w.train()
@@ -295,7 +299,7 @@ if __name__ == '__main__':
 
     mlp = MLP(w, t, y,
               training_params=training_params,
-              mlp_params_y_tw=mlp_params_y_tw,
+              network_params=dict(mlp_params_t_w=MLPParams(), mlp_params_y_tw=mlp_params_y_tw),
               binary_treatment=True, outcome_distribution=dist,
               outcome_min=0.0, outcome_max=1.0,
               train_prop=0.5,
