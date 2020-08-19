@@ -196,14 +196,15 @@ class MLP(BaseGenModel):
     def evaluate(self, data_loader):
         loss = 0
         n = 0
-        self.mlp_t_w.eval()
-        self.mlp_y_tw.eval()
+        for net in self.networks:
+            net.eval()
+
         for w, t, y in data_loader:
             loss += self._get_loss(w, t, y)[0] * w.size(0)
             n += w.size(0)
 
-        self.mlp_t_w.train()
-        self.mlp_y_tw.train()
+        for net in self.networks:
+            net.train()
         return loss / n
 
     def _sample_t(self, w=None, positivity=0):
@@ -314,5 +315,6 @@ if __name__ == '__main__':
     # mlp.plot_ty_dists()
     uni_metrics = mlp.get_univariate_quant_metrics(dataset='test')
     pp.pprint(uni_metrics)
+    print('noisy ate:', mlp.noisy_ate())
     # multi_ty_metrics = mlp.get_multivariate_quant_metrics(include_w=False, n_permutations=10)
     # multi_wty_metrics = mlp.get_multivariate_quant_metrics(include_w=True, n_permutations=10)
