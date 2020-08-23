@@ -45,7 +45,7 @@ mlp = MLP(w, t, y,
           ignore_w=ignore_w,
           w_transform=preprocess.Standardize, y_transform=preprocess.Normalize)
 
-mlp._train()
+mlp.train()
 
 naive = y[t == 1].mean() - y[t == 0].mean()
 print('Naive ATE:', naive)

@@ -79,6 +79,15 @@ def gaussian_sampler(mean, log_var):
 
 class BaseDistribution(object):
     """Distribution with batchified likelihood function and sampling function"""
+
+    dists = dict()
+    dist_names = []
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls.dists[cls.__name__] = cls
+        cls.dist_names.append(cls.__name__)
+
     def likelihood(self, x, params):
         raise NotImplementedError
 
@@ -174,7 +183,8 @@ class MixedDistribution(BaseDistribution):
         self.dist = dist
 
     def likelihood(self, x, params):
-        # todo: slicer is so that it can potentially handle n-d array. but it doesn't handle multiple features within an axis yet
+        # todo: slicer is so that it can potentially handle n-d array.
+        #  but it doesn't handle multiple features within an axis yet
 
         slc = [slice(None)] * len(params.shape)
         slc[-1] = slice(0, self.num_atoms + 1)
@@ -237,7 +247,7 @@ class MixedDistribution(BaseDistribution):
         for j, atom in enumerate(self.atoms):
             mean += pi[:, j] * atom
 
-        return mean + pi[:, -1] * self.dist.mean(params[:, self.num_atoms + 1:])[:,0] # todo: keep dim?
+        return mean + pi[:, -1] * self.dist.mean(params[:, self.num_atoms + 1:])[:, 0]  # todo: keep dim?
 
 
 def quick_test():
@@ -253,6 +263,6 @@ def quick_test_mean():
     for dist in [FactorialGaussian(), LogNormal(), LogLogistic(), MixedDistribution([1.0, 5.5], FactorialGaussian())]:
         num_params = dist.num_params
         params = torch.randn(10, num_params)
-        mean = dist.mean(params)[:,0]
-        mean_ = dist.sample(params[None].expand(n, 10, -1).reshape(-1,dist.num_params)).reshape(n, -1).mean(0)
+        mean = dist.mean(params)[:, 0]
+        mean_ = dist.sample(params[None].expand(n, 10, -1).reshape(-1, dist.num_params)).reshape(n, -1).mean(0)
         print(mean - mean_)

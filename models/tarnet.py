@@ -118,7 +118,7 @@ if __name__ == '__main__':
                  early_stop=early_stop,
                  ignore_w=ignore_w,
                  w_transform=preprocess.Standardize, y_transform=preprocess.Normalize)
-    mdl._train()
+    mdl.train()
     data_samples = mdl.sample()
     # mlp.plot_ty_dists()
     uni_metrics = mdl.get_univariate_quant_metrics(dataset='test')

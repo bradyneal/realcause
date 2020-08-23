@@ -79,6 +79,7 @@ class MLP(BaseGenModel):
                  w_transform=PlaceHolderTransform,
                  t_transform=PlaceHolderTransform,
                  y_transform=PlaceHolderTransform,
+                 savepath='.cache_best_model.pt'
                  ):
         super(MLP, self).__init__(*self._matricize((w, t, y)), seed=seed,
                                   train_prop=train_prop, val_prop=val_prop,
@@ -97,6 +98,7 @@ class MLP(BaseGenModel):
         self.outcome_max = outcome_max
         self.early_stop = early_stop
         self.ignore_w = ignore_w
+        self.savepath = savepath
 
         self.dim_w = self.w_transformed.shape[1]
         self.dim_t = self.t_transformed.shape[1]
@@ -158,7 +160,7 @@ class MLP(BaseGenModel):
         loss = loss_t + loss_y
         return loss, loss_t, loss_y
 
-    def _train(self, early_stop=None):
+    def train(self, early_stop=None, print_=print):
         if early_stop is None:
             early_stop = self.early_stop
 
@@ -174,22 +176,21 @@ class MLP(BaseGenModel):
 
                 c += 1
                 if self.training_params.verbose and c % self.training_params.print_every_iters == 0:
-                    print("Iteration {}: {} {}".format(c, loss_t, loss_y))
+                    print_("Iteration {}: {} {}".format(c, loss_t, loss_y))
 
                 if c % self.training_params.eval_every == 0 and len(self.val_idxs) > 0:
                     loss_val = self.evaluate(self.data_loader_val).item()
-                    print("Iteration {} valid loss {}".format(c, loss_val))
+                    print_("Iteration {} valid loss {}".format(c, loss_val))
                     if loss_val < self.best_val_loss:
                         self.best_val_loss = loss_val
                         print('saving best-val-loss model')
-                        torch.save([net.state_dict() for net in self.networks],
-                                   '.cache_best_model.pt')
+                        torch.save([net.state_dict() for net in self.networks], self.savepath)
                         # todo: this is not ideal since we cannot run multiple experiments at the same time
                         #       without overwriting the saved model
 
         if early_stop and len(self.val_idxs) > 0:
             print('loading best-val-loss model (early stopping checkpoint)')
-            for net, params in zip(self.networks, torch.load('.cache_best_model.pt')):
+            for net, params in zip(self.networks, torch.load(self.savepath)):
                 net.load_state_dict(params)
 
     @torch.no_grad()
@@ -255,7 +256,8 @@ if __name__ == '__main__':
     dataset = 2
     if dataset == 1:
         w, t, y = load_lalonde()
-        dist = distributions.MixedDistribution([0.0], distributions.LogLogistic())
+        # dist = distributions.MixedDistribution([0.0], distributions.LogLogistic())
+        dist = distributions.FactorialGaussian()
         training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=100, verbose=False)
         mlp_params_y_tw = MLPParams(n_hidden_layers=2, dim_h=256)
         early_stop = True
@@ -310,7 +312,7 @@ if __name__ == '__main__':
               early_stop=early_stop,
               ignore_w=ignore_w,
               w_transform=preprocess.Standardize, y_transform=preprocess.Normalize)
-    mlp._train()
+    mlp.train()
     data_samples = mlp.sample()
     # mlp.plot_ty_dists()
     uni_metrics = mlp.get_univariate_quant_metrics(dataset='test')

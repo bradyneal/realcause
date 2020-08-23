@@ -31,7 +31,7 @@ for seed in range(20):
               ignore_w=ignore_w,
               w_transform=preprocess.Standardize, y_transform=preprocess.Normalize)
 
-    mlp._train()
+    mlp.train()
 
     BEST_VAL_LOSS.append(mlp.best_val_loss)
     ATE.append(mlp.noisy_ate(n_y_per_w=1000))
