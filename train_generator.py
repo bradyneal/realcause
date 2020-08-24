@@ -3,6 +3,7 @@ import os
 import numpy as np
 import torch
 from data.lalonde import load_lalonde
+from data.lbidd import load_lbidd
 from models import TarNet, distributions, preprocess, TrainingParams, MLPParams
 import helpers
 from collections import OrderedDict
@@ -10,12 +11,27 @@ import json
 
 
 def get_data(args):
-    if args.data == 'lalonde':
+    # data_name = args.data.lower()
+    data_name = args.lower()
+    if data_name == 'lalonde':
         w, t, y = load_lalonde()
-    elif args.data == 'lalonde_rct':
+    elif data_name == 'lalonde_rct':
         w, t, y = load_lalonde(rct=True)
-    elif args.data == 'lalonde_cps1':
+    elif data_name == 'lalonde_cps1':
         w, t, y = load_lalonde(obs_version='cps1')
+    elif data_name.startswith('lbidd'):
+        # Valid string formats: lbidd_<link>_<n> and lbidd_<link>_<n>_counterfactual
+        # Valid <link> options: linear, quadratic, cubic, exp, and log
+        # Valid <n> options: 1k, 2.5k, 5k, 10k, 25k, and 50k
+        options = data_name.split('_')
+        link = options[1]
+        n = options[2]
+        observe_counterfactuals = (len(options) == 4) and (options[3] == 'counterfactual')
+        d = load_lbidd(n=n, observe_counterfactuals=observe_counterfactuals, link=link)
+        if observe_counterfactuals:
+            w, t, y = d['obs_counterfactual_w'], d['obs_counterfactual_t'], d['obs_counterfactual_y']
+        else:
+            w, t, y = d['w'], d['t'], d['y']
     else:
         raise (Exception('dataset {} not implemented'.format(args.data)))
 

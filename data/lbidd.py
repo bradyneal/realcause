@@ -60,11 +60,11 @@ N_STR_TO_INT = {
     '50000': 50000,
 }
 VALID_N = N_STR_TO_INT.keys()
-VALID_LINKS = {'poly', 'log', 'exp'}
+VALID_LINKS = {'linear', 'quadratic', 'cubic', 'poly', 'log', 'exp'}
 
 
 def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, return_params_df=False,
-               link='poly', degree_y=2, degree_t=2, n_shared_parents='max', i=0):
+               link='quadratic', degree_y=None, degree_t=None, n_shared_parents='median', i=0):
     """
     Load the LBIDD dataset that is specified
 
@@ -74,7 +74,7 @@ def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, return_
     :param return_ites: if True, return ITEs
     :param return_params_df: if True, return the DataFrame of dataset parameters
         that match
-    :param link: link function (poly, log, or exp)
+    :param link: link function (linear, quadratic, cubic, poly, log, or exp)
     :param degree_y: degree of function for Y (e.g. 1, 2, 3, etc.)
     :param degree_t: degree of function for T (e.g. 1, 2, 3, etc.)
     :param n_shared_parents: number covariates that T and Y share as causal parents
@@ -115,6 +115,18 @@ def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, return_
         if link not in VALID_LINKS:
             raise ValueError('Invalid link function type: {} ... Valid links: {}'
                              .format(link, VALID_LINKS))
+        if link == 'linear':
+            link = 'poly'
+            degree_y = 1
+            degree_t = 1
+        elif link == 'quadratic':
+            link = 'poly'
+            degree_y = 2
+            degree_t = 2
+        elif link == 'cubic':
+            link = 'poly'
+            degree_y = 3
+            degree_t = 3
         params_df = params_df[params_df['link_type'] == link]   # Select link function
     if degree_y is not None:
         params_df = params_df[params_df['deg(y)'] == degree_y]  # Select degree Y
@@ -128,10 +140,14 @@ def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, return_
     elif isinstance(n_shared_parents, str) and n_shared_parents.lower() == 'max':
         max_shared_parents = params_df['n_conf(yz)'].max()
         params_df = params_df[params_df['n_conf(yz)'] == max_shared_parents]
+    elif isinstance(n_shared_parents, str) and n_shared_parents.lower() == 'median':
+        median_i = len(params_df) // 2
+        median_shared_parents = params_df['n_conf(yz)'].sort_values().iloc[median_i]
+        params_df = params_df[params_df['n_conf(yz)'] == median_shared_parents]
     elif n_shared_parents is None:
         pass
     else:
-        raise ValueError('Invalid n_shared_parents ... must be either None, "max" or in {}'
+        raise ValueError('Invalid n_shared_parents ... must be either None, "max", "median", or in {}'
                          .format(valid_n_shared_parents))
 
     if params_df.empty:
