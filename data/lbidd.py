@@ -212,7 +212,3 @@ def lbidd_iter(n=None, observe_counterfactuals=False, return_ites=False, return_
                          return_ites=return_ites, return_params_df=return_params_df,
                          link=None, degree_y=None, degree_t=None, n_shared_parents=None,
                          i=i)
-
-
-for i, d in enumerate(lbidd_iter()):
-    print(i)
