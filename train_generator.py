@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from data.lalonde import load_lalonde
 from data.lbidd import load_lbidd
+from data.ihdp import load_ihdp
 from models import TarNet, distributions, preprocess, TrainingParams, MLPParams
 import helpers
 from collections import OrderedDict
@@ -32,6 +33,12 @@ def get_data(args):
             w, t, y = d['obs_counterfactual_w'], d['obs_counterfactual_t'], d['obs_counterfactual_y']
         else:
             w, t, y = d['w'], d['t'], d['y']
+    elif data_name == 'ihdp':
+        d = load_ihdp()
+        w, t, y = d['w'], d['t'], d['y']
+    elif data_name == 'ihdp_counterfactual':
+        d = load_ihdp(observe_counterfactuals=True)
+        w, t, y = d['w'], d['t'], d['y']
     else:
         raise (Exception('dataset {} not implemented'.format(args.data)))
 

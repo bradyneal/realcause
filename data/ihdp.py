@@ -33,7 +33,73 @@ SPLIT_OPTIONS = {'train', 'test', 'all'}
 N_REALIZATIONS_OPTIONS = {100, 1000}
 
 
-def load_ihdp(split='train', n_realizations=100):
+def load_ihdp(split='all', i=0, observe_counterfactuals=False, return_ites=False):
+    """
+    Load a single instance of the IHDP dataset
+
+    :param split: 'train', 'test', or 'both' (the default IHDP split is 90/10)
+    :param i: dataset instance (0 <= i < 1000)
+    :param observe_counterfactuals: if True, return double-sized dataset with
+        both y0 (first half) and y1 (second half) observed
+    :param return_ites: if True, return ITEs
+    :return: dictionary of results
+    """
+    if 0 <= i < 100:
+        n_realizations = 100
+    elif 100 <= i < 1000:
+        n_realizations = 1000
+        i = i - 100
+    else:
+        raise ValueError('Invalid i: {} ... Valid i: 0 <= i < 1000'.format(i))
+
+    if split == 'all':
+        train, test = load_ihdp_datasets(split=split, n_realizations=n_realizations)
+    else:
+        data = load_ihdp_datasets(split=split, n_realizations=n_realizations)
+
+    ws = []
+    ts = []
+    ys = []
+    ys_cf = []
+    itess = []
+    datasets = [train.f, test.f] if split == 'all' else [data.f]
+    for dataset in datasets:
+        w = dataset.x[:, :, i]
+        t = dataset.t[:, i]
+        y = dataset.yf[:, i]
+        y_cf = dataset.ycf[:, i]
+        ites = dataset.mu1[:, i] - dataset.mu0[:, i]
+
+        ws.append(w)
+        ts.append(t)
+        ys.append(y)
+        ys_cf.append(y_cf)
+        itess.append(ites)
+
+    w = np.vstack(ws)
+    t = np.concatenate(ts)
+    y = np.concatenate(ys)
+    y_cf = np.concatenate(ys_cf)
+    ites = np.concatenate(itess)
+
+    d = {}
+    if observe_counterfactuals:
+        d['w'] = np.vstack([w, w.copy()])
+        d['t'] = np.concatenate([t, np.logical_not(t.copy()).astype(int)])
+        d['y'] = np.concatenate([y, y_cf])
+        ites = np.concatenate([ites, ites.copy()])  # comment if you don't want duplicates
+    else:
+        d['w'] = w
+        d['t'] = t
+        d['y'] = y
+
+    if return_ites:
+        d['ites'] = ites
+
+    return d
+
+
+def load_ihdp_datasets(split='train', n_realizations=100):
     """
     Load the IHDP data with the nonlinear response surface ("B") that was used
     by Shalit et al. (2017). Description of variables:
