@@ -35,13 +35,17 @@ FILE_EXT = '.csv'
 INDEX_COL_NAME = 'sample_id'
 COUNTERFACTUAL_FILE_SUFFIX = '_cf'
 
-folder = os.path.join(DATA_FOLDER, 'lbidd')
-scaling_zip = os.path.join(folder, 'scaling.tar.gz')
-scaling_folder = os.path.join(folder, 'scaling')
-covariates_path = os.path.join(folder, 'x.csv')
-params_path = os.path.join(scaling_folder, 'params.csv')
-counterfactuals_folder = os.path.join(scaling_folder, 'counterfactuals')
-factuals_folder = os.path.join(scaling_folder, 'factuals')
+def get_paths(dataroot=None):
+    if dataroot is None:
+        dataroot = DATA_FOLDER
+    folder = os.path.join(dataroot, 'lbidd')
+    scaling_zip = os.path.join(folder, 'scaling.tar.gz')
+    scaling_folder = os.path.join(folder, 'scaling')
+    covariates_path = os.path.join(folder, 'x.csv')
+    params_path = os.path.join(scaling_folder, 'params.csv')
+    counterfactuals_folder = os.path.join(scaling_folder, 'counterfactuals')
+    factuals_folder = os.path.join(scaling_folder, 'factuals')
+    return folder, scaling_zip, scaling_folder, covariates_path, params_path, counterfactuals_folder, factuals_folder
 
 N_DATASETS = 2592
 N_DATASETS_PER_SIZE = 432
@@ -64,7 +68,7 @@ VALID_LINKS = {'linear', 'quadratic', 'cubic', 'poly', 'log', 'exp'}
 
 
 def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, return_params_df=False,
-               link='quadratic', degree_y=None, degree_t=None, n_shared_parents='median', i=0):
+               link='quadratic', degree_y=None, degree_t=None, n_shared_parents='median', i=0, dataroot=None):
     """
     Load the LBIDD dataset that is specified
 
@@ -81,6 +85,11 @@ def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, return_
     :param i: index of parametrization to choose among the ones that match
     :return: dictionary of results
     """
+
+    folder, scaling_zip, scaling_folder, covariates_path, params_path, counterfactuals_folder, factuals_folder = \
+        get_paths(dataroot=dataroot)
+    print(scaling_folder)
+    print(covariates_path)
 
     # Check if files exist
     if not (os.path.isfile(scaling_zip) and os.path.isfile(covariates_path)):
@@ -197,7 +206,7 @@ def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, return_
     return output
 
 
-def lbidd_iter(n=None, observe_counterfactuals=False, return_ites=False, return_params_df=False):
+def lbidd_iter(n=None, observe_counterfactuals=False, return_ites=False, return_params_df=False, dataroot=None):
     """
     Iterator for LBIDD datasets of a given size of just all of them
 
@@ -210,6 +219,10 @@ def lbidd_iter(n=None, observe_counterfactuals=False, return_ites=False, return_
         that match
     :yield: dictionary of results
     """
+
+    folder, scaling_zip, scaling_folder, covariates_path, params_path, counterfactuals_folder, factuals_folder = \
+        get_paths(dataroot=dataroot)
+
     if n is None:
         n_datasets = N_DATASETS
     else:

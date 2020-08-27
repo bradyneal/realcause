@@ -51,7 +51,7 @@ LALONDE = 'lalonde'
 PSID = 'psid1'
 
 
-def load_lalonde(rct_version=DEHEJIA_WAHBA, obs_version=PSID, rct=False, data_format=NUMPY):
+def load_lalonde(rct_version=DEHEJIA_WAHBA, obs_version=PSID, rct=False, data_format=NUMPY, dataroot=None):
     """
     Load LaLonde dataset: RCT or combined RCT with observational control group
     Options for 2 x 6 = 12 different observational datasets and 2 RCT datasets
@@ -62,11 +62,11 @@ def load_lalonde(rct_version=DEHEJIA_WAHBA, obs_version=PSID, rct=False, data_fo
     :param data_format: returned data format: 'torch' Tensors, 'pandas' DataFrame, or 'numpy' ndarrays
     :return: (covariates, treatment, outcome) tuple or Pandas DataFrame
     """
-    rct_df = load_lalonde_rct(rct_version)
+    rct_df = load_lalonde_rct(rct_version, dataroot=dataroot)
     if rct:
         df = rct_df
     else:
-        obs_df = load_lalonde_obs(obs_version)
+        obs_df = load_lalonde_obs(obs_version, dataroot=dataroot)
         if rct_version == LALONDE:
             # original lalonde dataset doesn't have 1974 earnings
             obs_df.drop('re74', axis='columns', inplace=True)
@@ -82,7 +82,9 @@ def load_lalonde(rct_version=DEHEJIA_WAHBA, obs_version=PSID, rct=False, data_fo
         return to_data_format(data_format, w, t, y)
 
 
-def load_lalonde_rct(version=DEHEJIA_WAHBA):
+def load_lalonde_rct(version=DEHEJIA_WAHBA, dataroot=None):
+    if dataroot is None:
+        dataroot = DATA_FOLDER
     rct_version_to_name = {
         DEHEJIA_WAHBA: 'nsw_dw.dta',
         LALONDE: 'nsw.dta'
@@ -91,10 +93,12 @@ def load_lalonde_rct(version=DEHEJIA_WAHBA):
     if version not in rct_version_to_name.keys():
         raise ValueError('Invalid version {} ... Valid versions: {}'.format(version, rct_version_to_name.keys()))
     else:
-        return pd.read_stata(os.path.join(DATA_FOLDER, rct_version_to_name[version]))
+        return pd.read_stata(os.path.join(dataroot, rct_version_to_name[version]))
 
 
-def load_lalonde_obs(version=PSID):
+def load_lalonde_obs(version=PSID, dataroot=None):
+    if dataroot is None:
+        dataroot = DATA_FOLDER
     obs_version_to_name = {
         'psid': 'psid_controls.dta',
         'psid1': 'psid_controls.dta',
@@ -109,4 +113,4 @@ def load_lalonde_obs(version=PSID):
     if version not in obs_version_to_name.keys():
         raise ValueError('Invalid version {} ... Valid versions: {}'.format(version, obs_version_to_name.keys()))
     else:
-        return pd.read_stata(os.path.join(DATA_FOLDER, obs_version_to_name[version]))
+        return pd.read_stata(os.path.join(dataroot, obs_version_to_name[version]))

@@ -12,14 +12,13 @@ import json
 
 
 def get_data(args):
-    # data_name = args.data.lower()
-    data_name = args.lower()
+    data_name = args.data.lower()
     if data_name == 'lalonde':
-        w, t, y = load_lalonde()
+        w, t, y = load_lalonde(dataroot=args.dataroot)
     elif data_name == 'lalonde_rct':
-        w, t, y = load_lalonde(rct=True)
+        w, t, y = load_lalonde(rct=True, dataroot=args.dataroot)
     elif data_name == 'lalonde_cps1':
-        w, t, y = load_lalonde(obs_version='cps1')
+        w, t, y = load_lalonde(obs_version='cps1', dataroot=args.dataroot)
     elif data_name.startswith('lbidd'):
         # Valid string formats: lbidd_<link>_<n> and lbidd_<link>_<n>_counterfactual
         # Valid <link> options: linear, quadratic, cubic, exp, and log
@@ -28,7 +27,7 @@ def get_data(args):
         link = options[1]
         n = options[2]
         observe_counterfactuals = (len(options) == 4) and (options[3] == 'counterfactual')
-        d = load_lbidd(n=n, observe_counterfactuals=observe_counterfactuals, link=link)
+        d = load_lbidd(n=n, observe_counterfactuals=observe_counterfactuals, link=link, dataroot=args.dataroot)
         if observe_counterfactuals:
             w, t, y = d['obs_counterfactual_w'], d['obs_counterfactual_t'], d['obs_counterfactual_y']
         else:
@@ -144,8 +143,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # dataset
-    parser.add_argument('--data', type=str, default='lalonde', choices=['lalonde', 'lalonde_rct'])  # TODO: add more
-    parser.add_argument('--dataroot', type=str, default='data')  # TODO: do we need it?
+    parser.add_argument('--data', type=str, default='lalonde')#, choices=['lalonde', 'lalonde_rct'])  # TODO: fix choices
+    parser.add_argument('--dataroot', type=str, default='datasets')  # TODO: do we need it?
     parser.add_argument('--saveroot', type=str, default='save')
     parser.add_argument('--train', type=eval, default=True, choices=[True, False])
     parser.add_argument('--eval', type=eval, default=True, choices=[True, False])
