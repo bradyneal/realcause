@@ -22,7 +22,7 @@ HP = OrderedDict(
     # training params
     lr=[0.001],
     batch_size=[64, 128],
-    num_epochs=[100],
+    num_epochs=[10],
     early_stop=[True],
     ignore_w=[False],
 

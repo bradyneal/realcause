@@ -1,6 +1,6 @@
 import torch
 
-from models import distributions
+from models.distributions import distributions
 from models import preprocess
 from models.nonlinear import MLP, TrainingParams, MLPParams
 from data.lalonde import load_lalonde
@@ -23,7 +23,7 @@ elif dataset == 2:
     ignore_w = False
 elif dataset == 3:
     w, t, y = load_lalonde(obs_version='cps1')
-    dist = distributions.MixedDistribution([0.0, 25564.669921875/y.max()], distributions.LogNormal())
+    dist = distributions.MixedDistribution([0.0, 25564.669921875 / y.max()], distributions.LogNormal())
     training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=1000)
     mlp_params_y_tw = MLPParams(n_hidden_layers=3, dim_h=512, activation=torch.nn.LeakyReLU())
     early_stop = True

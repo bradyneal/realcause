@@ -1,6 +1,4 @@
-import torch
-
-from models import distributions
+from models.distributions import distributions
 from models import preprocess
 from models.nonlinear import MLP, TrainingParams, MLPParams
 from data.lalonde import load_lalonde

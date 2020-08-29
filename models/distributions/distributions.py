@@ -1,14 +1,20 @@
+import warnings
 import numpy as np
 import torch
 from torch.nn import functional as F
-
+from models.distributions.flows import sigmoid_flow, sigmoid_flow_inverse
 
 Log2PI = float(np.log(2 * np.pi))
+VALID_BASE = ['uniform', 'normal', 'gaussian']
 
 
 def log_normal(x, mean, log_var, eps=0.00001):
     z = - 0.5 * Log2PI
     return - (x - mean) ** 2 / (2. * torch.exp(log_var) + eps) - log_var / 2. + z
+
+
+def log_standard_normal(x):
+    return log_normal(x, torch.zeros_like(x), torch.zeros_like(x), eps=0.0)
 
 
 def log_log_normal(x, mean, log_var, eps=0.00001):
@@ -38,6 +44,14 @@ def log_mixed_log_logistic(x, logit_pi, log_alpha, log_beta_):
     ll[x == 0] = F.logsigmoid(-logit_pi)[x == 0]
     ll[x > 0] = F.logsigmoid(logit_pi)[x > 0] + log_log_logistic(xp, log_alpha[x > 0], log_beta_[x > 0])
     return ll
+
+
+def log_exponential(x, log_lambda):
+    return log_lambda - torch.exp(log_lambda) * x
+
+
+def log_bernoulli(x, logit):
+    return - F.binary_cross_entropy_with_logits(logit, x, reduction='none').sum(-1)
 
 
 def binary_cross_entropy(p, t):
@@ -77,6 +91,16 @@ def gaussian_sampler(mean, log_var):
     return torch.randn(*mean.shape) * sigma + mean
 
 
+def bernoulli_sampler(logit):
+    return (torch.sigmoid(logit) > torch.rand_like(logit)).float().data.cpu().numpy()
+
+
+def exponential_sampler(log_lambda):
+    # F(x) = 1 - exp(-lambda * x)
+    # F^-1(u) = - log(1-u) / lambda
+    return - torch.log(1 - torch.rand_like(log_lambda) + 1e-8) / (torch.exp(log_lambda) + 1e-8)
+
+
 class BaseDistribution(object):
     """Distribution with batchified likelihood function and sampling function"""
 
@@ -107,10 +131,10 @@ class BaseDistribution(object):
 
 class Bernoulli(BaseDistribution):
     def likelihood(self, x, params):
-        return - F.binary_cross_entropy_with_logits(params, x, reduction='none').sum(-1)
+        return log_bernoulli(x, params)
 
     def sample(self, params):
-        return (torch.sigmoid(params) > torch.rand_like(params)).float().data.cpu().numpy()
+        return bernoulli_sampler(params)
 
     @property
     def num_params(self):
@@ -118,6 +142,21 @@ class Bernoulli(BaseDistribution):
 
     def mean(self, params):
         return torch.sigmoid(params)
+
+
+class Exponential(BaseDistribution):
+    def likelihood(self, x, params):
+        return log_exponential(x, params)
+
+    def sample(self, params):
+        return exponential_sampler(params)
+
+    @property
+    def num_params(self):
+        return 1
+
+    def mean(self, params):
+        return 1 / (torch.exp(params) + 1e-8)
 
 
 class FactorialGaussian(BaseDistribution):
@@ -133,6 +172,11 @@ class FactorialGaussian(BaseDistribution):
 
     def mean(self, params):
         return torch.chunk(params, chunks=2, dim=1)[0]
+
+
+# aliasing
+Normal = FactorialGaussian
+Gaussian = FactorialGaussian
 
 
 class LogLogistic(BaseDistribution):
@@ -170,6 +214,48 @@ class LogNormal(BaseDistribution):
         mean, log_var = torch.chunk(params, chunks=2, dim=1)
         var = torch.exp(log_var)
         return torch.exp(mean + var / 2)
+
+
+class SigmoidFlow(BaseDistribution):
+    def __init__(self, ndim=4, base_distribution='uniform'):
+        super(SigmoidFlow, self).__init__()
+        assert base_distribution in VALID_BASE, f'base_distribution not one of {VALID_BASE}, got {base_distribution}'
+        self.ndim = ndim
+        self.base_distribution = base_distribution
+        self.logit_end = False if base_distribution == 'uniform' else True
+
+    def forward_transform(self, x, params, logdet=0):
+        y, logdet = sigmoid_flow(
+            x, logdet, ndim=self.ndim, params=params.view(*x.size(), self.ndim*3), logit_end=self.logit_end)
+        return y, logdet
+
+    def likelihood(self, x, params, logdet=0):
+        y, logdet = self.forward_transform(x, params, logdet)
+        if self.logit_end:
+            return log_standard_normal(y).sum(-1) + logdet
+        else:
+            return logdet
+
+    def sample(self, params):
+        n, params_dim = params.shape
+        p = int(params_dim / (self.ndim * 3))
+        slc = torch.chunk(params, self.ndim*3, 1)[0]
+        y = torch.randn_like(slc) if self.logit_end else torch.rand_like(slc)
+        x = sigmoid_flow_inverse(
+            y, ndim=self.ndim, params=params.view(n, p, self.ndim*3),
+            logit_end=self.logit_end, x=None, tol=1e-2, max_iter=100, lr=0.1)
+        return x.data.cpu().numpy()
+
+    @property
+    def num_params(self):
+        return 3 * self.ndim
+
+    def mean(self, params):
+        warnings.warn(f'mean not implemented for {self.__str__()}')
+        return np.zeros_like(params[:, :1])
+
+    def __str__(self):
+        return f'{super(SigmoidFlow, self).__str__()} ndim:{self.ndim} base_distribution:{self.base_distribution}'
 
 
 class MixedDistribution(BaseDistribution):

@@ -5,7 +5,8 @@ import torch
 from data.lalonde import load_lalonde
 from data.lbidd import load_lbidd
 from data.ihdp import load_ihdp
-from models import TarNet, distributions, preprocess, TrainingParams, MLPParams
+from models import TarNet, preprocess, TrainingParams, MLPParams
+from models import distributions
 import helpers
 from collections import OrderedDict
 import json
@@ -45,11 +46,27 @@ def get_data(args):
 
 
 def get_distribution(args):
-    if args.dist in distributions.BaseDistribution.dist_names:
-        dist = distributions.BaseDistribution.dists[args.dist]()
+    """
+    args.dist_args should be a string of keyward:value pairs separated by _.
+
+      examples:
+      1) ndim:5
+      2) ndim=10_
+    """
+    dist_name = args.dist
+    kwargs = dict()
+    if len(args.dist_args) > 0:
+        for a in args.dist_args:
+            k, v = a.split(':')
+            if v.isdigit():
+                v = int(v)
+            kwargs.update({k:v})
+
+    if dist_name in distributions.BaseDistribution.dist_names:
+        dist = distributions.BaseDistribution.dists[dist_name](**kwargs)
     else:
         raise NotImplementedError(
-          f'Got dist argument `{args.dist}`, not one of {distributions.BaseDistribution.dist_names}')
+          f'Got dist argument `{dist_name}`, not one of {distributions.BaseDistribution.dist_names}')
     if args.atoms:
         dist = distributions.MixedDistribution(args.atoms, dist)
     return dist
@@ -143,7 +160,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # dataset
-    parser.add_argument('--data', type=str, default='lalonde')#, choices=['lalonde', 'lalonde_rct'])  # TODO: fix choices
+    parser.add_argument('--data', type=str, default='lalonde')  # TODO: fix choices
     parser.add_argument('--dataroot', type=str, default='datasets')  # TODO: do we need it?
     parser.add_argument('--saveroot', type=str, default='save')
     parser.add_argument('--train', type=eval, default=True, choices=[True, False])
@@ -154,6 +171,7 @@ if __name__ == "__main__":
     # distribution of outcome (y)
     parser.add_argument('--dist', type=str, default='FactorialGaussian',
                         choices=distributions.BaseDistribution.dist_names)
+    parser.add_argument('--dist_args', type=str, default=list(), nargs='+')
     parser.add_argument('--atoms', type=float, default=list(), nargs='+')
 
     # architecture

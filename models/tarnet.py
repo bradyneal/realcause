@@ -1,5 +1,6 @@
 from models.nonlinear import MLP, MLPParams, TrainingParams
-from models import distributions, preprocess
+from models import preprocess
+from models import distributions
 import torch
 import numpy as np
 
@@ -79,7 +80,7 @@ if __name__ == '__main__':
         ignore_w = False
     elif dataset == 3:
         w, t, y = load_lalonde(obs_version='cps1')
-        dist = distributions.MixedDistribution([0.0, 25564.669921875/y.max()], distributions.LogNormal())
+        dist = distributions.MixedDistribution([0.0, 25564.669921875 / y.max()], distributions.LogNormal())
         training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=1000)
         early_stop = True
         ignore_w = False

@@ -67,7 +67,7 @@ class MLP(BaseGenModel):
                  network_params=None,
                  training_params = TrainingParams(),
                  binary_treatment=False,
-                 outcome_distribution:distributions.BaseDistribution=distributions.FactorialGaussian(),
+                 outcome_distribution: distributions.BaseDistribution= distributions.FactorialGaussian(),
                  outcome_min=None,
                  outcome_max=None,
                  train_prop=1,
@@ -233,8 +233,6 @@ class MLP(BaseGenModel):
 
 
 if __name__ == '__main__':
-    from data.synthetic import generate_wty_linear_multi_w_data
-    from utils import NUMPY
     from data.lalonde import load_lalonde
     import matplotlib.pyplot as plt
     import pprint
@@ -272,7 +270,7 @@ if __name__ == '__main__':
         ignore_w = False
     elif dataset == 3:
         w, t, y = load_lalonde(obs_version='cps1')
-        dist = distributions.MixedDistribution([0.0, 25564.669921875/y.max()], distributions.LogNormal())
+        dist = distributions.MixedDistribution([0.0, 25564.669921875 / y.max()], distributions.LogNormal())
         training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=1000)
         mlp_params_y_tw = MLPParams(n_hidden_layers=3, dim_h=512, activation=torch.nn.LeakyReLU())
         early_stop = True
