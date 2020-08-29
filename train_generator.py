@@ -47,11 +47,11 @@ def get_data(args):
 
 def get_distribution(args):
     """
-    args.dist_args should be a string of keyward:value pairs separated by _.
+    args.dist_args should be a list of keyward:value pairs.
 
       examples:
-      1) ndim:5
-      2) ndim=10_
+      1) ['ndim:5']
+      2) ['ndim:10', 'base_distribution:uniform']
     """
     dist_name = args.dist
     kwargs = dict()
@@ -60,7 +60,7 @@ def get_distribution(args):
             k, v = a.split(':')
             if v.isdigit():
                 v = int(v)
-            kwargs.update({k:v})
+            kwargs.update({k: v})
 
     if dist_name in distributions.BaseDistribution.dist_names:
         dist = distributions.BaseDistribution.dists[dist_name](**kwargs)
