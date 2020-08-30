@@ -107,6 +107,10 @@ def main(args):
     logger = helpers.Logging(args.saveroot, 'log.txt')
     logger.info(args)
 
+    # save args
+    with open(os.path.join(args.saveroot, 'args.txt'), 'w') as file:
+        file.write(json.dumps(args.__dict__, indent=4))
+
     # dataset
     logger.info(f'getting data: {args.data}')
     w, t, y = get_data(args)
