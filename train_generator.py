@@ -95,7 +95,6 @@ def evaluate(args, model):
     summary.update(q50_t_pval=np.percentile(t_pvals, 50))
     summary.update(q50_y_pval=np.percentile(y_pvals, 50))
 
-
     # print ATE
     summary.update(ate_exact=model.ate().item())
     summary.update(ate_noisy=model.noisy_ate().item())
