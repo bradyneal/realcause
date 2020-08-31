@@ -252,7 +252,7 @@ class SigmoidFlow(BaseDistribution):
 
     def mean(self, params):
         warnings.warn(f'mean not implemented for {self.__str__()}')
-        return np.zeros_like(params[:, :1])
+        return torch.zeros_like(params[:, :1])
 
     def __str__(self):
         return f'{super(SigmoidFlow, self).__str__()} ndim:{self.ndim} base_distribution:{self.base_distribution}'

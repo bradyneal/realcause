@@ -2,8 +2,13 @@ import numpy as np
 
 
 class Preprocess(object):
-    def __init__(self, data=None):
-        pass
+    preps = dict()
+    prep_names = []
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls.preps[cls.__name__] = cls
+        cls.prep_names.append(cls.__name__)
 
     def transform(self, x):
         raise NotImplementedError
@@ -13,6 +18,10 @@ class Preprocess(object):
 
 
 class PlaceHolderTransform(Preprocess):
+    # noinspection PyUnusedLocal
+    def __init__(self, data=None):
+        pass
+
     def transform(self, x):
         return x
 
@@ -85,7 +94,6 @@ class Standardize(SequentialTransforms):
     """
     standardize data so that data.mean() = 0 and data.std() = 1
     """
-
     def __init__(self, data):
         super(Standardize, self).__init__(Centering(data), VarianceRescaling(data))
 
@@ -94,7 +102,6 @@ class Normalize(SequentialTransforms):
     """
     normalize data so that data.max() = 1 and data.min() = 0
     """
-
     def __init__(self, data):
         a = data.min()
         b = data.max()

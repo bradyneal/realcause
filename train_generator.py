@@ -134,19 +134,23 @@ def main(args):
     logger.info(training_params.__dict__)
 
     # initializing model
+    w_transform = preprocess.Preprocess.preps[args.w_transform]
+    y_transform = preprocess.Preprocess.preps[args.y_transform]
+    outcome_min = 0 if args.y_transform == 'Normalize' else None
+    outcome_max = 1 if args.y_transform == 'Normalize' else None
     model = TarNet(w, t, y,
                    training_params=training_params,
                    network_params=network_params,
                    binary_treatment=True, outcome_distribution=distribution,
-                   outcome_min=args.outcome_min,
-                   outcome_max=args.outcome_max,
+                   outcome_min=outcome_min,
+                   outcome_max=outcome_max,
                    train_prop=args.train_prop,
                    val_prop=args.val_prop,
                    test_prop=args.test_prop,
                    seed=args.seed,
                    early_stop=args.early_stop,
                    ignore_w=args.ignore_w,
-                   w_transform=preprocess.Standardize, y_transform=preprocess.Normalize,  # TODO set more args
+                   w_transform=w_transform, y_transform=y_transform,  # TODO set more args
                    savepath=os.path.join(args.saveroot, 'model.pt'))
     # TODO GPU support
     if args.train:
@@ -194,8 +198,10 @@ if __name__ == "__main__":
     parser.add_argument('--early_stop', type=eval, default=True, choices=[True, False])
     parser.add_argument('--ignore_w', type=eval, default=False, choices=[True, False])
 
-    parser.add_argument('--outcome_min', type=float, default=0.0)
-    parser.add_argument('--outcome_max', type=float, default=1.0)
+    parser.add_argument('--w_transform', type=str, default='Standardize',
+                        choices=preprocess.Preprocess.prep_names)
+    parser.add_argument('--y_transform', type=str, default='Normalize',
+                        choices=preprocess.Preprocess.prep_names)
     parser.add_argument('--train_prop', type=float, default=0.5)
     parser.add_argument('--val_prop', type=float, default=0.1)
     parser.add_argument('--test_prop', type=float, default=0.4)
