@@ -38,9 +38,7 @@ def run_exp(hp):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp_name", type=str, default="test_loop")
-    parser.add_argument(
-        "--num_workers", type=int, required=True, help="Number of cores"
-    )
+    parser.add_argument("--num_workers", type=int, default=1, help="Number of cores")
 
     arguments = parser.parse_args()
 
