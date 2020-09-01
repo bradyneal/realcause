@@ -67,8 +67,10 @@ VALID_N = N_STR_TO_INT.keys()
 VALID_LINKS = {'linear', 'quadratic', 'cubic', 'poly', 'log', 'exp'}
 
 
-def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, return_params_df=False,
-               link='quadratic', degree_y=None, degree_t=None, n_shared_parents='median', i=0, dataroot=None):
+def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False,
+               return_ate=False, return_params_df=False, link='quadratic',
+               degree_y=None, degree_t=None, n_shared_parents='median', i=0,
+               dataroot=None):
     """
     Load the LBIDD dataset that is specified
 
@@ -76,6 +78,7 @@ def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, return_
     :param observe_counterfactuals: if True, return double-sized dataset with
         both y0 (first half) and y1 (second half) observed
     :param return_ites: if True, return ITEs
+    :param return_ate: if True, return ATE
     :param return_params_df: if True, return the DataFrame of dataset parameters
         that match
     :param link: link function (linear, quadratic, cubic, poly, log, or exp)
@@ -182,7 +185,7 @@ def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, return_
     output['y'] = joint_factuals_df['y'].to_numpy()
     output['w'] = joint_factuals_df.drop(['z', 'y'], axis='columns').to_numpy()
 
-    if observe_counterfactuals or return_ites:
+    if observe_counterfactuals or return_ites or return_ate:
         counterfactuals_path = os.path.join(counterfactuals_folder, ufid + COUNTERFACTUAL_FILE_SUFFIX + FILE_EXT)
         counterfactuals_df = pd.read_csv(counterfactuals_path, index_col=INDEX_COL_NAME)
         joint_counterfactuals_df = covariates_df.join(counterfactuals_df, how='inner')
@@ -203,10 +206,15 @@ def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False, return_
             ites = joint_counterfactuals_df['y1'] - joint_counterfactuals_df['y0']
             output['ites'] = ites.to_numpy()
 
+        if return_ate:
+            ites = joint_counterfactuals_df['y1'] - joint_counterfactuals_df['y0']
+            output['ate'] = ites.to_numpy().mean()
+
     return output
 
 
-def lbidd_iter(n=None, observe_counterfactuals=False, return_ites=False, return_params_df=False, dataroot=None):
+def lbidd_iter(n=None, observe_counterfactuals=False, return_ites=False,
+               return_ate=False, return_params_df=False, dataroot=None):
     """
     Iterator for LBIDD datasets of a given size of just all of them
 
@@ -215,6 +223,7 @@ def lbidd_iter(n=None, observe_counterfactuals=False, return_ites=False, return_
     :param observe_counterfactuals: if True, return double-sized dataset with
         both y0 (first half) and y1 (second half) observed
     :param return_ites: if True, return ITEs
+    :param return_ate: if True, return ATE
     :param return_params_df: if True, return the DataFrame of dataset parameters
         that match
     :yield: dictionary of results
@@ -238,6 +247,7 @@ def lbidd_iter(n=None, observe_counterfactuals=False, return_ites=False, return_
         n_datasets = N_DATASETS_PER_SIZE
     for i in range(n_datasets):
         yield load_lbidd(n=n, observe_counterfactuals=observe_counterfactuals,
-                         return_ites=return_ites, return_params_df=return_params_df,
-                         link=None, degree_y=None, degree_t=None, n_shared_parents=None,
+                         return_ites=return_ites, return_ate=return_ate,
+                         return_params_df=return_params_df, link=None,
+                         degree_y=None, degree_t=None, n_shared_parents=None,
                          i=i)

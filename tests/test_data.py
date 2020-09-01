@@ -7,7 +7,7 @@ import torch
 from data.synthetic import generate_wty_linear_scalar_data, generate_wty_linear_multi_w_data
 from data.whynot_simulators import generate_lalonde_random_outcome
 from data.lalonde import load_lalonde
-from data.ihdp import load_ihdp
+from data.ihdp import load_ihdp_datasets
 from utils import NUMPY, PANDAS, PANDAS_SINGLE, TORCH
 
 
@@ -205,4 +205,4 @@ def test_multivariate_w_data():
 @pytest.mark.parametrize('split', ['train', 'test', 'all'])
 @pytest.mark.parametrize('n_realizations', [100, 1000])
 def test_ihdp_loading(split, n_realizations):
-    load_ihdp(split=split, n_realizations=n_realizations)
+    load_ihdp_datasets(split=split, n_realizations=n_realizations)

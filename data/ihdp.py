@@ -34,7 +34,7 @@ N_REALIZATIONS_OPTIONS = {100, 1000}
 
 
 def load_ihdp(split='all', i=0, observe_counterfactuals=False, return_ites=False,
-              dataroot=None):
+              return_ate=False, dataroot=None):
     """
     Load a single instance of the IHDP dataset
 
@@ -43,6 +43,7 @@ def load_ihdp(split='all', i=0, observe_counterfactuals=False, return_ites=False
     :param observe_counterfactuals: if True, return double-sized dataset with
         both y0 (first half) and y1 (second half) observed
     :param return_ites: if True, return ITEs
+    :param return_ate: if True, return ATE
     :return: dictionary of results
     """
     if 0 <= i < 100:
@@ -84,6 +85,7 @@ def load_ihdp(split='all', i=0, observe_counterfactuals=False, return_ites=False
     y = np.concatenate(ys)
     y_cf = np.concatenate(ys_cf)
     ites = np.concatenate(itess)
+    ate = np.mean(ites)
 
     d = {}
     if observe_counterfactuals:
@@ -98,6 +100,8 @@ def load_ihdp(split='all', i=0, observe_counterfactuals=False, return_ites=False
 
     if return_ites:
         d['ites'] = ites
+    if return_ate:
+        d['ate'] = ate
 
     return d
 
