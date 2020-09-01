@@ -271,10 +271,12 @@ def class_name(obj):
     return type(obj).__name__
 
 
-def download_dataset(url, dataset_name, filename=None):
+def download_dataset(url, dataset_name, dataroot=None, filename=None):
+    if dataroot is None:
+        dataroot = DATA_FOLDER
     if filename is None:
         filename = os.path.basename(urlparse(url).path)
-    file_path = os.path.join(DATA_FOLDER, filename)
+    file_path = os.path.join(dataroot, filename)
     if os.path.isfile(file_path):
         print('{} dataset already exists at {}'.format(dataset_name, file_path))
     else:

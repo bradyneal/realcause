@@ -33,7 +33,8 @@ SPLIT_OPTIONS = {'train', 'test', 'all'}
 N_REALIZATIONS_OPTIONS = {100, 1000}
 
 
-def load_ihdp(split='all', i=0, observe_counterfactuals=False, return_ites=False):
+def load_ihdp(split='all', i=0, observe_counterfactuals=False, return_ites=False,
+              dataroot=None):
     """
     Load a single instance of the IHDP dataset
 
@@ -53,9 +54,11 @@ def load_ihdp(split='all', i=0, observe_counterfactuals=False, return_ites=False
         raise ValueError('Invalid i: {} ... Valid i: 0 <= i < 1000'.format(i))
 
     if split == 'all':
-        train, test = load_ihdp_datasets(split=split, n_realizations=n_realizations)
+        train, test = load_ihdp_datasets(split=split, n_realizations=n_realizations,
+                                         dataroot=dataroot)
     else:
-        data = load_ihdp_datasets(split=split, n_realizations=n_realizations)
+        data = load_ihdp_datasets(split=split, n_realizations=n_realizations,
+                                  dataroot=dataroot)
 
     ws = []
     ts = []
@@ -99,7 +102,7 @@ def load_ihdp(split='all', i=0, observe_counterfactuals=False, return_ites=False
     return d
 
 
-def load_ihdp_datasets(split='train', n_realizations=100):
+def load_ihdp_datasets(split='train', n_realizations=100, dataroot=None):
     """
     Load the IHDP data with the nonlinear response surface ("B") that was used
     by Shalit et al. (2017). Description of variables:
@@ -136,18 +139,18 @@ def load_ihdp_datasets(split='train', n_realizations=100):
                          .format(n_realizations, N_REALIZATIONS_OPTIONS))
     if n_realizations == 100:
         if split == 'train' or split == 'all':
-            path = download_dataset(IHDP_100_TRAIN_URL, 'IHDP train 100')
+            path = download_dataset(IHDP_100_TRAIN_URL, 'IHDP train 100', dataroot=dataroot)
             train = np.load(path)
         if split == 'test' or split == 'all':
-            path = download_dataset(IHDP_100_TEST_URL, 'IHDP test 100')
+            path = download_dataset(IHDP_100_TEST_URL, 'IHDP test 100', dataroot=dataroot)
             test = np.load(path)
     elif n_realizations == 1000:
         if split == 'train' or split == 'all':
-            path = download_dataset(IHDP_1000_TRAIN_URL, 'IHDP train 1000')
+            path = download_dataset(IHDP_1000_TRAIN_URL, 'IHDP train 1000', dataroot=dataroot)
             unzip_path = unzip(path)
             train = np.load(unzip_path)
         if split == 'test' or split == 'all':
-            path = download_dataset(IHDP_1000_TEST_URL, 'IHDP test 1000')
+            path = download_dataset(IHDP_1000_TEST_URL, 'IHDP test 1000', dataroot=dataroot)
             unzip_path = unzip(path)
             test = np.load(unzip_path)
 
