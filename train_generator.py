@@ -57,7 +57,7 @@ def get_distribution(args):
     kwargs = dict()
     if len(args.dist_args) > 0:
         for a in args.dist_args:
-            k, v = a.split(':')
+            k, v = a.split('=')
             if v.isdigit():
                 v = int(v)
             kwargs.update({k: v})
