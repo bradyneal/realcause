@@ -150,6 +150,7 @@ def main(args):
                    seed=args.seed,
                    early_stop=args.early_stop,
                    ignore_w=args.ignore_w,
+                   grad_norm=args.grad_norm,
                    w_transform=w_transform, y_transform=y_transform,  # TODO set more args
                    savepath=os.path.join(args.saveroot, 'model.pt'))
     # TODO GPU support
@@ -197,6 +198,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--early_stop', type=eval, default=True, choices=[True, False])
     parser.add_argument('--ignore_w', type=eval, default=False, choices=[True, False])
+    parser.add_argument('--grad_norm', type=float, default=float('inf'))
 
     parser.add_argument('--w_transform', type=str, default='Standardize',
                         choices=preprocess.Preprocess.prep_names)

@@ -26,6 +26,7 @@ HP = OrderedDict(
     num_epochs=[10],
     early_stop=[True],
     ignore_w=[False],
+    grad_norm=['inf'],
 
     w_transform=['Standardize'],
     y_transform=['Normalize'],

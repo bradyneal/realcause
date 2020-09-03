@@ -76,6 +76,7 @@ class MLP(BaseGenModel):
                  shuffle=True,
                  early_stop=True,
                  ignore_w=False,
+                 grad_norm=float('inf'),
                  w_transform=PlaceHolderTransform,
                  t_transform=PlaceHolderTransform,
                  y_transform=PlaceHolderTransform,
@@ -98,6 +99,7 @@ class MLP(BaseGenModel):
         self.outcome_max = outcome_max
         self.early_stop = early_stop
         self.ignore_w = ignore_w
+        self.grad_norm = grad_norm
         self.savepath = savepath
 
         self.dim_w = self.w_transformed.shape[1]
@@ -172,6 +174,7 @@ class MLP(BaseGenModel):
                 loss, loss_t, loss_y = self._get_loss(w, t, y)
                 # TODO: learning rate can be separately adjusted by weighting the losses here
                 loss.backward()
+                torch.nn.utils.clip_grad_norm(chain(*[net.parameters() for net in self.networks]), self.grad_norm)
                 self.optim.step()
 
                 c += 1
