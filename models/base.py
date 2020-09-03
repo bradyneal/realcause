@@ -65,7 +65,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
                            'w_transformed', 't_transformed', 'y_transformed']
 
     def __init__(self, w, t, y, train_prop=1, val_prop=0, test_prop=0,
-                 shuffle=True, seed=SEED,
+                 test_size=None, shuffle=True, seed=SEED,
                  w_transform: Type[Preprocess] = PlaceHolderTransform,
                  t_transform: Type[Preprocess] = PlaceHolderTransform,
                  y_transform: Type[Preprocess] = PlaceHolderTransform,
@@ -85,6 +85,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             is in the validation set
         :param test_prop: number to use for proportion of the whole dataset that
             is in the test set
+        :param test_size: size of the test set
         :param shuffle: boolean for whether to shuffle the data
         :param seed: random seed for pytorch and numpy
         :param w_transform: transform for covariates
@@ -99,10 +100,17 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         n = w.shape[0]
         idxs = np.arange(n)
 
-        total = train_prop + val_prop + test_prop
-        n_train = regular_round(n * train_prop / total)
-        n_val = regular_round(n * val_prop / total)
-        n_test = n - n_train - n_val
+        if test_size is None:
+            total = train_prop + val_prop + test_prop
+            n_train = regular_round(n * train_prop / total)
+            n_val = regular_round(n * val_prop / total)
+            n_test = n - n_train - n_val
+        else:
+            total = train_prop + val_prop
+            n = n - test_size
+            n_train = regular_round(n * train_prop / total)
+            n_val = regular_round(n * val_prop / total)
+            n_test = test_size
 
         if verbose:
             print('n_train: {}\tn_val: {}\tn_test: {}'.format(n_train, n_val, n_test))
