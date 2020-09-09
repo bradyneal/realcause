@@ -151,6 +151,7 @@ class MLP(BaseGenModel):
             shuffle=True,
         )
 
+
         if len(self.val_idxs) > 0:
             self.data_loader_val = data.DataLoader(
                 CausalDataset(
@@ -161,6 +162,9 @@ class MLP(BaseGenModel):
                 batch_size=training_params.batch_size,
                 shuffle=True,
             )
+
+        self.best_val_loss = float('inf')
+
 
     def _matricize(self, data):
         return [np.reshape(d, [d.shape[0], -1]) for d in data]

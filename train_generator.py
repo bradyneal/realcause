@@ -118,14 +118,16 @@ def evaluate(args, model):
     return summary, all_runs
 
 
-def main(args):
-    helpers.create(*args.saveroot.split("/"))
-    logger = helpers.Logging(args.saveroot, "log.txt")
+
+def main(args, save_args=True, log_=True):
+    helpers.create(*args.saveroot.split('/'))
+    logger = helpers.Logging(args.saveroot, 'log.txt', log_)
     logger.info(args)
 
     # save args
-    with open(os.path.join(args.saveroot, "args.txt"), "w") as file:
-        file.write(json.dumps(args.__dict__, indent=4))
+    if save_args:
+        with open(os.path.join(args.saveroot, 'args.txt'), 'w') as file:
+            file.write(json.dumps(args.__dict__, indent=4))
 
     # dataset
     logger.info(f"getting data: {args.data}")
@@ -200,9 +202,8 @@ def main(args):
     return model
 
 
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser()
+def get_args():
+    parser = argparse.ArgumentParser(description='causal-gen')
 
     # dataset
     parser.add_argument("--data", type=str, default="lalonde")  # TODO: fix choices
@@ -262,5 +263,8 @@ if __name__ == "__main__":
     # evaluation
     parser.add_argument("--num_univariate_tests", type=int, default=100)
 
-    arguments = parser.parse_args()
-    main(arguments)
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    main(get_args())

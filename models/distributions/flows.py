@@ -55,7 +55,7 @@ def sigmoid_flow_integral(x, ndim=4, params=None):
     return x_pre
 
 
-def sigmoid_flow_inverse(y, ndim=4, params=None, logit_end=True, x=None, tol=1e-2, max_iter=100, lr=0.1):
+def sigmoid_flow_inverse(y, ndim=4, params=None, logit_end=True, x=None, tol=1e-2, max_iter=100, lr=0.1, verbose=False):
     if logit_end:
         y = torch.sigmoid(y)
     if x is None:
@@ -72,12 +72,14 @@ def sigmoid_flow_inverse(y, ndim=4, params=None, logit_end=True, x=None, tol=1e-
     optimizer.step(closure)
 
     error_new = (sigmoid_flow(x, 0, ndim=ndim, params=params, logit_end=False)[0] - y).abs().max().item()
-    print('inversion error', error_new)
+    if verbose:
+        print('inversion error', error_new)
     torch.cuda.empty_cache()
     gc.collect()
 
     if error_new > error_old:
-        print('learning rate too large for inversion')
+        if verbose:
+            print('learning rate too large for inversion')
         return sigmoid_flow_inverse(y, ndim=ndim, params=params, logit_end=False, x=x)
     else:
         return x
