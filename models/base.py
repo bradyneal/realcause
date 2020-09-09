@@ -7,25 +7,33 @@ from typing import Type
 
 from models.preprocess import Preprocess, PlaceHolderTransform
 from plotting import compare_joints, compare_bivariate_marginals
-from utils import T, Y, to_np_vectors, to_np_vector, to_torch_variable,\
-    permutation_test, regular_round
+from utils import (
+    T,
+    Y,
+    to_np_vectors,
+    to_np_vector,
+    to_torch_variable,
+    permutation_test,
+    regular_round,
+)
 
-MODEL_LABEL = 'model'
-TRUE_LABEL = 'true'
-T_MODEL_LABEL = '{} ({})'.format(T, MODEL_LABEL)
-Y_MODEL_LABEL = '{} ({})'.format(Y, MODEL_LABEL)
-T_TRUE_LABEL = '{} ({})'.format(T, TRUE_LABEL)
-Y_TRUE_LABEL = '{} ({})'.format(Y, TRUE_LABEL)
+MODEL_LABEL = "model"
+TRUE_LABEL = "true"
+T_MODEL_LABEL = "{} ({})".format(T, MODEL_LABEL)
+Y_MODEL_LABEL = "{} ({})".format(Y, MODEL_LABEL)
+T_TRUE_LABEL = "{} ({})".format(T, TRUE_LABEL)
+Y_TRUE_LABEL = "{} ({})".format(Y, TRUE_LABEL)
 SEED = 42
-TRAIN = 'train'
-VAL = 'val'
-TEST = 'test'
+TRAIN = "train"
+VAL = "val"
+TEST = "test"
 
 
 class BaseGenModelMeta(ABCMeta):
     """
     Forces subclasses to implement abstract_attributes
     """
+
     abstract_attributes = []
 
     def __call__(cls, *args, **kwargs):
@@ -35,13 +43,19 @@ class BaseGenModelMeta(ABCMeta):
             if not hasattr(obj, attr_name):
                 missing_attributes.append(attr_name)
         if len(missing_attributes) == 1:
-            raise TypeError("Can't instantiate abstract class {} with abstract attribute '{}'. "
-                            "You must set self.{} in the constructor."
-                            .format(cls.__name__, missing_attributes[0], missing_attributes[0]))
+            raise TypeError(
+                "Can't instantiate abstract class {} with abstract attribute '{}'. "
+                "You must set self.{} in the constructor.".format(
+                    cls.__name__, missing_attributes[0], missing_attributes[0]
+                )
+            )
         elif len(missing_attributes) > 1:
-            raise TypeError("Can't instantiate abstract class {} with abstract attributes {}. "
-                            "For example, you must set self.{} in the constructor."
-                            .format(cls.__name__, missing_attributes, missing_attributes[0]))
+            raise TypeError(
+                "Can't instantiate abstract class {} with abstract attributes {}. "
+                "For example, you must set self.{} in the constructor.".format(
+                    cls.__name__, missing_attributes, missing_attributes[0]
+                )
+            )
 
         return obj
 
@@ -61,15 +75,31 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         y - outcomes from real data
     """
 
-    abstract_attributes = ['w', 't', 'y',
-                           'w_transformed', 't_transformed', 'y_transformed']
+    abstract_attributes = [
+        "w",
+        "t",
+        "y",
+        "w_transformed",
+        "t_transformed",
+        "y_transformed",
+    ]
 
-    def __init__(self, w, t, y, train_prop=1, val_prop=0, test_prop=0,
-                 test_size=None, shuffle=True, seed=SEED,
-                 w_transform: Type[Preprocess] = PlaceHolderTransform,
-                 t_transform: Type[Preprocess] = PlaceHolderTransform,
-                 y_transform: Type[Preprocess] = PlaceHolderTransform,
-                 verbose=True):
+    def __init__(
+        self,
+        w,
+        t,
+        y,
+        train_prop=1,
+        val_prop=0,
+        test_prop=0,
+        test_size=None,
+        shuffle=True,
+        seed=SEED,
+        w_transform: Type[Preprocess] = PlaceHolderTransform,
+        t_transform: Type[Preprocess] = PlaceHolderTransform,
+        y_transform: Type[Preprocess] = PlaceHolderTransform,
+        verbose=True,
+    ):
         """
         Initialize the generative model. Split the data up according to the
         splits specified by train_prop, val_prop, and test_prop. These can add
@@ -97,6 +127,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             self.set_seed(seed)
 
         # Split the data into train and test
+
         n = w.shape[0]
         idxs = np.arange(n)
 
@@ -113,13 +144,15 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             n_test = test_size
 
         if verbose:
-            print('n_train: {}\tn_val: {}\tn_test: {}'.format(n_train, n_val, n_test))
+            print("n_train: {}\tn_val: {}\tn_test: {}".format(n_train, n_val, n_test))
 
         if shuffle:
             np.random.shuffle(idxs)
         train_idxs = idxs[:n_train]
-        val_idxs = idxs[n_train:n_train+n_val]
-        test_idxs = idxs[n_train+n_val:]
+        val_idxs = idxs[n_train : n_train + n_val]
+        test_idxs = idxs[n_train + n_val :]
+
+        print("test_idxs: ", test_idxs.shape)
 
         self.train_idxs = train_idxs
         self.val_idxs = val_idxs
@@ -161,31 +194,33 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         """
         dataset = dataset.lower()
         if verbose:
-            print(dataset, end=' ')
+            print(dataset, end=" ")
         if dataset == TRAIN:
             w, t, y = self.w, self.t, self.y
-        elif dataset == VAL or dataset == 'validation':
+        elif dataset == VAL or dataset == "validation":
             w, t, y = self.w_val, self.t_val, self.y_val
         elif dataset == TEST:
             w, t, y = self.w_test, self.t_test, self.y_test
         else:
-            raise ValueError('Invalid dataset: {}'.format(dataset))
+            raise ValueError("Invalid dataset: {}".format(dataset))
 
         assert w.shape[0] == t.shape[0] == y.shape[0]
         if w.shape[0] == 0:
-            raise ValueError('Dataset "{}" has 0 examples in it. Please '
-                             'increase the value of the corresponding argument '
-                             'in the constructor.'.format(dataset))
+            raise ValueError(
+                'Dataset "{}" has 0 examples in it. Please '
+                "increase the value of the corresponding argument "
+                "in the constructor.".format(dataset)
+            )
 
         if transformed:
             w = self.w_transform.transform(w)
             t = self.t_transform.transform(t)
             y = self.y_transform.transform(y)
             if verbose:
-                print('transformed')
+                print("transformed")
         else:
             if verbose:
-                print('untransformed')
+                print("untransformed")
 
         return w, t, y
 
@@ -244,7 +279,11 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         t = self.sample_t(w, untransform=False)
         y = self.sample_y(t, w, untransform=False)
         if untransform:
-            return self.w_transform.untransform(w), self.t_transform.untransform(t), self.y_transform.untransform(y)
+            return (
+                self.w_transform.untransform(w),
+                self.t_transform.untransform(t),
+                self.y_transform.untransform(y),
+            )
         else:
             return w, t, y
 
@@ -254,22 +293,29 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         if w is None:
             w = self.sample_w(untransform=False)
         if isinstance(w, Number):
-            raise ValueError('Unsupported data type: {} ... only numpy is currently supported'.format(type(w)))
+            raise ValueError(
+                "Unsupported data type: {} ... only numpy is currently supported".format(
+                    type(w)
+                )
+            )
         if isinstance(t, Number):
             t = np.full_like(self.t, t)
         return self.sample_y(t, w)
 
     def ate(self, t1=1, t0=0, w=None, untransform=True, transform_t=True):
-        return self.ite(t1=t1, t0=t0, w=w, untransform=untransform,
-                        transform_t=transform_t).mean()
+        return self.ite(
+            t1=t1, t0=t0, w=w, untransform=untransform, transform_t=transform_t
+        ).mean()
 
     def noisy_ate(self, t1=1, t0=0, w=None, n_y_per_w=100, seed=None):
         if seed is not None:
             self.set_seed(seed)
         total = 0
         for _ in range(n_y_per_w):
-            total += (self.sample_interventional(t=t1, w=w) -
-                      self.sample_interventional(t=t0, w=w)).mean()
+            total += (
+                self.sample_interventional(t=t1, w=w)
+                - self.sample_interventional(t=t0, w=w)
+            ).mean()
         return total / n_y_per_w
 
     def att(self, t1=1, t0=0, w=None, untransform=True, transform_t=True):
@@ -278,20 +324,29 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         # return self.ite(t1=t1, t0=t0, w=w, untransform=untransform,
         #                 transform_t=transform_t).mean()
 
-    def ite(self, t1=1, t0=0, w=None, t=None, untransform=True, transform_t=True, estimand='all'):
+    def ite(
+        self,
+        t1=1,
+        t0=0,
+        w=None,
+        t=None,
+        untransform=True,
+        transform_t=True,
+        estimand="all",
+    ):
         if w is None:
             w = self.w_transformed
             # w = self.sample_w(untransform=False)
             t = self.t
         estimand = estimand.lower()
-        if estimand == 'all' or estimand == 'ate':
+        if estimand == "all" or estimand == "ate":
             pass
-        elif estimand == 'treated' or estimand == 'att':
+        elif estimand == "treated" or estimand == "att":
             w = w[t == 1]
-        elif estimand == 'control' or estimand == 'atc':
+        elif estimand == "control" or estimand == "atc":
             w = w[t == 0]
         else:
-            raise ValueError('Invalid estimand: {}'.format(estimand))
+            raise ValueError("Invalid estimand: {}".format(estimand))
         if transform_t:
             t1 = self.t_transform.transform(t1)
             t0 = self.t_transform.transform(t0)
@@ -307,10 +362,22 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             y_0 = self.y_transform.untransform(y_0)
         return y_1 - y_0
 
-    def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True,
-                      dataset=TRAIN, transformed=False,
-                      title=True, name=None, file_ext='pdf', thin_model=None,
-                      thin_true=None, joint_kwargs={}, test=False, seed=None):
+    def plot_ty_dists(
+        self,
+        joint=True,
+        marginal_hist=True,
+        marginal_qq=True,
+        dataset=TRAIN,
+        transformed=False,
+        title=True,
+        name=None,
+        file_ext="pdf",
+        thin_model=None,
+        thin_true=None,
+        joint_kwargs={},
+        test=False,
+        seed=None,
+    ):
         """
         Creates up to 3 different plots of the real data and the corresponding model
 
@@ -333,31 +400,61 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         if name is None:
             name = self.__class__.__name__
 
-        _, t_model, y_model = to_np_vectors(self.sample(seed=seed, untransform=(not transformed)),
-                                            thin_interval=thin_model)
+        _, t_model, y_model = to_np_vectors(
+            self.sample(seed=seed, untransform=(not transformed)),
+            thin_interval=thin_model,
+        )
         _, t_true, y_true = self.get_data(transformed=transformed, dataset=dataset)
         t_true, y_true = to_np_vectors((t_true, y_true), thin_interval=thin_true)
 
         if joint:
-            compare_joints(t_model, y_model, t_true, y_true,
-                           xlabel1=T_MODEL_LABEL, ylabel1=Y_MODEL_LABEL,
-                           xlabel2=T_TRUE_LABEL, ylabel2=Y_TRUE_LABEL,
-                           xlabel=T, ylabel=Y,
-                           label1=MODEL_LABEL, label2=TRUE_LABEL,
-                           save_fname='{}_ty_joints.{}'.format(name, file_ext),
-                           title=title, name=name, test=test, kwargs=joint_kwargs)
+            compare_joints(
+                t_model,
+                y_model,
+                t_true,
+                y_true,
+                xlabel1=T_MODEL_LABEL,
+                ylabel1=Y_MODEL_LABEL,
+                xlabel2=T_TRUE_LABEL,
+                ylabel2=Y_TRUE_LABEL,
+                xlabel=T,
+                ylabel=Y,
+                label1=MODEL_LABEL,
+                label2=TRUE_LABEL,
+                save_fname="{}_ty_joints.{}".format(name, file_ext),
+                title=title,
+                name=name,
+                test=test,
+                kwargs=joint_kwargs,
+            )
 
         if marginal_hist or marginal_qq:
-            compare_bivariate_marginals(t_true, t_model, y_true, y_model,
-                                        xlabel=T, ylabel=Y,
-                                        label1=TRUE_LABEL, label2=MODEL_LABEL,
-                                        hist=marginal_hist, qqplot=marginal_qq,
-                                        save_hist_fname='{}_ty_marginal_hists.{}'.format(name, file_ext),
-                                        save_qq_fname='{}_ty_marginal_qqplots.{}'.format(name, file_ext),
-                                        title=title, name=name, test=test)
+            compare_bivariate_marginals(
+                t_true,
+                t_model,
+                y_true,
+                y_model,
+                xlabel=T,
+                ylabel=Y,
+                label1=TRUE_LABEL,
+                label2=MODEL_LABEL,
+                hist=marginal_hist,
+                qqplot=marginal_qq,
+                save_hist_fname="{}_ty_marginal_hists.{}".format(name, file_ext),
+                save_qq_fname="{}_ty_marginal_qqplots.{}".format(name, file_ext),
+                title=title,
+                name=name,
+                test=test,
+            )
 
-    def get_univariate_quant_metrics(self, dataset=TRAIN, transformed=False,
-                                     thin_model=None, thin_true=None, seed=None):
+    def get_univariate_quant_metrics(
+        self,
+        dataset=TRAIN,
+        transformed=False,
+        thin_model=None,
+        thin_true=None,
+        seed=None,
+    ):
         """
         Calculates quantitative metrics for the difference between p(t) and
         p_model(t) and the difference between p(y) and p_model(y)
@@ -375,13 +472,15 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             'y_wasserstein1_dist': wasserstein1 distance between y_true and y_model
         }
         """
-        _, t_model, y_model = to_np_vectors(self.sample(seed=seed, untransform=(not transformed)),
-                                            thin_interval=thin_model)
+        _, t_model, y_model = to_np_vectors(
+            self.sample(seed=seed, untransform=(not transformed)),
+            thin_interval=thin_model,
+        )
         _, t_true, y_true = self.get_data(transformed=transformed, dataset=dataset)
         t_true, y_true = to_np_vectors((t_true, y_true), thin_interval=thin_true)
 
-        ks_label = '_ks_pval'
-        wasserstein_label = '_wasserstein1_dist'
+        ks_label = "_ks_pval"
+        wasserstein_label = "_wasserstein1_dist"
         metrics = {
             T + ks_label: stats.ks_2samp(t_model, t_true).pvalue,
             Y + ks_label: stats.ks_2samp(y_model, y_true).pvalue,
@@ -390,10 +489,17 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         }
         return metrics
 
-    def get_multivariate_quant_metrics(self, include_w=True, dataset=TRAIN,
-                                       transformed=False, norm=2, k=1,
-                                       alphas=None, n_permutations=1000,
-                                       seed=None):
+    def get_multivariate_quant_metrics(
+        self,
+        include_w=True,
+        dataset=TRAIN,
+        transformed=False,
+        norm=2,
+        k=1,
+        alphas=None,
+        n_permutations=1000,
+        seed=None,
+    ):
         """
         Computes Wasserstein-1 and Wasserstein-2 distances. Also computes all the
         test statistics and p-values for the multivariate two sample tests from
@@ -423,14 +529,22 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         try:
             import ot
         except ModuleNotFoundError as e:
-            raise ModuleNotFoundError(str(e) + ' ... Install: conda install cython && conda install -c conda-forge pot')
+            raise ModuleNotFoundError(
+                str(e)
+                + " ... Install: conda install cython && conda install -c conda-forge pot"
+            )
         try:
             from torch_two_sample.statistics_nondiff import FRStatistic, KNNStatistic
             from torch_two_sample.statistics_diff import MMDStatistic, EnergyStatistic
         except ModuleNotFoundError as e:
-            raise ModuleNotFoundError(str(e) + ' ... Install: pip install git+git://github.com/josipd/torch-two-sample')
+            raise ModuleNotFoundError(
+                str(e)
+                + " ... Install: pip install git+git://github.com/josipd/torch-two-sample"
+            )
 
-        w_model, t_model, y_model = self.sample(seed=seed, untransform=(not transformed))
+        w_model, t_model, y_model = self.sample(
+            seed=seed, untransform=(not transformed)
+        )
         t_model, y_model = to_np_vectors((t_model, y_model), column_vector=True)
         model_samples = np.hstack((t_model, y_model))
 
@@ -445,33 +559,42 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         n_model = model_samples.shape[0]
         n_true = true_samples.shape[0]
 
-        a, b = np.ones((n_model,)) / n_model, np.ones((n_true,)) / n_true  # uniform distribution on samples
+        a, b = (
+            np.ones((n_model,)) / n_model,
+            np.ones((n_true,)) / n_true,
+        )  # uniform distribution on samples
 
         def calculate_wasserstein1_dist(x, y):
-            M_wasserstein1 = ot.dist(x, y, metric='euclidean')
+            M_wasserstein1 = ot.dist(x, y, metric="euclidean")
             wasserstein1_dist = ot.emd2(a, b, M_wasserstein1)
             return wasserstein1_dist
 
         def calculate_wasserstein2_dist(x, y):
-            M_wasserstein2 = ot.dist(x, y, metric='sqeuclidean')
+            M_wasserstein2 = ot.dist(x, y, metric="sqeuclidean")
             wasserstein2_dist = np.sqrt(ot.emd2(a, b, M_wasserstein2))
             return wasserstein2_dist
 
-        wasserstein1_pval = permutation_test(model_samples, true_samples,
-                                             func=calculate_wasserstein1_dist,
-                                             method='approximate',
-                                             num_rounds=n_permutations,
-                                             seed=0)
+        wasserstein1_pval = permutation_test(
+            model_samples,
+            true_samples,
+            func=calculate_wasserstein1_dist,
+            method="approximate",
+            num_rounds=n_permutations,
+            seed=0,
+        )
 
-        wasserstein2_pval = permutation_test(model_samples, true_samples,
-                                             func=calculate_wasserstein2_dist,
-                                             method='approximate',
-                                             num_rounds=n_permutations,
-                                             seed=0)
+        wasserstein2_pval = permutation_test(
+            model_samples,
+            true_samples,
+            func=calculate_wasserstein2_dist,
+            method="approximate",
+            num_rounds=n_permutations,
+            seed=0,
+        )
 
         results = {
-            'wasserstein1 pval': wasserstein1_pval,
-            'wasserstein2 pval': wasserstein2_pval,
+            "wasserstein1 pval": wasserstein1_pval,
+            "wasserstein2 pval": wasserstein2_pval,
         }
 
         model_samples_var = to_torch_variable(model_samples)
@@ -479,19 +602,21 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
         fr = FRStatistic(n_model, n_true)
         matrix = fr(model_samples_var, true_samples_var, norm=norm, ret_matrix=True)[1]
-        results['Friedman-Rafsky pval'] = fr.pval(matrix, n_permutations=n_permutations)
+        results["Friedman-Rafsky pval"] = fr.pval(matrix, n_permutations=n_permutations)
 
         knn = KNNStatistic(n_model, n_true, k)
         matrix = knn(model_samples_var, true_samples_var, norm=norm, ret_matrix=True)[1]
-        results['kNN pval'] = knn.pval(matrix, n_permutations=n_permutations)
+        results["kNN pval"] = knn.pval(matrix, n_permutations=n_permutations)
 
         if alphas is not None:
             mmd = MMDStatistic(n_model, n_true)
-            matrix = mmd(model_samples_var, true_samples_var, alphas=None, ret_matrix=True)[1]
-            results['MMD pval'] = mmd.pval(matrix, n_permutations=n_permutations)
+            matrix = mmd(
+                model_samples_var, true_samples_var, alphas=None, ret_matrix=True
+            )[1]
+            results["MMD pval"] = mmd.pval(matrix, n_permutations=n_permutations)
 
         energy = EnergyStatistic(n_model, n_true)
         matrix = energy(model_samples_var, true_samples_var, ret_matrix=True)[1]
-        results['Energy pval'] = energy.pval(matrix, n_permutations=n_permutations)
+        results["Energy pval"] = energy.pval(matrix, n_permutations=n_permutations)
 
         return results

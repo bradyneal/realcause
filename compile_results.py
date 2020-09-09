@@ -17,7 +17,8 @@ if __name__ == "__main__":
         "--exp_dir", type=str, help="Path to experiment folder", required=True
     )
     parser.add_argument(
-        "--verbose", action="store_true",
+        "--verbose",
+        action="store_true",
     )
 
     arguments = parser.parse_args()
@@ -29,20 +30,22 @@ if __name__ == "__main__":
 
     results = {}
     for exp in tqdm(experiments):
-        for word in filter_criterion:
-            if word not in exp:
-                if arguments.verbose:
-                    print(f"Omitting exp {exp}")
-                continue
+        if filter_criterion is not None:
+            for word in filter_criterion:
+                if word not in exp:
+                    if arguments.verbose:
+                        print(f"Omitting exp {exp}")
+                    continue
 
         exp = Path(exp)
 
         if (experiment_dir / exp / "summary.txt").is_file():
             with open(experiment_dir / exp / "summary.txt") as f:
                 exp_contents = f.read()
+                if "NaN" in exp_contents or "nan" in exp_contents:
+                    continue
                 exp_dict = ast.literal_eval(exp_contents)
                 results[exp] = exp_dict
 
     df = pd.DataFrame.from_dict(results).transpose()
     df.to_csv(experiment_dir.stem + ".csv")
-
