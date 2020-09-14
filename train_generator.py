@@ -194,6 +194,7 @@ def main(args, save_args=True, log_=True):
     # evaluation
     if args.eval:
         summary, all_runs = evaluate(args, model)
+        logger.info(summary)
         with open(os.path.join(args.saveroot, "summary.txt"), "w") as file:
             file.write(json.dumps(summary, indent=4))
         with open(os.path.join(args.saveroot, "all_runs.txt"), "w") as file:
