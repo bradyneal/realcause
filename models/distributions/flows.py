@@ -68,7 +68,7 @@ def sigmoid_flow_inverse(y, ndim=4, params=None, logit_end=True, x=None, tol=1e-
         x.grad = torch.autograd.grad(loss, x)[0].detach()
         return loss
 
-    optimizer = torch.optim.LBFGS([x], lr=lr, max_iter=max_iter, tolerance_grad=tol)
+    optimizer = torch.optim.LBFGS([x], lr=lr, max_iter=max_iter, tolerance_grad=tol, line_search_fn="strong_wolfe")
     optimizer.step(closure)
 
     error_new = (sigmoid_flow(x, 0, ndim=ndim, params=params, logit_end=False)[0] - y).abs().max().item()
