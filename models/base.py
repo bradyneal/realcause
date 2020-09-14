@@ -482,10 +482,10 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         ks_label = "_ks_pval"
         wasserstein_label = "_wasserstein1_dist"
         metrics = {
-            T + ks_label: stats.ks_2samp(t_model, t_true).pvalue,
-            Y + ks_label: stats.ks_2samp(y_model, y_true).pvalue,
-            T + wasserstein_label: stats.wasserstein_distance(t_model, t_true),
-            Y + wasserstein_label: stats.wasserstein_distance(y_model, y_true),
+            T + ks_label: float(stats.ks_2samp(t_model, t_true).pvalue),
+            Y + ks_label: float(stats.ks_2samp(y_model, y_true).pvalue),
+            T + wasserstein_label: float(stats.wasserstein_distance(t_model, t_true)),
+            Y + wasserstein_label: float(stats.wasserstein_distance(y_model, y_true)),
         }
         return metrics
 
