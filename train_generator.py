@@ -118,15 +118,14 @@ def evaluate(args, model):
     return summary, all_runs
 
 
-
 def main(args, save_args=True, log_=True):
-    helpers.create(*args.saveroot.split('/'))
-    logger = helpers.Logging(args.saveroot, 'log.txt', log_)
+    helpers.create(*args.saveroot.split("/"))
+    logger = helpers.Logging(args.saveroot, "log.txt", log_)
     logger.info(args)
 
     # save args
     if save_args:
-        with open(os.path.join(args.saveroot, 'args.txt'), 'w') as file:
+        with open(os.path.join(args.saveroot, "args.txt"), "w") as file:
             file.write(json.dumps(args.__dict__, indent=4))
 
     # dataset
@@ -164,6 +163,7 @@ def main(args, save_args=True, log_=True):
     y_transform = preprocess.Preprocess.preps[args.y_transform]
     outcome_min = 0 if args.y_transform == "Normalize" else None
     outcome_max = 1 if args.y_transform == "Normalize" else None
+
     model = TarNet(
         w,
         t,
@@ -184,7 +184,7 @@ def main(args, save_args=True, log_=True):
         w_transform=w_transform,
         y_transform=y_transform,  # TODO set more args
         savepath=os.path.join(args.saveroot, "model.pt"),
-        test_size=5000,
+        test_size=args.test_size,
     )
 
     # TODO GPU support
@@ -200,11 +200,13 @@ def main(args, save_args=True, log_=True):
         with open(os.path.join(args.saveroot, "all_runs.txt"), "w") as file:
             file.write(json.dumps(all_runs))
 
+        model.plot_ty_dists()
+
     return model
 
 
 def get_args():
-    parser = argparse.ArgumentParser(description='causal-gen')
+    parser = argparse.ArgumentParser(description="causal-gen")
 
     # dataset
     parser.add_argument("--data", type=str, default="lalonde")  # TODO: fix choices
@@ -243,6 +245,7 @@ def get_args():
     parser.add_argument("--early_stop", type=eval, default=True, choices=[True, False])
     parser.add_argument("--ignore_w", type=eval, default=False, choices=[True, False])
     parser.add_argument("--grad_norm", type=float, default=float("inf"))
+    parser.add_argument("--test_size", type=int)
 
     parser.add_argument(
         "--w_transform",
