@@ -10,7 +10,7 @@ def softplus(x):
 
 
 def sigmoid(x):
-    return torch.sigmoid(x) * (1-DELTA) + 0.5 * DELTA
+    return torch.sigmoid(x) * (1 - DELTA) + 0.5 * DELTA
 
 
 def logsigmoid(x):
@@ -18,11 +18,11 @@ def logsigmoid(x):
 
 
 def log(x):
-    return torch.log(x*1e2)-np.log(1e2)
+    return torch.log(x * 1e2 + DELTA) - np.log(1e2 + DELTA)
 
 
 def logit(x):
-    return log(x) - log(1-x)
+    return log(x) - log(1 - x)
 
 
 def act_a(x):
@@ -51,9 +51,11 @@ def oper(array, operetor, axis=-1, keepdims=False):
 def log_sum_exp(a, axis=-1, sum_op=torch.sum):
     def maximum(x):
         return x.max(axis)[0]
+
     a_max = oper(a, maximum, axis, True)
 
     def summation(x):
         return sum_op(torch.exp(x - a_max), axis)
+
     b = torch.log(oper(a, summation, axis, True)) + a_max
     return b
