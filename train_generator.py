@@ -1,3 +1,4 @@
+from comet_ml import Experiment
 import argparse
 import os
 import numpy as np
@@ -119,6 +120,8 @@ def evaluate(args, model):
 
 
 def main(args, save_args=True, log_=True):
+
+    # create logger
     helpers.create(*args.saveroot.split("/"))
     logger = helpers.Logging(args.saveroot, "log.txt", log_)
     logger.info(args)
@@ -131,6 +134,13 @@ def main(args, save_args=True, log_=True):
     # dataset
     logger.info(f"getting data: {args.data}")
     ate, w, t, y = get_data(args)
+
+    # comet logging
+    if args.comet:
+        exp = Experiment(project_name="causal-benchmark", auto_metric_logging=False)
+        exp.add_tag(args.data)
+    else:
+        exp = None
 
     logger.info(f"ate: {ate}")
 
@@ -189,7 +199,7 @@ def main(args, save_args=True, log_=True):
 
     # TODO GPU support
     if args.train:
-        model.train(print_=logger.info)
+        model.train(print_=logger.info, comet_exp=exp)
 
     # evaluation
     if args.eval:
@@ -263,6 +273,7 @@ def get_args():
     parser.add_argument("--val_prop", type=float, default=0.1)
     parser.add_argument("--test_prop", type=float, default=0.4)
     parser.add_argument("--seed", type=int, default=123)
+    parser.add_argument("--comet", type=eval, default=False, choices=[True, False])
 
     # evaluation
     parser.add_argument("--num_univariate_tests", type=int, default=100)
