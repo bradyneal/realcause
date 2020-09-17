@@ -4,9 +4,14 @@ from models.base import BaseGenModel
 from models import preprocess
 from models.preprocess import PlaceHolderTransform
 import torch
+from torch import autograd
+
+# autograd.set_detect_anomaly(True)
+
 from torch import nn
 from torch.utils import data
 from itertools import chain
+import pdb
 
 
 class MLPParams:
@@ -28,6 +33,7 @@ class TrainingParams:
         verbose=True,
         print_every_iters=100,
         eval_every=100,
+        plot_every=1000,
         optim=torch.optim.Adam,
         **optim_args
     ):
@@ -38,6 +44,7 @@ class TrainingParams:
         self.print_every_iters = print_every_iters
         self.optim = optim
         self.eval_every = eval_every
+        self.plot_every = plot_every
         self.optim_args = optim_args
 
 
@@ -151,7 +158,6 @@ class MLP(BaseGenModel):
             shuffle=True,
         )
 
-
         if len(self.val_idxs) > 0:
             self.data_loader_val = data.DataLoader(
                 CausalDataset(
@@ -163,8 +169,7 @@ class MLP(BaseGenModel):
                 shuffle=True,
             )
 
-        self.best_val_loss = float('inf')
-
+        self.best_val_loss = float("inf")
 
     def _matricize(self, data):
         return [np.reshape(d, [d.shape[0], -1]) for d in data]
@@ -202,7 +207,7 @@ class MLP(BaseGenModel):
         loss = loss_t + loss_y
         return loss, loss_t, loss_y
 
-    def train(self, early_stop=None, print_=print):
+    def train(self, early_stop=None, print_=print, comet_exp=None):
         if early_stop is None:
             early_stop = self.early_stop
 
@@ -210,21 +215,32 @@ class MLP(BaseGenModel):
         self.best_val_loss = float("inf")
         for _ in range(self.training_params.num_epochs):
             for w, t, y in self.data_loader:
+
                 self.optim.zero_grad()
                 loss, loss_t, loss_y = self._get_loss(w, t, y)
                 # TODO: learning rate can be separately adjusted by weighting the losses here
                 loss.backward()
+
                 torch.nn.utils.clip_grad_norm(
                     chain(*[net.parameters() for net in self.networks]), self.grad_norm
                 )
+
                 self.optim.step()
 
                 c += 1
+
                 if (
                     self.training_params.verbose
                     and c % self.training_params.print_every_iters == 0
                 ):
                     print_("Iteration {}: {} {}".format(c, loss_t, loss_y))
+
+                    if comet_exp is not None:
+                        comet_exp.log_metric("loss_t", loss_t.item())
+                        comet_exp.log_metric("loss_y", loss_y.item())
+
+                    if torch.isnan(loss_y):
+                        pdb.set_trace()
 
                 if c % self.training_params.eval_every == 0 and len(self.val_idxs) > 0:
                     loss_val = self.evaluate(self.data_loader_val).item()
