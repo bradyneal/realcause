@@ -4,14 +4,9 @@ from models.base import BaseGenModel
 from models import preprocess
 from models.preprocess import PlaceHolderTransform
 import torch
-from torch import autograd
-
-# autograd.set_detect_anomaly(True)
-
 from torch import nn
 from torch.utils import data
 from itertools import chain
-import pdb
 
 
 class MLPParams:
@@ -238,9 +233,6 @@ class MLP(BaseGenModel):
                     if comet_exp is not None:
                         comet_exp.log_metric("loss_t", loss_t.item())
                         comet_exp.log_metric("loss_y", loss_y.item())
-
-                    if torch.isnan(loss_y):
-                        pdb.set_trace()
 
                 if c % self.training_params.eval_every == 0 and len(self.val_idxs) > 0:
                     loss_val = self.evaluate(self.data_loader_val).item()
