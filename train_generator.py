@@ -246,7 +246,7 @@ def get_args():
     # architecture
     parser.add_argument("--n_hidden_layers", type=int, default=1)
     parser.add_argument("--dim_h", type=int, default=64)
-    parser.add_argument("--activation", type=str, default="LeakyReLU")
+    parser.add_argument("--activation", type=str, default="ReLU")
 
     # training params
     parser.add_argument("--lr", type=float, default=0.001)
