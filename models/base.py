@@ -333,7 +333,12 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         untransform=True,
         transform_t=True,
         estimand="all",
+        noisy=True,
+        seed=None,
+        n_y_per_w=100
     ):
+        if seed is not None:
+            self.set_seed(seed)
         if w is None:
             w = self.w_transformed
             # w = self.sample_w(untransform=False)
@@ -355,8 +360,14 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             t_shape[0] = w.shape[0]
             t1 = np.full(t_shape, t1)
             t0 = np.full(t_shape, t0)
-        y_1 = to_np_vector(self.mean_y(t=t1, w=w))
-        y_0 = to_np_vector(self.mean_y(t=t0, w=w))
+        if noisy:
+            total = np.zeros(w.shape[0])
+            for _ in range(n_y_per_w):
+                total += self.sample_interventional(t=t1, w=w) - self.sample_interventional(t=t0, w=w)
+            return total / n_y_per_w
+        else:
+            y_1 = to_np_vector(self.mean_y(t=t1, w=w))
+            y_0 = to_np_vector(self.mean_y(t=t0, w=w))
         if untransform:
             y_1 = self.y_transform.untransform(y_1)
             y_0 = self.y_transform.untransform(y_0)
