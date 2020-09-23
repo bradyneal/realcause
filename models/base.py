@@ -288,7 +288,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         #                 transform_t=transform_t).mean()
 
     def ite(self, t1=1, t0=0, w=None, t=None, untransform=True, transform_t=True,
-            estimand="all", noisy=True, seed=None, n_y_per_w=100):
+            estimand="all", noisy=False, seed=None, n_y_per_w=100):
     
         if seed is not None:
             self.set_seed(seed)
