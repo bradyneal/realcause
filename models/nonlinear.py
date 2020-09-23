@@ -20,18 +20,9 @@ _DEFAULT_MLP = dict(mlp_params_t_w=MLPParams(), mlp_params_y_tw=MLPParams())
 
 
 class TrainingParams:
-    def __init__(
-        self,
-        batch_size=32,
-        lr=0.001,
-        num_epochs=100,
-        verbose=True,
-        print_every_iters=100,
-        eval_every=100,
-        plot_every=1000,
-        optim=torch.optim.Adam,
-        **optim_args
-    ):
+    def __init__(self, batch_size=32, lr=0.001, num_epochs=100, verbose=True, print_every_iters=100,
+                 eval_every=100,
+                 optim=torch.optim.Adam, **optim_args):
         self.batch_size = batch_size
         self.lr = lr
         self.num_epochs = num_epochs
@@ -39,27 +30,18 @@ class TrainingParams:
         self.print_every_iters = print_every_iters
         self.optim = optim
         self.eval_every = eval_every
-        self.plot_every = plot_every
         self.optim_args = optim_args
 
 
 class CausalDataset(data.Dataset):
-    def __init__(
-        self,
-        w,
-        t,
-        y,
-        wtype="float32",
-        ttype="float32",
-        ytype="float32",
-        w_transform: preprocess.Preprocess = preprocess.PlaceHolderTransform(),
-        t_transform: preprocess.Preprocess = preprocess.PlaceHolderTransform(),
-        y_transform: preprocess.Preprocess = preprocess.PlaceHolderTransform(),
-    ):
+    def __init__(self, w, t, y, wtype='float32', ttype='float32', ytype='float32',
+                 w_transform: preprocess.Preprocess = preprocess.PlaceHolderTransform(),
+                 t_transform: preprocess.Preprocess = preprocess.PlaceHolderTransform(),
+                 y_transform: preprocess.Preprocess = preprocess.PlaceHolderTransform()):
+                 
         self.w = w.astype(wtype)
         self.t = t.astype(ttype)
         self.y = y.astype(ytype)
-
         # todo: no need anymore, remove?
         self.w_transform = w_transform
         self.t_transform = t_transform
@@ -78,43 +60,31 @@ class CausalDataset(data.Dataset):
 
 # TODO: for more complex w, we might need to share parameters (dependent on the problem)
 class MLP(BaseGenModel):
-    def __init__(
-        self,
-        w,
-        t,
-        y,
-        seed=1,
-        network_params=None,
-        training_params=TrainingParams(),
-        binary_treatment=False,
-        outcome_distribution: distributions.BaseDistribution = distributions.FactorialGaussian(),
-        outcome_min=None,
-        outcome_max=None,
-        train_prop=1,
-        val_prop=0,
-        test_prop=0,
-        shuffle=True,
-        early_stop=True,
-        ignore_w=False,
-        grad_norm=float("inf"),
-        w_transform=PlaceHolderTransform,
-        t_transform=PlaceHolderTransform,
-        y_transform=PlaceHolderTransform,
-        savepath=".cache_best_model.pt",
-        test_size=None,
-    ):
-        super(MLP, self).__init__(
-            *self._matricize((w, t, y)),
-            seed=seed,
-            train_prop=train_prop,
-            val_prop=val_prop,
-            test_prop=test_prop,
-            shuffle=shuffle,
-            w_transform=w_transform,
-            t_transform=t_transform,
-            y_transform=y_transform,
-            test_size=test_size
-        )
+    def __init__(self, w, t, y, seed=1,
+                 network_params=None,
+                 training_params=TrainingParams(),
+                 binary_treatment=False,
+                 outcome_distribution: distributions.BaseDistribution = distributions.FactorialGaussian(),
+                 outcome_min=None,
+                 outcome_max=None,
+                 train_prop=1,
+                 val_prop=0,
+                 test_prop=0,
+                 shuffle=True,
+                 early_stop=True,
+                 ignore_w=False,
+                 grad_norm=float('inf'),
+                 w_transform=PlaceHolderTransform,
+                 t_transform=PlaceHolderTransform,
+                 y_transform=PlaceHolderTransform,
+                 savepath='.cache_best_model.pt'
+                 ):
+        super(MLP, self).__init__(*self._matricize((w, t, y)), seed=seed,
+                                  train_prop=train_prop, val_prop=val_prop,
+                                  test_prop=test_prop, shuffle=shuffle,
+                                  w_transform=w_transform,
+                                  t_transform=t_transform,
+                                  y_transform=y_transform)
 
         self.binary_treatment = binary_treatment
         if binary_treatment:  # todo: input?
@@ -178,18 +148,12 @@ class MLP(BaseGenModel):
         return nn.Sequential(*hidden_layers)
 
     def build_networks(self):
-        self.MLP_params_t_w = self.network_params["mlp_params_t_w"]
-        self.MLP_params_y_tw = self.network_params["mlp_params_y_tw"]
+        self.MLP_params_t_w = self.network_params['mlp_params_t_w']
+        self.MLP_params_y_tw = self.network_params['mlp_params_y_tw']
         output_multiplier_t = 1 if self.binary_treatment else 2
-        self.mlp_t_w = self._build_mlp(
-            self.dim_w, self.dim_t, self.MLP_params_t_w, output_multiplier_t
-        )
-        self.mlp_y_tw = self._build_mlp(
-            self.dim_w + self.dim_t,
-            self.dim_y,
-            self.MLP_params_y_tw,
-            self.outcome_distribution.num_params,
-        )
+        self.mlp_t_w = self._build_mlp(self.dim_w, self.dim_t, self.MLP_params_t_w, output_multiplier_t)
+        self.mlp_y_tw = self._build_mlp(self.dim_w + self.dim_t, self.dim_y, self.MLP_params_y_tw,
+                                        self.outcome_distribution.num_params)
         self.networks = [self.mlp_t_w, self.mlp_y_tw]
 
     def _get_loss(self, w, t, y):
@@ -215,19 +179,11 @@ class MLP(BaseGenModel):
                 loss, loss_t, loss_y = self._get_loss(w, t, y)
                 # TODO: learning rate can be separately adjusted by weighting the losses here
                 loss.backward()
-
-                torch.nn.utils.clip_grad_norm(
-                    chain(*[net.parameters() for net in self.networks]), self.grad_norm
-                )
-
+                torch.nn.utils.clip_grad_norm(chain(*[net.parameters() for net in self.networks]), self.grad_norm)
                 self.optim.step()
 
                 c += 1
-
-                if (
-                    self.training_params.verbose
-                    and c % self.training_params.print_every_iters == 0
-                ):
+                if self.training_params.verbose and c % self.training_params.print_every_iters == 0:
                     print_("Iteration {}: {} {}".format(c, loss_t, loss_y))
 
                     if comet_exp is not None:
@@ -240,9 +196,7 @@ class MLP(BaseGenModel):
                     if loss_val < self.best_val_loss:
                         self.best_val_loss = loss_val
                         print("saving best-val-loss model")
-                        torch.save(
-                            [net.state_dict() for net in self.networks], self.savepath
-                        )
+                        torch.save([net.state_dict() for net in self.networks], self.savepath)
                         # todo: this is not ideal since we cannot run multiple experiments at the same time
                         #       without overwriting the saved model
 
@@ -287,9 +241,7 @@ class MLP(BaseGenModel):
         if self.ignore_w:
             w = np.zeros_like(w)
         wt = np.concatenate([w, t], 1)
-        return self.outcome_distribution.mean(
-            self.mlp_y_tw(torch.from_numpy(wt).float())
-        )
+        return self.outcome_distribution.mean(self.mlp_y_tw(torch.from_numpy(wt).float()))
 
 
 if __name__ == "__main__":
@@ -317,9 +269,7 @@ if __name__ == "__main__":
         w, t, y = load_lalonde()
         # dist = distributions.MixedDistribution([0.0], distributions.LogLogistic())
         dist = distributions.FactorialGaussian()
-        training_params = TrainingParams(
-            lr=0.0005, batch_size=128, num_epochs=100, verbose=False
-        )
+        training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=100, verbose=False)
         mlp_params_y_tw = MLPParams(n_hidden_layers=2, dim_h=256)
         early_stop = True
         ignore_w = False
@@ -333,13 +283,9 @@ if __name__ == "__main__":
         ignore_w = False
     elif dataset == 3:
         w, t, y = load_lalonde(obs_version="cps1")
-        dist = distributions.MixedDistribution(
-            [0.0, 25564.669921875 / y.max()], distributions.LogNormal()
-        )
+        dist = distributions.MixedDistribution([0.0, 25564.669921875 / y.max()], distributions.LogNormal())
         training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=1000)
-        mlp_params_y_tw = MLPParams(
-            n_hidden_layers=3, dim_h=512, activation=torch.nn.LeakyReLU()
-        )
+        mlp_params_y_tw = MLPParams(n_hidden_layers=3, dim_h=512, activation=torch.nn.LeakyReLU())
         early_stop = True
         ignore_w = False
     else:
@@ -363,27 +309,18 @@ if __name__ == "__main__":
     plt.hist(y_samples, 50, density=True, alpha=0.5, range=(0, 1))
     plt.legend(["data", "density", "samples"], loc=1)
 
-    mlp = MLP(
-        w,
-        t,
-        y,
-        training_params=training_params,
-        network_params=dict(
-            mlp_params_t_w=MLPParams(), mlp_params_y_tw=mlp_params_y_tw
-        ),
-        binary_treatment=True,
-        outcome_distribution=dist,
-        outcome_min=0.0,
-        outcome_max=1.0,
-        train_prop=0.5,
-        val_prop=0.1,
-        test_prop=0.4,
-        seed=1,
-        early_stop=early_stop,
-        ignore_w=ignore_w,
-        w_transform=preprocess.Standardize,
-        y_transform=preprocess.Normalize,
-    )
+    mlp = MLP(w, t, y,
+              training_params=training_params,
+              network_params=dict(mlp_params_t_w=MLPParams(), mlp_params_y_tw=mlp_params_y_tw),
+              binary_treatment=True, outcome_distribution=dist,
+              outcome_min=0.0, outcome_max=1.0,
+              train_prop=0.5,
+              val_prop=0.1,
+              test_prop=0.4,
+              seed=1,
+              early_stop=early_stop,
+              ignore_w=ignore_w,
+              w_transform=preprocess.Standardize, y_transform=preprocess.Normalize)
     mlp.train()
     data_samples = mlp.sample()
     # mlp.plot_ty_dists()
