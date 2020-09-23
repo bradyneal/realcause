@@ -77,14 +77,15 @@ class MLP(BaseGenModel):
                  w_transform=PlaceHolderTransform,
                  t_transform=PlaceHolderTransform,
                  y_transform=PlaceHolderTransform,
-                 savepath='.cache_best_model.pt'
-                 ):
+                 savepath='.cache_best_model.pt',
+                 test_size=None):
         super(MLP, self).__init__(*self._matricize((w, t, y)), seed=seed,
                                   train_prop=train_prop, val_prop=val_prop,
                                   test_prop=test_prop, shuffle=shuffle,
                                   w_transform=w_transform,
                                   t_transform=t_transform,
-                                  y_transform=y_transform)
+                                  y_transform=y_transform,
+                                  test_size=test_size)
 
         self.binary_treatment = binary_treatment
         if binary_treatment:  # todo: input?
