@@ -314,10 +314,14 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             t1 = np.full(t_shape, t1)
             t0 = np.full(t_shape, t0)
         if noisy:
+            y1_total = np.zeros(w.shape[0])
+            y0_total = np.zeros(w.shape[0])
             total = np.zeros(w.shape[0])
             for _ in range(n_y_per_w):
-                total += self.sample_interventional(t=t1, w=w) - self.sample_interventional(t=t0, w=w)
-            return total / n_y_per_w
+                y1_total += to_np_vector(self.sample_interventional(t=t1, w=w))
+                y0_total += to_np_vector(self.sample_interventional(t=t0, w=w))
+            y_1 = y1_total / n_y_per_w
+            y_0 = y0_total / n_y_per_w
         else:
             y_1 = to_np_vector(self.mean_y(t=t1, w=w))
             y_0 = to_np_vector(self.mean_y(t=t0, w=w))
