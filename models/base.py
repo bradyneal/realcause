@@ -272,7 +272,9 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         return self.ite(t1=t1, t0=t0, w=w, untransform=untransform,
                         transform_t=transform_t).mean()
 
-    def noisy_ate(self, t1=1, t0=0, w=None, n_y_per_w=100, seed=None):
+    def noisy_ate(self, t1=1, t0=0, w=None, n_y_per_w=100, seed=None, transform_w=False):
+        if w is not None and transform_w:
+            w = self.w_transform.transform(w)
         if seed is not None:
             self.set_seed(seed)
         total = 0
@@ -287,9 +289,8 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         # return self.ite(t1=t1, t0=t0, w=w, untransform=untransform,
         #                 transform_t=transform_t).mean()
 
-    def ite(self, t1=1, t0=0, w=None, t=None, untransform=True, transform_t=True,
+    def ite(self, t1=1, t0=0, w=None, t=None, untransform=True, transform_t=True, transform_w=True,
             estimand="all", noisy=False, seed=None, n_y_per_w=100):
-    
         if seed is not None:
             self.set_seed(seed)
         if w is None:
@@ -313,10 +314,11 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             t_shape[0] = w.shape[0]
             t1 = np.full(t_shape, t1)
             t0 = np.full(t_shape, t0)
+        if transform_w:
+            w = self.w_transform.transform(w)
         if noisy:
             y1_total = np.zeros(w.shape[0])
             y0_total = np.zeros(w.shape[0])
-            total = np.zeros(w.shape[0])
             for _ in range(n_y_per_w):
                 y1_total += to_np_vector(self.sample_interventional(t=t1, w=w))
                 y0_total += to_np_vector(self.sample_interventional(t=t0, w=w))
