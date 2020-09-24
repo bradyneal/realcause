@@ -16,6 +16,7 @@ import json
 def get_data(args):
     data_name = args.data.lower()
     ate = None
+    ites = None
     if data_name == "lalonde":
         w, t, y = load_lalonde(dataroot=args.dataroot)
     elif data_name == "lalonde_rct":
@@ -30,9 +31,10 @@ def get_data(args):
         link = options[1]
         n = options[2]
         observe_counterfactuals = (len(options) == 4) and (options[3] == "counterfactual")
-        d = load_lbidd(n=n, observe_counterfactuals=observe_counterfactuals, 
-                       link=link, dataroot=args.dataroot, return_ate=True)
+        d = load_lbidd(n=n, observe_counterfactuals=observe_counterfactuals, link=link,
+                       dataroot=args.dataroot, return_ate=True, return_ites=True)
         ate = d["ate"]
+        ites = d['ites']
         if observe_counterfactuals:
             w, t, y = d["obs_counterfactual_w"], d["obs_counterfactual_t"], d["obs_counterfactual_y"]
         else:
@@ -46,7 +48,7 @@ def get_data(args):
     else:
         raise (Exception("dataset {} not implemented".format(args.data)))
 
-    return ate, w, t, y
+    return ites, ate, w, t, y
 
 
 def get_distribution(args):
@@ -120,7 +122,7 @@ def main(args, save_args=True, log_=True):
 
     # dataset
     logger.info(f"getting data: {args.data}")
-    ate, w, t, y = get_data(args)
+    ites, ate, w, t, y = get_data(args)
 
     # comet logging
     if args.comet:
