@@ -277,6 +277,12 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             w = self.w_transform.transform(w)
         if seed is not None:
             self.set_seed(seed)
+        if isinstance(t1, Number) or isinstance(t0, Number):
+            t_shape = list(self.t.shape)
+            t_shape[0] = w.shape[0]
+            t1 = np.full(t_shape, t1)
+            t0 = np.full(t_shape, t0)
+
         total = 0
         for _ in range(n_y_per_w):
             total += (self.sample_interventional(t=t1, w=w) -
