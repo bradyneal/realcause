@@ -15,33 +15,18 @@ _DEFAULT_TARNET = dict(
 
 class TarNet(MLP):
     def build_networks(self):
-        self.MLP_params_w = self.network_params["mlp_params_w"]
-        self.MLP_params_t_w = self.network_params["mlp_params_t_w"]
-        self.MLP_params_y0_w = self.network_params["mlp_params_y0_w"]
-        self.MLP_params_y1_w = self.network_params["mlp_params_y1_w"]
+        self.MLP_params_w = self.network_params['mlp_params_w']
+        self.MLP_params_t_w = self.network_params['mlp_params_t_w']
+        self.MLP_params_y0_w = self.network_params['mlp_params_y0_w']
+        self.MLP_params_y1_w = self.network_params['mlp_params_y1_w']
 
         output_multiplier_t = 1 if self.binary_treatment else 2
-        self._mlp_w = self._build_mlp(
-            self.dim_w, self.MLP_params_w.dim_h, self.MLP_params_w, 1
-        )
-        self._mlp_t_w = self._build_mlp(
-            self.MLP_params_w.dim_h,
-            self.dim_t,
-            self.MLP_params_t_w,
-            output_multiplier_t,
-        )
-        self._mlp_y0_w = self._build_mlp(
-            self.MLP_params_w.dim_h,
-            self.dim_y,
-            self.MLP_params_y0_w,
-            self.outcome_distribution.num_params,
-        )
-        self._mlp_y1_w = self._build_mlp(
-            self.MLP_params_w.dim_h,
-            self.dim_y,
-            self.MLP_params_y1_w,
-            self.outcome_distribution.num_params,
-        )
+        self._mlp_w = self._build_mlp(self.dim_w, self.MLP_params_w.dim_h, self.MLP_params_w, 1)
+        self._mlp_t_w = self._build_mlp(self.MLP_params_w.dim_h, self.dim_t, self.MLP_params_t_w, output_multiplier_t)
+        self._mlp_y0_w = self._build_mlp(self.MLP_params_w.dim_h, self.dim_y, self.MLP_params_y0_w,
+                                         self.outcome_distribution.num_params)
+        self._mlp_y1_w = self._build_mlp(self.MLP_params_w.dim_h, self.dim_y, self.MLP_params_y1_w,
+                                         self.outcome_distribution.num_params)
         self.networks = [self._mlp_w, self._mlp_t_w, self._mlp_y0_w, self._mlp_y1_w]
 
     def mlp_w(self, w):
@@ -85,9 +70,7 @@ if __name__ == "__main__":
     if dataset == 1:
         w, t, y = load_lalonde()
         dist = distributions.MixedDistribution([0.0], distributions.LogLogistic())
-        training_params = TrainingParams(
-            lr=0.0005, batch_size=128, num_epochs=100, verbose=False
-        )
+        training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=100, verbose=False)
         early_stop = True
         ignore_w = False
     elif dataset == 2:
@@ -127,25 +110,18 @@ if __name__ == "__main__":
     plt.hist(y_samples, 50, density=True, alpha=0.5, range=(0, 1))
     plt.legend(["data", "density", "samples"], loc=1)
 
-    mdl = TarNet(
-        w,
-        t,
-        y,
-        training_params=training_params,
-        network_params=network_params,
-        binary_treatment=True,
-        outcome_distribution=dist,
-        outcome_min=0.0,
-        outcome_max=1.0,
-        train_prop=0.5,
-        val_prop=0.1,
-        test_prop=0.4,
-        seed=1,
-        early_stop=early_stop,
-        ignore_w=ignore_w,
-        w_transform=preprocess.Standardize,
-        y_transform=preprocess.Normalize,
-    )
+    mdl = TarNet(w, t, y,
+                 training_params=training_params,
+                 network_params=network_params,
+                 binary_treatment=True, outcome_distribution=dist,
+                 outcome_min=0.0, outcome_max=1.0,
+                 train_prop=0.5,
+                 val_prop=0.1,
+                 test_prop=0.4,
+                 seed=1,
+                 early_stop=early_stop,
+                 ignore_w=ignore_w,
+                 w_transform=preprocess.Standardize, y_transform=preprocess.Normalize)
     mdl.train()
     data_samples = mdl.sample()
     # mlp.plot_ty_dists()
