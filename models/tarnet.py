@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
     pp = pprint.PrettyPrinter(indent=4)
 
-    dataset = 2
+    dataset = 3
     network_params = _DEFAULT_TARNET.copy()
     if dataset == 1:
         w, t, y = load_lalonde()
@@ -100,9 +100,10 @@ if __name__ == "__main__":
     elif dataset == 3:
         w, t, y = load_lalonde(obs_version="cps1")
         dist = distributions.MixedDistribution(
-            [0.0, 25564.669921875 / y.max()], distributions.LogNormal()
+            [0.0, 25564.669921875], distributions.SigmoidFlow(ndim=10)
+            # [0.0], distributions.SigmoidFlow(ndim=10)
         )
-        training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=1000)
+        training_params = TrainingParams(lr=0.0005, batch_size=128, num_epochs=100)
         early_stop = True
         ignore_w = False
     else:
