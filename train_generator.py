@@ -128,6 +128,7 @@ def main(args, save_args=True, log_=True):
     if args.comet:
         exp = Experiment(project_name="causal-benchmark", auto_metric_logging=False)
         exp.add_tag(args.data)
+        logger.info(f"comet url: {exp.url}")
     else:
         exp = None
 

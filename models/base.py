@@ -275,14 +275,15 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
     def noisy_ate(self, t1=1, t0=0, w=None, n_y_per_w=100, seed=None, transform_w=False):
         if w is not None and transform_w:
             w = self.w_transform.transform(w)
+
         if seed is not None:
             self.set_seed(seed)
-        if isinstance(t1, Number) or isinstance(t0, Number):
+
+        if (isinstance(t1, Number) or isinstance(t0, Number)) and w is not None:
             t_shape = list(self.t.shape)
             t_shape[0] = w.shape[0]
             t1 = np.full(t_shape, t1)
             t0 = np.full(t_shape, t0)
-
         total = 0
         for _ in range(n_y_per_w):
             total += (self.sample_interventional(t=t1, w=w) -
@@ -339,7 +340,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         return y_1 - y_0
 
     def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True,
-                      dataset=TRAIN, transformed=False,
+                      dataset=TRAIN, transformed=False, verbose=True,
                       title=True, name=None, file_ext='pdf', thin_model=None,
                       thin_true=None, joint_kwargs={}, test=False, seed=None):
         """
@@ -366,28 +367,33 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
         _, t_model, y_model = to_np_vectors(self.sample(seed=seed, untransform=(not transformed)),
                                             thin_interval=thin_model)
-        _, t_true, y_true = self.get_data(transformed=transformed, dataset=dataset)
+        _, t_true, y_true = self.get_data(transformed=transformed, dataset=dataset, verbose=verbose)
         t_true, y_true = to_np_vectors((t_true, y_true), thin_interval=thin_true)
+        plots = []
 
         if joint:
-            compare_joints(t_model, y_model, t_true, y_true,
+            fig1 = compare_joints(t_model, y_model, t_true, y_true,
                            xlabel1=T_MODEL_LABEL, ylabel1=Y_MODEL_LABEL,
                            xlabel2=T_TRUE_LABEL, ylabel2=Y_TRUE_LABEL,
                            xlabel=T, ylabel=Y,
                            label1=MODEL_LABEL, label2=TRUE_LABEL,
                            save_fname='{}_ty_joints.{}'.format(name, file_ext),
                            title=title, name=name, test=test, kwargs=joint_kwargs)
+            
+            plots += [fig1]
 
         if marginal_hist or marginal_qq:
-            compare_bivariate_marginals(t_true, t_model, y_true, y_model,
+            plots += compare_bivariate_marginals(t_true, t_model, y_true, y_model,
                                         xlabel=T, ylabel=Y,
                                         label1=TRUE_LABEL, label2=MODEL_LABEL,
                                         hist=marginal_hist, qqplot=marginal_qq,
                                         save_hist_fname='{}_ty_marginal_hists.{}'.format(name, file_ext),
                                         save_qq_fname='{}_ty_marginal_qqplots.{}'.format(name, file_ext),
                                         title=title, name=name, test=test)
+            
+        return plots
 
-    def get_univariate_quant_metrics(self, dataset=TRAIN, transformed=False,
+    def get_univariate_quant_metrics(self, dataset=TRAIN, transformed=False, verbose=True,
                                      thin_model=None, thin_true=None, seed=None):
         """
         Calculates quantitative metrics for the difference between p(t) and
@@ -410,7 +416,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             self.sample(seed=seed, untransform=(not transformed)),
             thin_interval=thin_model,
         )
-        _, t_true, y_true = self.get_data(transformed=transformed, dataset=dataset)
+        _, t_true, y_true = self.get_data(transformed=transformed, dataset=dataset, verbose=verbose)
         t_true, y_true = to_np_vectors((t_true, y_true), thin_interval=thin_true)
 
         ks_label = "_ks_pval"
