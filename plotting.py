@@ -143,6 +143,7 @@ def save_and_show(f, save_fname, dir=DIR, test=False):
     plt.close()
 
 
+# Source: http://193.51.245.4/tutorials/convert_a_matplotlib_figure
 def fig2data(fig):
     """
     @brief Convert a Matplotlib figure to a 4D numpy array with RGBA channels and return it
