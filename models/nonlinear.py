@@ -7,7 +7,8 @@ import torch
 from torch import nn
 from torch.utils import data
 from itertools import chain
-
+from plotting import fig2img
+from tqdm import tqdm
 
 class MLPParams:
     def __init__(self, n_hidden_layers=1, dim_h=64, activation=nn.ReLU()):
@@ -21,7 +22,7 @@ _DEFAULT_MLP = dict(mlp_params_t_w=MLPParams(), mlp_params_y_tw=MLPParams())
 
 class TrainingParams:
     def __init__(self, batch_size=32, lr=0.001, num_epochs=100, verbose=True, print_every_iters=100,
-                 eval_every=100,
+                 eval_every=100, plot_every=1000, p_every=100,
                  optim=torch.optim.Adam, **optim_args):
         self.batch_size = batch_size
         self.lr = lr
@@ -30,6 +31,8 @@ class TrainingParams:
         self.print_every_iters = print_every_iters
         self.optim = optim
         self.eval_every = eval_every
+        self.plot_every = plot_every
+        self.p_every = p_every
         self.optim_args = optim_args
 
 
@@ -175,7 +178,7 @@ class MLP(BaseGenModel):
 
         c = 0
         self.best_val_loss = float("inf")
-        for _ in range(self.training_params.num_epochs):
+        for _ in tqdm(range(self.training_params.num_epochs)):
             for w, t, y in self.data_loader:
 
                 self.optim.zero_grad()
@@ -187,7 +190,7 @@ class MLP(BaseGenModel):
 
                 c += 1
                 if self.training_params.verbose and c % self.training_params.print_every_iters == 0:
-                    print_("Iteration {}: {} {}".format(c, loss_t, loss_y))
+                    print_("Iteration {}: {} {}".format(c, loss_t, loss_y), print_=False)
 
                     if comet_exp is not None:
                         comet_exp.log_metric("loss_t", loss_t.item())
@@ -195,13 +198,32 @@ class MLP(BaseGenModel):
 
                 if c % self.training_params.eval_every == 0 and len(self.val_idxs) > 0:
                     loss_val = self.evaluate(self.data_loader_val).item()
-                    print_("Iteration {} valid loss {}".format(c, loss_val))
+                    if comet_exp is not None:
+                        comet_exp.log_metric('loss_val', loss_val)
+
+                    print_("Iteration {} valid loss {}".format(c, loss_val), print_=False)
                     if loss_val < self.best_val_loss:
                         self.best_val_loss = loss_val
-                        print("saving best-val-loss model")
+                        print_("saving best-val-loss model", print_=False)
                         torch.save([net.state_dict() for net in self.networks], self.savepath)
                         # todo: this is not ideal since we cannot run multiple experiments at the same time
                         #       without overwriting the saved model
+
+                if c % self.training_params.plot_every == 0:
+                    plots = self.plot_ty_dists(verbose=False)
+                    for plot in plots:
+                        title = plot._suptitle.get_text()
+                        img = fig2img(plot)
+                        if comet_exp is not None:
+                            comet_exp.log_image(img, name=title)
+                        
+                if c % self.training_params.p_every == 0:
+                    uni_metrics_train = self.get_univariate_quant_metrics(dataset="train", verbose=False)
+                    uni_metrics_val = self.get_univariate_quant_metrics(dataset="val", verbose=False)
+
+                    if comet_exp is not None:
+                        comet_exp.log_metric('y p_value', uni_metrics_train["y_ks_pval"])
+                        comet_exp.log_metric('y p_value val', uni_metrics_val["y_ks_pval"])
 
         if early_stop and len(self.val_idxs) > 0:
             print("loading best-val-loss model (early stopping checkpoint)")
