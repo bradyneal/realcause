@@ -439,6 +439,8 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         alphas=None,
         n_permutations=1000,
         seed=None,
+        verbose=False,
+        n=None
     ):
         """
         Computes Wasserstein-1 and Wasserstein-2 distances. Also computes all the
@@ -456,6 +458,9 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         :param alphas: list of kernel parameters for MMD test
         :param n_permutations: number of permutations for each test
         :param seed: seed for sample from generative model
+        :param verbose: print intermediate steps
+        :param n: subsample dataset to n samples
+
         :return: {
             'wasserstein1_dist': wasserstein1 distance between p_true and p_model
             'wasserstein2_dist': wasserstein2 distance between p_true and p_model
@@ -479,13 +484,24 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(str(e) + ' ... Install: pip install git+git://github.com/josipd/torch-two-sample')
 
-        w_model, t_model, y_model = self.sample(
-            seed=seed, untransform=(not transformed)
-        )
+        w_model, t_model, y_model = self.sample(seed=seed, untransform=(not transformed))
+        if n is not None:
+            select_rows = np.random.choice(w_model.shape[0], n, replace=False)
+            w_model = w_model[select_rows, :]
+            t_model = t_model[select_rows, :]
+            y_model = y_model[select_rows, :]
+
         t_model, y_model = to_np_vectors((t_model, y_model), column_vector=True)
         model_samples = np.hstack((t_model, y_model))
 
-        w_true, t_true, y_true = self.get_data(transformed=transformed, dataset=dataset)
+        w_true, t_true, y_true = self.get_data(transformed=transformed, dataset=dataset, verbose=verbose)
+        if n is not None:
+            select_rows = np.random.choice(w_true.shape[0], n, replace=False)
+            w_true = w_true[select_rows, :]
+            t_true = t_true[select_rows, :]
+            y_true = y_true[select_rows, :]
+
+
         t_true, y_true = to_np_vectors((t_true, y_true), column_vector=True)
         true_samples = np.hstack((t_true, y_true))
 
