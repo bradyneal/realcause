@@ -11,6 +11,7 @@ from models import distributions
 import helpers
 from collections import OrderedDict
 import json
+from utils import get_duplicates
 
 
 def get_data(args):
@@ -175,6 +176,7 @@ def main(args, save_args=True, log_=True):
                    test_prop=args.test_prop,
                    seed=args.seed,
                    early_stop=args.early_stop,
+                   patience=args.patience,
                    ignore_w=args.ignore_w,
                    grad_norm=args.grad_norm,
                    w_transform=w_transform, y_transform=y_transform,  # TODO set more args
@@ -230,6 +232,8 @@ def get_args():
     parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--num_epochs", type=int, default=100)
     parser.add_argument("--early_stop", type=eval, default=True, choices=[True, False])
+    parser.add_argument("--patience", type=int)
+
     parser.add_argument("--ignore_w", type=eval, default=False, choices=[True, False])
     parser.add_argument("--grad_norm", type=float, default=float("inf"))
     parser.add_argument("--test_size", type=int)

@@ -312,3 +312,10 @@ def unzip(path_to_zip_file, unzip_dir=None):
 
 def regular_round(x):
     return int(Decimal(x).to_integral_value(rounding=ROUND_HALF_UP))
+
+
+def get_duplicates(x, thresh=2):
+    u, c = np.unique(x, return_counts=True)
+    dup = u[c >= thresh]
+    dup_counts = c[c >= thresh]
+    return dup, dup_counts

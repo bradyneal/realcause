@@ -22,7 +22,7 @@ _DEFAULT_MLP = dict(mlp_params_t_w=MLPParams(), mlp_params_y_tw=MLPParams())
 
 class TrainingParams:
     def __init__(self, batch_size=32, lr=0.001, num_epochs=100, verbose=True, print_every_iters=100,
-                 eval_every=100, plot_every=1000, p_every=100,
+                 eval_every=100, plot_every=10000, p_every=10000,
                  optim=torch.optim.Adam, **optim_args):
         self.batch_size = batch_size
         self.lr = lr
@@ -75,6 +75,7 @@ class MLP(BaseGenModel):
                  test_prop=0,
                  shuffle=True,
                  early_stop=True,
+                 patience=None,
                  ignore_w=False,
                  grad_norm=float('inf'),
                  w_transform=PlaceHolderTransform,
@@ -101,6 +102,7 @@ class MLP(BaseGenModel):
         self.outcome_min = outcome_min
         self.outcome_max = outcome_max
         self.early_stop = early_stop
+        self.patience = patience
         self.ignore_w = ignore_w
         self.grad_norm = grad_norm
         self.savepath = savepath
@@ -178,6 +180,7 @@ class MLP(BaseGenModel):
 
         c = 0
         self.best_val_loss = float("inf")
+        self.best_val_idx = 0
         for _ in tqdm(range(self.training_params.num_epochs)):
             for w, t, y in self.data_loader:
 
@@ -185,7 +188,7 @@ class MLP(BaseGenModel):
                 loss, loss_t, loss_y = self._get_loss(w, t, y)
                 # TODO: learning rate can be separately adjusted by weighting the losses here
                 loss.backward()
-                torch.nn.utils.clip_grad_norm(chain(*[net.parameters() for net in self.networks]), self.grad_norm)
+                torch.nn.utils.clip_grad_norm_(chain(*[net.parameters() for net in self.networks]), self.grad_norm)
                 self.optim.step()
 
                 c += 1
@@ -204,6 +207,7 @@ class MLP(BaseGenModel):
                     print_("Iteration {} valid loss {}".format(c, loss_val), print_=False)
                     if loss_val < self.best_val_loss:
                         self.best_val_loss = loss_val
+                        self.best_val_idx = c
                         print_("saving best-val-loss model", print_=False)
                         torch.save([net.state_dict() for net in self.networks], self.savepath)
                         # todo: this is not ideal since we cannot run multiple experiments at the same time
@@ -224,6 +228,10 @@ class MLP(BaseGenModel):
                     if comet_exp is not None:
                         comet_exp.log_metric('y p_value', uni_metrics_train["y_ks_pval"])
                         comet_exp.log_metric('y p_value val', uni_metrics_val["y_ks_pval"])
+                
+            if early_stop and self.patience is not None and c - self.best_val_idx > self.patience:
+                print_('early stopping criterion reached. Ending experiment.')
+                break
 
         if early_stop and len(self.val_idxs) > 0:
             print("loading best-val-loss model (early stopping checkpoint)")
