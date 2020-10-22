@@ -124,14 +124,6 @@ def main(args, save_args=True, log_=True):
     # dataset
     logger.info(f"getting data: {args.data}")
     ites, ate, w, t, y = get_data(args)
-    
-    '''
-    print('--------------------------------')
-    y_dup, y_dup_count = get_duplicates(y)
-    print('y dups: ', y_dup)
-    print('y dup counts: ', y_dup_count)
-    print('--------------------------------')
-    '''
 
     # comet logging
     if args.comet:
