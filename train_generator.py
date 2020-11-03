@@ -6,12 +6,11 @@ import torch
 from data.lalonde import load_lalonde
 from data.lbidd import load_lbidd
 from data.ihdp import load_ihdp
-from models import TarNet, preprocess, TrainingParams, MLPParams
+from models import TarNet, preprocess, TrainingParams, MLPParams, LinearModel
 from models import distributions
 import helpers
 from collections import OrderedDict
 import json
-from utils import get_duplicates
 
 
 def get_data(args):
@@ -81,7 +80,6 @@ def get_distribution(args):
 
 
 def evaluate(args, model):
-
     all_runs = list()
     t_pvals = list()
     y_pvals = list()
@@ -110,7 +108,6 @@ def evaluate(args, model):
 
 
 def main(args, save_args=True, log_=True):
-
     # create logger
     helpers.create(*args.saveroot.split("/"))
     logger = helpers.Logging(args.saveroot, "log.txt", log_)
@@ -165,24 +162,29 @@ def main(args, save_args=True, log_=True):
     outcome_min = 0 if args.y_transform == "Normalize" else None
     outcome_max = 1 if args.y_transform == "Normalize" else None
 
-    model = TarNet(w, t, y,
-                   training_params=training_params,
-                   network_params=network_params,
-                   binary_treatment=True, outcome_distribution=distribution,
-                   outcome_min=outcome_min,
-                   outcome_max=outcome_max,
-                   train_prop=args.train_prop,
-                   val_prop=args.val_prop,
-                   test_prop=args.test_prop,
-                   seed=args.seed,
-                   early_stop=args.early_stop,
-                   patience=args.patience,
-                   ignore_w=args.ignore_w,
-                   grad_norm=args.grad_norm,
-                   w_transform=w_transform, y_transform=y_transform,  # TODO set more args
-                   savepath=os.path.join(args.saveroot, 'model.pt'),
-                   test_size=args.test_size)
-    
+    if args.n_hidden_layers > 0:
+        Model = TarNet
+    elif args.n_hidden_layers == 0:
+        Model = LinearModel
+    else:
+        raise Exception(f'`n_hidden_layers` must be nonnegative, got {args.n_hidden_layers}')
+    model = Model(w, t, y,
+                  training_params=training_params,
+                  network_params=network_params,
+                  binary_treatment=True, outcome_distribution=distribution,
+                  outcome_min=outcome_min,
+                  outcome_max=outcome_max,
+                  train_prop=args.train_prop,
+                  val_prop=args.val_prop,
+                  test_prop=args.test_prop,
+                  seed=args.seed,
+                  early_stop=args.early_stop,
+                  patience=args.patience,
+                  ignore_w=args.ignore_w,
+                  grad_norm=args.grad_norm,
+                  w_transform=w_transform, y_transform=y_transform,  # TODO set more args
+                  savepath=os.path.join(args.saveroot, 'model.pt'),
+                  test_size=args.test_size)
 
     # TODO GPU support
     if args.train:
