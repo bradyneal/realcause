@@ -64,18 +64,11 @@ def generate_plots(
 
             ites, ate, w, t, y = get_data(args)
 
-            print("--------------------------")
-            print(root, subdata)
-            print("w: ", w.shape)
-            print("--------------------------")
-
-            """
             plots = model.plot_ty_dists(verbose=False)
 
             for plot in plots:
                 title = plot._suptitle.get_text()
                 plot.savefig(str(subdata_plot_dir / title) + ".png")
-            """
 
 
 if __name__ == "__main__":
