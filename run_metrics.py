@@ -83,8 +83,6 @@ def evaluate_directory(
 
         # For each subdataset (psid1, cps1, etc.)
         for subdata in subdatasets:
-            if "psid" not in subdata:
-                continue
 
             subdata_path = checkpoint_dir / root / subdata
 
