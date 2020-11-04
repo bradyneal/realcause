@@ -72,7 +72,7 @@ class VarianceRescaling(Scaling):
                 assert np.isclose(s, stdv), 'stdv of data is not close to the provided value'
         else:
             s = np.cast['float32'](stdv)
-        super(VarianceRescaling, self).__init__(gain / s)
+        super(VarianceRescaling, self).__init__(gain / (s+1e-7))
 
 
 class SequentialTransforms(Preprocess):

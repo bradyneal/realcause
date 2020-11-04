@@ -14,6 +14,7 @@ _DEFAULT_TARNET = dict(
 
 
 class TarNet(MLP):
+    # noinspection PyAttributeOutsideInit
     def build_networks(self):
         self.MLP_params_w = self.network_params['mlp_params_w']
         self.MLP_params_t_w = self.network_params['mlp_params_t_w']
