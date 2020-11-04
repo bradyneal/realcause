@@ -3,6 +3,7 @@ from numbers import Number
 import numpy as np
 import torch
 from scipy import stats
+import warnings
 from typing import Type
 
 from models.preprocess import Preprocess, PlaceHolderTransform
@@ -169,8 +170,6 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         :return: (covariates, treatment, outcome)
         """
         dataset = dataset.lower()
-        if verbose:
-            print(dataset, end=" ")
         if dataset == TRAIN:
             w, t, y = self.w, self.t, self.y
         elif dataset == VAL or dataset == "validation":
@@ -191,10 +190,10 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             t = self.t_transform.transform(t)
             y = self.y_transform.transform(y)
             if verbose:
-                print("transformed")
+                warnings.warn("transformed")
         else:
             if verbose:
-                print("untransformed")
+                warnings.warn("untransformed")
 
         return w, t, y
 
