@@ -109,10 +109,6 @@ def evaluate_directory(
             args.saveroot = model_folder
 
             ites, ate, w, t, y = get_data(args)
-            print("BROH ate: ", ate)
-
-            # ites = None
-            # ate = None
 
             # Now load model
             model, args = load_gen(saveroot=str(args.saveroot), dataroot="./datasets")
