@@ -5,20 +5,20 @@ import numpy as np
 DELTA = 1e-7
 
 
-def softplus(x):
-    return nn.functional.softplus(x) + DELTA
+def softplus(x, delta=DELTA):
+    return nn.functional.softplus(x) + delta
 
 
-def sigmoid(x):
-    return torch.sigmoid(x) * (1 - DELTA) + 0.5 * DELTA
+def sigmoid(x, delta=DELTA):
+    return torch.sigmoid(x) * (1 - delta) + 0.5 * delta
 
 
 def logsigmoid(x):
     return -softplus(-x)
 
 
-def log(x):
-    return torch.log(x * 1e2 + DELTA) - np.log(1e2 + DELTA)
+def log(x, delta=DELTA):
+    return torch.log(x * 1e2 + DELTA) - np.log(1e2 + delta)
 
 
 def logit(x):
