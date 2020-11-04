@@ -106,3 +106,56 @@ class Normalize(SequentialTransforms):
         a = data.min()
         b = data.max()
         super(Normalize, self).__init__(Shifting(-a), Scaling(1 / (b - a)))
+
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+
+def logit(x):
+    return np.log(x) - np.log(1-x)
+
+
+def cauchy(x):
+    return np.arctan(x) / np.pi + 0.5
+
+
+def cauchy_inv(x):
+    return np.tan(np.pi * (x - 0.5))
+
+
+class Logit(Preprocess):
+    def transform(self, x):
+        return logit(x)
+
+    def untransform(self, x):
+        return sigmoid(x)
+
+
+class Cauchy(Preprocess):
+    def transform(self, x):
+        return cauchy(x)
+
+    def untransform(self, x):
+        return cauchy_inv(x)
+
+
+class LightTailTransform(SequentialTransforms):
+    """
+    standardize data so that data.mean() = 0 and data.std() = 1
+    """
+    def __init__(self, data):
+        super(LightTailTransform, self).__init__(Standardize(data), Cauchy(), Logit())
+
+
+class LightTailTransformN(SequentialTransforms):
+    """
+    standardize data so that data.mean() = 0 and data.std() = 1
+    """
+    def __init__(self, data, n=2):
+        transforms = list()
+        for _ in range(n):
+            transforms.append(LightTailTransform(data))
+            data = transforms[-1].transform(data)
+        transforms.append(Standardize(data))
+        super(LightTailTransformN, self).__init__(*transforms)
