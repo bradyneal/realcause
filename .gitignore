@@ -3,6 +3,8 @@
 *.pdf
 *.png
 ihdp*.npz*
+experiments/
+GenModelCkpts/
 
 # Mac files
 .DS_Store
