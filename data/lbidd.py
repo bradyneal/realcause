@@ -70,7 +70,8 @@ VALID_LINKS = {'linear', 'quadratic', 'cubic', 'poly', 'log', 'exp'}
 def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False,
                return_ate=False, return_params_df=False, link='quadratic',
                degree_y=None, degree_t=None, n_shared_parents='median', i=0,
-               dataroot=None):
+               dataroot=None,
+               print_paths=True):
     """
     Load the LBIDD dataset that is specified
 
@@ -91,8 +92,9 @@ def load_lbidd(n=5000, observe_counterfactuals=False, return_ites=False,
 
     folder, scaling_zip, scaling_folder, covariates_path, params_path, counterfactuals_folder, factuals_folder = \
         get_paths(dataroot=dataroot)
-    print(scaling_folder)
-    print(covariates_path)
+    if print_paths:
+        print(scaling_folder)
+        print(covariates_path)
 
     # Check if files exist
     if not (os.path.isfile(scaling_zip) and os.path.isfile(covariates_path)):
