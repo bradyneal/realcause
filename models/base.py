@@ -485,7 +485,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             raise ModuleNotFoundError(str(e) + ' ... Install: pip install git+git://github.com/josipd/torch-two-sample')
 
         w_model, t_model, y_model = self.sample(seed=seed, untransform=(not transformed))
-        if n is not None:
+        if n is not None and w_model.shape[0] > n:
             select_rows = np.random.choice(w_model.shape[0], n, replace=False)
             w_model = w_model[select_rows, :]
             t_model = t_model[select_rows, :]
@@ -495,12 +495,11 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         model_samples = np.hstack((t_model, y_model))
 
         w_true, t_true, y_true = self.get_data(transformed=transformed, dataset=dataset, verbose=verbose)
-        if n is not None:
+        if n is not None and w_true.shape[0] > n:
             select_rows = np.random.choice(w_true.shape[0], n, replace=False)
             w_true = w_true[select_rows, :]
             t_true = t_true[select_rows, :]
             y_true = y_true[select_rows, :]
-
 
         t_true, y_true = to_np_vectors((t_true, y_true), column_vector=True)
         true_samples = np.hstack((t_true, y_true))
