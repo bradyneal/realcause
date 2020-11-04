@@ -31,7 +31,7 @@ def get_univariate_results(model, num_tests=100, verbose=False):
     return summary
 
 
-def get_multivariate_results(model, num_tests=100, n=1000):
+def get_multivariate_results(model, include_w, num_tests=100, n=1000):
     # wasserstein1 pval', 'wasserstein2 pval', 'Friedman-Rafsky pval', 'kNN pval', 'Energy pval'
     w1_pval = list()
     w2_pval = list()
@@ -40,7 +40,9 @@ def get_multivariate_results(model, num_tests=100, n=1000):
     energy_pval = list()
 
     for _ in tqdm(range(num_tests)):
-        multi_metrics = model.get_multivariate_quant_metrics(dataset="test", n=n)
+        multi_metrics = model.get_multivariate_quant_metrics(
+            dataset="test", n=n, include_w=include_w
+        )
         w1_pval.append(multi_metrics["wasserstein1 pval"])
         w2_pval.append(multi_metrics["wasserstein2 pval"])
         fr_pval.append(multi_metrics["Friedman-Rafsky pval"])
@@ -57,20 +59,33 @@ def get_multivariate_results(model, num_tests=100, n=1000):
     return summary
 
 
-def evaluate_directory(checkpoint_dir="./GenModelCkpts"):
+def evaluate_directory(
+    checkpoint_dir="./GenModelCkpts",
+    data_filter=None,
+    num_tests=100,
+    n=1000,
+    include_w=True,
+    results_dir="./results",
+):
+
     checkpoint_dir = Path(checkpoint_dir).resolve()
+    results_dir = Path(results_dir)
+    results_dir.mkdir(exist_ok=True, parents=True)
     dataset_roots = [Path(i) for i in os.listdir(checkpoint_dir)]
-    n=1000
     results = {}
     # For each overall dataset (LBIDD, lalonde, etc.)
     for root in dataset_roots:
         subdatasets = os.listdir(checkpoint_dir / root)
 
-        if "lalonde" not in str(root):
-            continue
+        if data_filter is not None:
+            if data_filter not in str(root) or "1k" in str(root):
+                continue
 
         # For each subdataset (psid1, cps1, etc.)
         for subdata in subdatasets:
+            if "psid" not in subdata:
+                continue
+
             subdata_path = checkpoint_dir / root / subdata
 
             # Check if unzipping is necessary
@@ -94,6 +109,10 @@ def evaluate_directory(checkpoint_dir="./GenModelCkpts"):
             args.saveroot = model_folder
 
             ites, ate, w, t, y = get_data(args)
+            print("BROH ate: ", ate)
+
+            # ites = None
+            # ate = None
 
             # Now load model
             model, args = load_gen(saveroot=str(args.saveroot), dataroot="./datasets")
@@ -116,10 +135,16 @@ def evaluate_directory(checkpoint_dir="./GenModelCkpts"):
                 pehe = None
 
             print("computing uni metrics...", end="\r", flush=True)
-            uni_summary = get_univariate_results(model, num_tests=100)
-            print("computing multi metrics...", end="\r", flush=True)
-            multi_summary = get_multivariate_results(model, num_tests=100, n=n)
-            # multi_summary = []
+            # uni_summary = get_univariate_results(model, num_tests=num_tests)
+            uni_summary = None
+            print("computing multi metrics include_w=True...", end="\r", flush=True)
+            multi_summary_w = get_multivariate_results(
+                model, num_tests=num_tests, n=n, include_w=True
+            )
+            print("computing multi metrics include_w=True...", end="\r", flush=True)
+            multi_summary_no_w = get_multivariate_results(
+                model, num_tests=num_tests, n=n, include_w=False
+            )
 
             if args.test_size is None:
                 total = args.train_prop + args.val_prop + args.test_prop
@@ -137,11 +162,20 @@ def evaluate_directory(checkpoint_dir="./GenModelCkpts"):
             subdict["ate"] = ate
             subdict["ate_est"] = noisy_ate
             subdict["univariate_metrics"] = uni_summary
-            subdict["multivariate_metrics"] = multi_summary
+            subdict["multivariate_metrics_w"] = multi_summary_w
+            subdict["multivariate_metrics_no_w"] = multi_summary_no_w
+
             results[str(root) + "_" + str(subdata)] = subdict
 
-            with open("results.json", "w") as fp:
-                json.dump(results, fp, indent=4)
+            if data_filter is not None:
+                with open(
+                    results_dir / (data_filter + "results.json"), "w"
+                ) as fp:
+                    json.dump(results, fp, indent=4)
+
+            else:
+                with open(results_dir / "results.json", "w") as fp:
+                    json.dump(results, fp, indent=4)
 
 
 def eval_ckpt(checkpoint_path):
@@ -154,4 +188,4 @@ def eval_ckpt(checkpoint_path):
 
 
 if __name__ == "__main__":
-    evaluate_directory()
+    evaluate_directory(data_filter="lalonde", num_tests=1, n=200)
