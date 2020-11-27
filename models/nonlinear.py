@@ -174,7 +174,7 @@ class MLP(BaseGenModel):
         loss = loss_t + loss_y
         return loss, loss_t, loss_y
 
-    def train(self, early_stop=None, print_=print, comet_exp=None):
+    def train(self, early_stop=None, print_=lambda s, print_: print(s), comet_exp=None):
         if early_stop is None:
             early_stop = self.early_stop
 
