@@ -230,12 +230,29 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         else:
             return t
 
-    def sample_y(self, t, w, untransform=True, seed=None):
+    def sample_y(self, t, w, untransform=True, causal_effect=1.0, seed=None):
+        """
+        :param t: treatment
+        :param w: covariate (confounder)
+        :param untransform: whether to transform the data back to the raw scale
+        :param causal_effect: size of the causal effect
+        :param seed: random seed
+        :return: sampled outcome
+        """
         if seed is not None:
             self.set_seed(seed)
         if w is None:
             # note: input to the model need to be transformed
             w = self.sample_w(untransform=False)
+
+        assert causal_effect <= 1.0 and causal_effect >= 0, f'causal_effect is in [0,1], got {causal_effect}'
+        if causal_effect < 1.0:
+            prob_to_swap = (1 - causal_effect) / 2  # p = 0.0 if causal_effect = 1.0, p = 0.5 if causal_effect = 0.0
+            t = t * 2 - 1  # rescale t = -1 and 1
+            swap = - 2 * (np.random.rand(*t.shape) <= prob_to_swap).astype('float') + 1  # swap = -1, no swap = 1
+            t *= swap
+            t = (t + 1) / 2
+
         y = self._sample_y(t, w)
         if untransform:
             return self.y_transform.untransform(y)
