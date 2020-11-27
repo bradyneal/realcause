@@ -238,6 +238,13 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         :param causal_effect: size of the causal effect
         :param seed: random seed
         :return: sampled outcome
+
+        with probability p = (1 - causal_effect) / 2, t will be swapped when sampling y, so that
+            E[y|T=1,w] - E[y|T=0,w] = pE[y|T'=0,w] + (1-p)E[y|T'=1,w] - pE[y|T'=1,w] - (1-p)E[y|T'=0,w]
+                                    = (1-2p)E[y|T'=1,w] - (1-2p)E[y|T'=0,w]
+                                    = causal_effect (size) * ITE
+            
+            where T' is the real variable for conditioning (after stochastic swapping)
         """
         if seed is not None:
             self.set_seed(seed)
