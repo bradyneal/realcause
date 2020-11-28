@@ -372,7 +372,8 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
         :param joint: boolean for whether to plot p(t, y)
         :param marginal_hist: boolean for whether to plot the p(t) and p(y) histograms
-        :param marginal_qq: boolean for whether to plot the p(t) and p(y) Q-Q plots
+        :param marginal_qq: boolean for whether to plot the p(y) Q-Q plot
+            or use 'both' for plotting both the p(t) and p(y) Q-Q plots
         :param dataset: dataset subset to use (train, val, or test)
         :param transformed: If True, use transformed version of data.
             If False, use original (non-transformed) version of data.
