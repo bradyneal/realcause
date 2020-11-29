@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 def generate_plots(
     checkpoint_dir="./GenModelCkpts",
+    #checkpoint_dir="./LinearModelCkpts",
     data_filter=None,
     plot_dir="./plots",
 ):
@@ -34,6 +35,9 @@ def generate_plots(
 
         # For each subdataset (psid1, cps1, etc.)
         for subdata in subdatasets:
+
+            #if 'cps' not in subdata:
+            #    continue
 
             subdata_plot_dir = root_plot_dir / subdata
             subdata_plot_dir.mkdir(exist_ok=True, parents=True)
@@ -64,10 +68,13 @@ def generate_plots(
 
             ites, ate, w, t, y = get_data(args)
 
-            plots = model.plot_ty_dists(verbose=False)
+            plots = model.plot_ty_dists(verbose=False, title=False, transformed=True)
 
-            for plot in plots:
-                title = plot._suptitle.get_text()
+            for i, plot in enumerate(plots):
+                if plot._suptitle is not None:
+                    title = plot._suptitle.get_text()
+                else:
+                    title = str(i)
                 plot.savefig(str(subdata_plot_dir / title) + ".png")
 
 
