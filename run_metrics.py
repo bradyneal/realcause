@@ -175,12 +175,12 @@ def evaluate_directory(
 
             if data_filter is not None:
                 with open(
-                    results_dir / (data_filter + "_broh.json"), "w"
+                    results_dir / (data_filter + "_results.json"), "w"
                 ) as fp:
                     json.dump(results, fp, indent=4)
 
             else:
-                with open(results_dir / "results_uni_es.json", "w") as fp:
+                with open(results_dir / "results.json", "w") as fp:
                     json.dump(results, fp, indent=4)
 
 
