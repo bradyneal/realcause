@@ -91,6 +91,8 @@ def evaluate(args, model):
         y_pvals.append(uni_metrics["y_ks_pval"])
 
     summary = OrderedDict()
+
+
     summary.update(nll=model.best_val_loss)
     summary.update(avg_t_pval=sum(t_pvals) / args.num_univariate_tests)
     summary.update(avg_y_pval=sum(y_pvals) / args.num_univariate_tests)

@@ -258,11 +258,11 @@ class MLP(BaseGenModel):
         t_ = self.mlp_t_w(torch.from_numpy(w).float())
         return self.treatment_distribution.sample(t_ + positivity)
 
-    def _sample_y(self, t, w=None):
+    def _sample_y(self, t, w=None, deg_hetero=1.0):
         if self.ignore_w:
             w = np.zeros_like(w)
         wt = np.concatenate([w, t], 1)
-        y_ = self.mlp_y_tw(torch.from_numpy(wt).float())
+        y_ = self.mlp_y_tw(torch.from_numpy(wt).float(), deg_hetero=deg_hetero)
         y_samples = self.outcome_distribution.sample(y_)
 
         if self.outcome_min is not None or self.outcome_max is not None:

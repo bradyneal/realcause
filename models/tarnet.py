@@ -36,10 +36,30 @@ class TarNet(MLP):
     def mlp_t_w(self, w):
         return self._mlp_t_w(self.mlp_w(w))
 
-    def mlp_y_tw(self, wt):
+    def mlp_y_tw(self, wt, deg_hetero=1):
+        """
+        :param wt: concatenation of w and t
+        :param deg_hetero: degree of heterogeneity
+        :return: parameter of the conditional distribution p(y|t,w)
+
+        Degree of heterogeneity is implemented by decomposing w as the population mean + individual's deviation from it.
+            The deviation is scaled by the `deg_hetero` coefficient. e.g. if
+            deg_hetero = 1.0, then nothing changes, and if
+            deg_hetero = 0.0, the mlps' input will be exactly the mean of the embedding, eliminating any heterogeneity.
+        """
         w, t = wt[:, :-1], wt[:, -1:]
-        y0 = self._mlp_y0_w(self.mlp_w(w))
-        y1 = self._mlp_y1_w(self.mlp_w(w))
+
+        w = self.mlp_w(w)
+
+        # degree of heterogeneity
+        assert deg_hetero <= 1.0 and deg_hetero >= 0, f'deg_hetero is in [0,1], got {deg_hetero}'
+        if deg_hetero < 1:
+            mean_w = w.mean(0, keepdim=True)
+            dev = w - mean_w
+            w = mean_w + dev * deg_hetero
+
+        y0 = self._mlp_y0_w(w)
+        y1 = self._mlp_y1_w(w)
         return y0 * (1 - t) + y1 * t
 
     def _get_loss(self, w, t, y):
@@ -66,7 +86,7 @@ if __name__ == "__main__":
 
     pp = pprint.PrettyPrinter(indent=4)
 
-    dataset = 3
+    dataset = 1
     network_params = _DEFAULT_TARNET.copy()
     if dataset == 1:
         w, t, y = load_lalonde()
@@ -95,7 +115,7 @@ if __name__ == "__main__":
 
     param = torch.zeros(1, dist.num_params, requires_grad=True)
     y_torch = torch.from_numpy(y / y.max()).float()[:, None]
-    for i in range(500):
+    for i in range(100):
         param.grad = None
         nll = -dist.likelihood(y_torch, param.expand(len(y), -1)).mean()
         nll.backward()
