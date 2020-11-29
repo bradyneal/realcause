@@ -501,7 +501,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             from torch_two_sample.statistics_diff import MMDStatistic, EnergyStatistic
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(str(e) + ' ... Install: pip install git+git://github.com/josipd/torch-two-sample')
-        w_model, t_model, y_model = self.sample(seed=seed, untransform=(not transformed), dataset=dataset)
+        w_model, t_model, y_model = self.sample(seed=seed, untransform=(not transformed))
         if n is not None and w_model.shape[0] > n:
             select_rows = np.random.choice(w_model.shape[0], n, replace=False)
             w_model = w_model[select_rows, :]

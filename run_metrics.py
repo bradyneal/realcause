@@ -95,9 +95,6 @@ def evaluate_directory(
         # For each subdataset (psid1, cps1, etc.)
         for subdata in subdatasets:
 
-            #if "cps" not in subdata:
-            #    continue
-
             subdata_path = checkpoint_dir / root / subdata
 
             # Check if unzipping is necessary
@@ -121,12 +118,10 @@ def evaluate_directory(
             args.saveroot = model_folder
 
             ites, ate, w, t, y = get_data(args)
-            ites, ate = None, None
 
             # Now load model
             model, args = load_gen(saveroot=str(args.saveroot), dataroot="./datasets")
             
-
             # TODO: compare the pipeline of noisy_ate() to ite() too see what's different
             if ate is not None:
                 t0 = np.zeros((t.shape[0], 1))
@@ -147,9 +142,7 @@ def evaluate_directory(
             print("computing uni metrics...", end="\r", flush=True)
 
             uni_summary = get_univariate_results(model, num_tests=num_tests, n=n_uni)
-            #uni_summary = None
 
-            '''
             print("computing multi metrics include_w=True...", end="\r", flush=True)
             multi_summary_w = get_multivariate_results(
                 model, num_tests=num_tests, n=n_multi, include_w=True
@@ -158,10 +151,6 @@ def evaluate_directory(
             multi_summary_no_w = get_multivariate_results(
                 model, num_tests=num_tests, n=n_multi, include_w=False
             )
-            '''
-
-            multi_summary_w = None
-            multi_summary_no_w = None
 
             if args.test_size is None:
                 total = args.train_prop + args.val_prop + args.test_prop

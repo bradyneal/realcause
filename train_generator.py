@@ -127,10 +127,6 @@ def main(args, save_args=True, log_=True):
     logger.info(f"getting data: {args.data}")
     ites, ate, w, t, y = get_data(args)
 
-    print("---------------------------")
-    print('w: ', w.shape)
-    print("---------------------------")
-
     # comet logging
     if args.comet:
         exp = Experiment(project_name="causal-benchmark", auto_metric_logging=False)
