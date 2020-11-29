@@ -5,7 +5,9 @@ import os
 import numpy as np
 from PIL import Image
 
+
 FIGSIZE = [12, 5]
+SINGLE_FIGSIZE = [5.5, 5]
 DIR = 'plots'
 DPI = 300
 
@@ -104,7 +106,7 @@ def compare_bivariate_marginals(x1, x2, y1, y2, xlabel=None, ylabel=None, label1
         save_and_show(f1, save_hist_fname, test=test)
         plots.append(f1)
 
-    if qqplot:
+    if qqplot is 'both':
         f2, ax2 = plt.subplots(1, 2, figsize=FIGSIZE)
         if title:
             f2.suptitle(name + ' Marginal Q-Q Plots')
@@ -116,6 +118,16 @@ def compare_bivariate_marginals(x1, x2, y1, y2, xlabel=None, ylabel=None, label1
         compare_marginal_qqplots(y1, y2, ax=ax2[1],
                                  label1=get_quantile_label(label1, ylabel),
                                  label2=get_quantile_label(label2, ylabel))
+
+        save_and_show(f2, save_qq_fname, test=test)
+        plots.append(f2)
+    elif qqplot is 'y' or qqplot:
+        f2, ax2 = plt.subplots(1, 1, figsize=SINGLE_FIGSIZE)
+        compare_marginal_qqplots(y1, y2, ax=ax2,
+                                 label1=get_quantile_label(label1, ylabel),
+                                 label2=get_quantile_label(label2, ylabel))
+        if title:
+            plt.title(name + ' Y Marginal Q-Q Plot')
         save_and_show(f2, save_qq_fname, test=test)
         plots.append(f2)
 

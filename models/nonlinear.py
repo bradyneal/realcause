@@ -22,7 +22,7 @@ _DEFAULT_MLP = dict(mlp_params_t_w=MLPParams(), mlp_params_y_tw=MLPParams())
 
 class TrainingParams:
     def __init__(self, batch_size=32, lr=0.001, num_epochs=100, verbose=True, print_every_iters=100,
-                 eval_every=100, plot_every=10000, p_every=10000,
+                 eval_every=100, plot_every=100, p_every=100,
                  optim=torch.optim.Adam, **optim_args):
         self.batch_size = batch_size
         self.lr = lr

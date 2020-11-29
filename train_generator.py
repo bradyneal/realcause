@@ -6,11 +6,13 @@ import torch
 from data.lalonde import load_lalonde
 from data.lbidd import load_lbidd
 from data.ihdp import load_ihdp
+from data.twins import load_twins
 from models import TarNet, preprocess, TrainingParams, MLPParams, LinearModel
 from models import distributions
 import helpers
 from collections import OrderedDict
 import json
+from utils import get_duplicates
 
 
 def get_data(args):
@@ -40,10 +42,13 @@ def get_data(args):
         else:
             w, t, y = d["w"], d["t"], d["y"]
     elif data_name == "ihdp":
-        d = load_ihdp()
-        w, t, y = d["w"], d["t"], d["y"]
+        d = load_ihdp(return_ate=True, return_ites=True)
+        w, t, y, ate, ites = d["w"], d["t"], d["y"], d['ate'], d['ites']
     elif data_name == "ihdp_counterfactual":
         d = load_ihdp(observe_counterfactuals=True)
+        w, t, y = d["w"], d["t"], d["y"]
+    elif data_name == "twins":
+        d = load_twins(dataroot=args.dataroot)
         w, t, y = d["w"], d["t"], d["y"]
     else:
         raise (Exception("dataset {} not implemented".format(args.data)))
