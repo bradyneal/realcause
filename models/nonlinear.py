@@ -9,6 +9,18 @@ from torch.utils import data
 from itertools import chain
 from plotting import fig2img
 from tqdm import tqdm
+from contextlib import contextmanager
+
+
+@contextmanager
+def eval_ctx(mdl, debug=False, is_train=False):
+    for net in mdl.networks: net.eval()
+    torch.autograd.set_detect_anomaly(debug)
+    with torch.set_grad_enabled(mode=is_train):
+        yield
+    torch.autograd.set_detect_anomaly(False)
+    for net in mdl.networks: net.train()
+
 
 class MLPParams:
     def __init__(self, n_hidden_layers=1, dim_h=64, activation=nn.ReLU()):
@@ -200,7 +212,8 @@ class MLP(BaseGenModel):
                         comet_exp.log_metric("loss_y", loss_y.item())
 
                 if c % self.training_params.eval_every == 0 and len(self.val_idxs) > 0:
-                    loss_val = self.evaluate(self.data_loader_val).item()
+                    with eval_ctx(self):
+                        loss_val = self.evaluate(self.data_loader_val).item()
                     if comet_exp is not None:
                         comet_exp.log_metric('loss_val', loss_val)
 
@@ -214,7 +227,8 @@ class MLP(BaseGenModel):
                         #       without overwriting the saved model
 
                 if c % self.training_params.plot_every == 0:
-                    plots = self.plot_ty_dists(verbose=False)
+                    with eval_ctx(self):
+                        plots = self.plot_ty_dists(verbose=False)
                     for plot in plots:
                         title = plot._suptitle.get_text()
                         img = fig2img(plot)
@@ -222,8 +236,9 @@ class MLP(BaseGenModel):
                             comet_exp.log_image(img, name=title)
                         
                 if c % self.training_params.p_every == 0:
-                    uni_metrics_train = self.get_univariate_quant_metrics(dataset="train", verbose=False)
-                    uni_metrics_val = self.get_univariate_quant_metrics(dataset="val", verbose=False)
+                    with eval_ctx(self):
+                        uni_metrics_train = self.get_univariate_quant_metrics(dataset="train", verbose=False)
+                        uni_metrics_val = self.get_univariate_quant_metrics(dataset="val", verbose=False)
 
                     if comet_exp is not None:
                         comet_exp.log_metric('y p_value', uni_metrics_train["y_ks_pval"])
@@ -238,19 +253,13 @@ class MLP(BaseGenModel):
             for net, params in zip(self.networks, torch.load(self.savepath)):
                 net.load_state_dict(params)
 
-    @torch.no_grad()
     def evaluate(self, data_loader):
         loss = 0
         n = 0
-        for net in self.networks:
-            net.eval()
 
         for w, t, y in data_loader:
             loss += self._get_loss(w, t, y)[0] * w.size(0)
             n += w.size(0)
-
-        for net in self.networks:
-            net.train()
         return loss / n
 
     def _sample_t(self, w=None, positivity=0):
