@@ -185,4 +185,4 @@ def evaluate_directory(
 
 
 if __name__ == "__main__":
-    evaluate_directory(data_filter=None, num_tests=100, n_uni=None, n_multi=1000)
+    evaluate_directory(data_filter='lalonde', num_tests=1, n_uni=None, n_multi=200)
