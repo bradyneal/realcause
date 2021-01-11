@@ -458,6 +458,10 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         _, t_true, y_true = self.get_data(transformed=transformed, dataset=dataset, verbose=verbose)
         t_true, y_true = to_np_vectors((t_true, y_true), thin_interval=thin_true)
 
+        # jitter for numerical stability
+        t_true = t_true.copy() + np.random.rand(*t_true.shape) * 1e-6
+        t_model = t_model.copy() + np.random.rand(*t_model.shape) * 1e-6
+
         ks_label = "_ks_pval"
         es_label = "_es_pval"
         wasserstein_label = "_wasserstein1_dist"
