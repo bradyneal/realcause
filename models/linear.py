@@ -11,10 +11,10 @@ class LinearModel(MLP):
 
         self.networks = [self._mlp_t_w, self._mlp_y0_w, self._mlp_y1_w]
 
-    def mlp_t_w(self, w):
+    def mlp_t_w(self, w,  **kwargs):
         return self._mlp_t_w(w)
 
-    def mlp_y_tw(self, wt):
+    def mlp_y_tw(self, wt, **kwargs):
         w, t = wt[:, :-1], wt[:, -1:]
         y0 = self._mlp_y0_w(w)
         y1 = self._mlp_y1_w(w)
