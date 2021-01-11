@@ -230,7 +230,10 @@ class MLP(BaseGenModel):
                     with eval_ctx(self):
                         plots = self.plot_ty_dists(verbose=False)
                     for plot in plots:
-                        title = plot._suptitle.get_text()
+                        try:
+                            title = plot._suptitle.get_text()
+                        except AttributeError:
+                            title = plot.axes[0].get_title()
                         img = fig2img(plot)
                         if comet_exp is not None:
                             comet_exp.log_image(img, name=title)
