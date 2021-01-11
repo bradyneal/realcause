@@ -3,16 +3,17 @@ import argparse
 import os
 import numpy as np
 import torch
+import gpytorch
 from data.lalonde import load_lalonde
 from data.lbidd import load_lbidd
 from data.ihdp import load_ihdp
 from data.twins import load_twins
-from models import TarNet, preprocess, TrainingParams, MLPParams, LinearModel
+from models import TarNet, preprocess, TrainingParams, MLPParams, LinearModel, GPModel, GPParams
 from models import distributions
 import helpers
 from collections import OrderedDict
 import json
-from utils import get_duplicates
+# from utils import get_duplicates
 
 
 def get_data(args):
@@ -97,7 +98,6 @@ def evaluate(args, model):
 
     summary = OrderedDict()
 
-
     summary.update(nll=model.best_val_loss)
     summary.update(avg_t_pval=sum(t_pvals) / args.num_univariate_tests)
     summary.update(avg_y_pval=sum(y_pvals) / args.num_univariate_tests)
@@ -143,20 +143,6 @@ def main(args, save_args=True, log_=True):
     distribution = get_distribution(args)
     logger.info(distribution)
 
-    # architecture
-    mlp_params = MLPParams(
-        n_hidden_layers=args.n_hidden_layers,
-        dim_h=args.dim_h,
-        activation=getattr(torch.nn, args.activation)(),
-    )
-    logger.info(mlp_params.__dict__)
-    network_params = dict(
-        mlp_params_w=mlp_params,
-        mlp_params_t_w=mlp_params,
-        mlp_params_y0_w=mlp_params,
-        mlp_params_y1_w=mlp_params,
-    )
-
     # training params
     training_params = TrainingParams(
         lr=args.lr, batch_size=args.batch_size, num_epochs=args.num_epochs
@@ -169,12 +155,48 @@ def main(args, save_args=True, log_=True):
     outcome_min = 0 if args.y_transform == "Normalize" else None
     outcome_max = 1 if args.y_transform == "Normalize" else None
 
-    if args.n_hidden_layers > 0:
+    # model type
+    if args.model_type == 'tarnet':
         Model = TarNet
-    elif args.n_hidden_layers == 0:
+
+        logger.info('model type: tarnet')
+        mlp_params = MLPParams(
+            n_hidden_layers=args.n_hidden_layers,
+            dim_h=args.dim_h,
+            activation=getattr(torch.nn, args.activation)(),
+        )
+        logger.info(mlp_params.__dict__)
+        network_params = dict(
+            mlp_params_w=mlp_params,
+            mlp_params_t_w=mlp_params,
+            mlp_params_y0_w=mlp_params,
+            mlp_params_y1_w=mlp_params,
+        )
+    elif args.model_type == 'linear':
         Model = LinearModel
+
+        logger.info('model type: linear model')
+        network_params = dict()
+    elif args.model_type == 'gp':
+        Model = GPModel
+
+        logger.info('model type: linear model')
+
+        kernel_t = gpytorch.kernels.__dict__[args.kernel_t]()
+        kernel_y = gpytorch.kernels.__dict__[args.kernel_y]()
+        var_dist = gpytorch.variational.__dict__[args.var_dist]
+        network_params = dict(
+            gp_t_w=GPParams(kernel=kernel_t, var_dist=var_dist),
+            gp_y_tw=GPParams(kernel=kernel_y, var_dist=None),
+        )
+        logger.info(f'gp_t_w: {repr(network_params["gp_t_w"])}'
+                    f'gp_y_tw: {repr(network_params["gp_y_tw"])}')
     else:
+        raise Exception(f'model type {args.model_type} not implemented')
+
+    if args.n_hidden_layers < 0:
         raise Exception(f'`n_hidden_layers` must be nonnegative, got {args.n_hidden_layers}')
+
     model = Model(w, t, y,
                   training_params=training_params,
                   network_params=network_params,
@@ -225,16 +247,28 @@ def get_args():
     parser.add_argument('--overwrite_reload', type=str, default='',
                         help='secondary folder name of an experiment')  # TODO: for model loading
 
+    # model type
+    parser.add_argument('--model_type', type=str, default='tarnet',
+                        choices=['tarnet', 'linear', 'gp'])  # TODO: renaming tarnet to be dragonnet
+
     # distribution of outcome (y)
     parser.add_argument('--dist', type=str, default='FactorialGaussian',
                         choices=distributions.BaseDistribution.dist_names)
     parser.add_argument("--dist_args", type=str, default=list(), nargs="+")
     parser.add_argument("--atoms", type=float, default=list(), nargs="+")
 
-    # architecture
+    # architecture for tarnet
     parser.add_argument("--n_hidden_layers", type=int, default=1)
     parser.add_argument("--dim_h", type=int, default=64)
     parser.add_argument("--activation", type=str, default="ReLU")
+
+    # architecture for gp
+    parser.add_argument("--kernel_t", type=str, default="RBFKernel",
+                        choices=gpytorch.kernels.__all__)
+    parser.add_argument("--kernel_y", type=str, default="RBFKernel",
+                        choices=gpytorch.kernels.__all__)
+    parser.add_argument("--var_dist", type=str, default="MeanFieldVariationalDistribution",
+                        choices=[vd for vd in gpytorch.variational.__all__ if 'VariationalDistribution' in vd])
 
     # training params
     parser.add_argument("--lr", type=float, default=0.001)
