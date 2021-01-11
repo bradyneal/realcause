@@ -56,8 +56,14 @@ def compare_marginal_hists(x1, x2, label1=None, label2=None, ax=None):
         sns.distplot(x1, kde=False, ax=ax, label=label1)
         sns.distplot(x2, kde=False, ax=ax, label=label2)
     else:
-        sns.distplot(x1, ax=ax, label=label1)
-        sns.distplot(x2, ax=ax, label=label2)
+        try:
+            sns.distplot(x1, ax=ax, label=label1)
+        except RuntimeError:
+            sns.distplot(x1, ax=ax, label=label1, kde_kws={'bw': 0.5})
+        try:
+            sns.distplot(x2, ax=ax, label=label2)
+        except RuntimeError:
+            sns.distplot(x1, ax=ax, label=label1, kde_kws={'bw': 0.5})
 
 
 def is_binary(x1, x2=None):
