@@ -22,9 +22,12 @@ dependencies:
   - r-rgenoud
   - r-matching
   - pip:
+    - addict
     - causallib
+    - comet_ml
     - econml
     - git+git://github.com/bradyneal/torch-two-sample
+    - gpytorch
     - POT
     - pyro-ppl    # not necessary if not using Pyro
     - whynot
