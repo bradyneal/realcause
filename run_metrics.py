@@ -11,22 +11,28 @@ import time
 from tqdm import tqdm
 
 
-def get_univariate_results(model, num_tests=100, verbose=False):
+def get_univariate_results(model, num_tests=100, verbose=False, n=None):
     all_runs = list()
-    t_pvals = list()
-    y_pvals = list()
+    t_ks_pvals = list()
+    y_ks_pvals = list()
+    y_es_pvals = list()
+    t_es_pvals = list()
 
     for _ in tqdm(range(num_tests)):
         uni_metrics = model.get_univariate_quant_metrics(
-            dataset="test", verbose=verbose
+            dataset="test", verbose=verbose, n=n
         )
         all_runs.append(uni_metrics)
-        t_pvals.append(uni_metrics["t_ks_pval"])
-        y_pvals.append(uni_metrics["y_ks_pval"])
+        t_ks_pvals.append(uni_metrics["t_ks_pval"])
+        y_ks_pvals.append(uni_metrics["y_ks_pval"])
+        y_es_pvals.append(uni_metrics["y_es_pval"])
+        t_es_pvals.append(uni_metrics["t_es_pval"])
 
     summary = OrderedDict()
-    summary.update(avg_t_pval=sum(t_pvals) / num_tests)
-    summary.update(avg_y_pval=sum(y_pvals) / num_tests)
+    summary.update(avg_t_ks_pval=sum(t_ks_pvals) / num_tests)
+    summary.update(avg_y_ks_pval=sum(y_ks_pvals) / num_tests)
+    summary.update(avg_t_es_pval=sum(t_es_pvals) / num_tests)
+    summary.update(avg_y_es_pval=sum(y_es_pvals) / num_tests)
 
     return summary
 
@@ -61,9 +67,11 @@ def get_multivariate_results(model, include_w, num_tests=100, n=1000):
 
 def evaluate_directory(
     checkpoint_dir="./GenModelCkpts",
+    #checkpoint_dir="./LinearModelCkpts",
     data_filter=None,
     num_tests=100,
-    n=1000,
+    n_uni=None,
+    n_multi=1000,
     include_w=True,
     results_dir="./results",
 ):
@@ -78,8 +86,11 @@ def evaluate_directory(
         subdatasets = os.listdir(checkpoint_dir / root)
 
         if data_filter is not None:
-            if data_filter not in str(root) or "1k" in str(root):
+            if data_filter not in str(root):
                 continue
+
+        if "1k" in str(root):
+            continue
 
         # For each subdataset (psid1, cps1, etc.)
         for subdata in subdatasets:
@@ -105,12 +116,14 @@ def evaluate_directory(
                 args = Dict(json.load(f))
 
             args.saveroot = model_folder
+            args.dataroot = "./datasets/"
+            args.comet = False
 
             ites, ate, w, t, y = get_data(args)
 
             # Now load model
             model, args = load_gen(saveroot=str(args.saveroot), dataroot="./datasets")
-
+            
             # TODO: compare the pipeline of noisy_ate() to ite() too see what's different
             if ate is not None:
                 t0 = np.zeros((t.shape[0], 1))
@@ -129,15 +142,16 @@ def evaluate_directory(
                 pehe = None
 
             print("computing uni metrics...", end="\r", flush=True)
-            # uni_summary = get_univariate_results(model, num_tests=num_tests)
-            uni_summary = None
+
+            uni_summary = get_univariate_results(model, num_tests=num_tests, n=n_uni)
+
             print("computing multi metrics include_w=True...", end="\r", flush=True)
             multi_summary_w = get_multivariate_results(
-                model, num_tests=num_tests, n=n, include_w=True
+                model, num_tests=num_tests, n=n_multi, include_w=True
             )
-            print("computing multi metrics include_w=True...", end="\r", flush=True)
+            print("computing multi metrics include_w=False...", end="\r", flush=True)
             multi_summary_no_w = get_multivariate_results(
-                model, num_tests=num_tests, n=n, include_w=False
+                model, num_tests=num_tests, n=n_multi, include_w=False
             )
 
             if args.test_size is None:
@@ -150,8 +164,8 @@ def evaluate_directory(
                 n_test = args.test_size
 
             subdict = {}
-            subdict["univariate_test_size"] = n_test
-            subdict["multivariate_test_size"] = n
+            subdict["univariate_test_size"] = n_uni if n_uni is not None else n_test
+            subdict["multivariate_test_size"] = n_multi
             subdict["pehe"] = pehe
             subdict["ate"] = ate
             subdict["ate_est"] = noisy_ate
@@ -163,7 +177,7 @@ def evaluate_directory(
 
             if data_filter is not None:
                 with open(
-                    results_dir / (data_filter + "results.json"), "w"
+                    results_dir / (data_filter + "_results.json"), "w"
                 ) as fp:
                     json.dump(results, fp, indent=4)
 
@@ -172,14 +186,5 @@ def evaluate_directory(
                     json.dump(results, fp, indent=4)
 
 
-def eval_ckpt(checkpoint_path):
-    with open(checkpoint_path / "args.txt") as f:
-        args = Dict(json.load(f))
-        args.saveroot = checkpoint_path
-        ites, ate, w, t, y = get_data(args)
-        # Now load model
-        model, args = load_gen(saveroot=str(args.saveroot), dataroot="./datasets")
-
-
 if __name__ == "__main__":
-    evaluate_directory(data_filter="lalonde", num_tests=1, n=200)
+    evaluate_directory(data_filter='lalonde', num_tests=1, n_uni=None, n_multi=200)

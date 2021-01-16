@@ -7,7 +7,9 @@ import os
 import numpy as np
 from PIL import Image
 
+
 FIGSIZE = [12, 5]
+SINGLE_FIGSIZE = [5.5, 5]
 DIR = 'plots'
 DPI = 300
 
@@ -56,8 +58,14 @@ def compare_marginal_hists(x1, x2, label1=None, label2=None, ax=None):
         sns.distplot(x1, kde=False, ax=ax, label=label1)
         sns.distplot(x2, kde=False, ax=ax, label=label2)
     else:
-        sns.distplot(x1, ax=ax, label=label1)
-        sns.distplot(x2, ax=ax, label=label2)
+        try:
+            sns.distplot(x1, ax=ax, label=label1)
+        except RuntimeError:
+            sns.distplot(x1, ax=ax, label=label1, kde_kws={'bw': 0.5})
+        try:
+            sns.distplot(x2, ax=ax, label=label2)
+        except RuntimeError:
+            sns.distplot(x1, ax=ax, label=label1, kde_kws={'bw': 0.5})
 
 
 def is_binary(x1, x2=None):
@@ -106,7 +114,7 @@ def compare_bivariate_marginals(x1, x2, y1, y2, xlabel=None, ylabel=None, label1
         save_and_show(f1, save_hist_fname, test=test)
         plots.append(f1)
 
-    if qqplot:
+    if qqplot is 'both':
         f2, ax2 = plt.subplots(1, 2, figsize=FIGSIZE)
         if title:
             f2.suptitle(name + ' Marginal Q-Q Plots')
@@ -118,6 +126,16 @@ def compare_bivariate_marginals(x1, x2, y1, y2, xlabel=None, ylabel=None, label1
         compare_marginal_qqplots(y1, y2, ax=ax2[1],
                                  label1=get_quantile_label(label1, ylabel),
                                  label2=get_quantile_label(label2, ylabel))
+
+        save_and_show(f2, save_qq_fname, test=test)
+        plots.append(f2)
+    elif qqplot is 'y' or qqplot:
+        f2, ax2 = plt.subplots(1, 1, figsize=SINGLE_FIGSIZE)
+        compare_marginal_qqplots(y1, y2, ax=ax2,
+                                 label1=get_quantile_label(label1, ylabel),
+                                 label2=get_quantile_label(label2, ylabel))
+        if title:
+            plt.title(name + ' Y Marginal Q-Q Plot')
         save_and_show(f2, save_qq_fname, test=test)
         plots.append(f2)
 

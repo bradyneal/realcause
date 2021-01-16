@@ -8,7 +8,7 @@ from typing import Type
 
 from models.preprocess import Preprocess, PlaceHolderTransform
 from plotting import compare_joints, compare_bivariate_marginals
-from utils import T, Y, to_np_vectors, to_np_vector, to_torch_variable, permutation_test, regular_round
+from utils import T, Y, to_np_vectors, to_np_vector, to_torch_variable, permutation_test, regular_round, get_duplicates
 
 
 MODEL_LABEL = "model"
@@ -197,20 +197,33 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
         return w, t, y
 
-    def sample_w(self, untransform=True, seed=None):
+    def sample_w(self, untransform=True, seed=None, dataset=TRAIN):
         if seed is not None:
             self.set_seed(seed)
         if untransform:
-            return self.w
+            if dataset == TEST:
+                return self.w_test
+            elif dataset == VAL:
+                return self.w_val
+            else:
+                return self.w
+                    
         else:
-            return self.w_transformed
+            if dataset == TEST:
+                return self.w_test_transformed
+            elif dataset == VAL:
+                return self.w_val_transformed
+            else:
+                return self.w_transformed
+
+
 
     @abstractmethod
     def _sample_t(self, w, positivity=0):
         pass
 
     @abstractmethod
-    def _sample_y(self, t, w):
+    def _sample_y(self, t, w, deg_hetero=1.0):
         pass
 
     @abstractmethod
@@ -229,13 +242,37 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         else:
             return t
 
-    def sample_y(self, t, w, untransform=True, seed=None):
+    def sample_y(self, t, w, untransform=True, causal_effect=1.0, deg_hetero=1.0, seed=None):
+        """
+        :param t: treatment
+        :param w: covariate (confounder)
+        :param untransform: whether to transform the data back to the raw scale
+        :param causal_effect: size of the causal effect
+        :param seed: random seed
+        :return: sampled outcome
+
+        With probability p = (1 - causal_effect) / 2, t will be swapped when sampling y, so that
+            E[y|T=1,w] - E[y|T=0,w] = pE[y|T'=0,w] + (1-p)E[y|T'=1,w] - pE[y|T'=1,w] - (1-p)E[y|T'=0,w]
+                                    = (1-2p)E[y|T'=1,w] - (1-2p)E[y|T'=0,w]
+                                    = causal_effect (size) * ITE
+
+            where T' is the real variable for conditioning (after stochastic swapping)
+        """
         if seed is not None:
             self.set_seed(seed)
         if w is None:
             # note: input to the model need to be transformed
             w = self.sample_w(untransform=False)
-        y = self._sample_y(t, w)
+
+        assert causal_effect <= 1.0 and causal_effect >= 0, f'causal_effect is in [0,1], got {causal_effect}'
+        if causal_effect < 1.0:
+            prob_to_swap = (1 - causal_effect) / 2  # p = 0.0 if causal_effect = 1.0, p = 0.5 if causal_effect = 0.0
+            t = t * 2 - 1  # rescale t = -1 and 1
+            swap = - 2 * (np.random.rand(*t.shape) <= prob_to_swap).astype('float') + 1  # swap = -1, no swap = 1
+            t *= swap
+            t = (t + 1) / 2
+
+        y = self._sample_y(t, w, deg_hetero=deg_hetero)
         if untransform:
             return self.y_transform.untransform(y)
         else:
@@ -245,10 +282,10 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         torch.manual_seed(seed)
         np.random.seed(seed)
 
-    def sample(self, untransform=True, seed=None):
+    def sample(self, untransform=True, seed=None, dataset=TRAIN):
         if seed is not None:
             self.set_seed(seed)
-        w = self.sample_w(untransform=False)
+        w = self.sample_w(untransform=False, dataset=dataset)
         t = self.sample_t(w, untransform=False)
         y = self.sample_y(t, w, untransform=False)
         if untransform:
@@ -347,7 +384,8 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
         :param joint: boolean for whether to plot p(t, y)
         :param marginal_hist: boolean for whether to plot the p(t) and p(y) histograms
-        :param marginal_qq: boolean for whether to plot the p(t) and p(y) Q-Q plots
+        :param marginal_qq: boolean for whether to plot the p(y) Q-Q plot
+            or use 'both' for plotting both the p(t) and p(y) Q-Q plots
         :param dataset: dataset subset to use (train, val, or test)
         :param transformed: If True, use transformed version of data.
             If False, use original (non-transformed) version of data.
@@ -393,7 +431,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         return plots
 
     def get_univariate_quant_metrics(self, dataset=TRAIN, transformed=False, verbose=True,
-                                     thin_model=None, thin_true=None, seed=None):
+                                     thin_model=None, thin_true=None, seed=None, n=None):
         """
         Calculates quantitative metrics for the difference between p(t) and
         p_model(t) and the difference between p(y) and p_model(y)
@@ -413,19 +451,28 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         """
         _, t_model, y_model = to_np_vectors(
             self.sample(seed=seed, untransform=(not transformed)),
-            thin_interval=thin_model,
+            thin_interval=thin_model
         )
+
         _, t_true, y_true = self.get_data(transformed=transformed, dataset=dataset, verbose=verbose)
         t_true, y_true = to_np_vectors((t_true, y_true), thin_interval=thin_true)
 
+        # jitter for numerical stability
+        t_true = t_true.copy() + np.random.rand(*t_true.shape) * 1e-6
+        t_model = t_model.copy() + np.random.rand(*t_model.shape) * 1e-6
+
         ks_label = "_ks_pval"
+        es_label = "_es_pval"
         wasserstein_label = "_wasserstein1_dist"
         metrics = {
             T + ks_label: float(stats.ks_2samp(t_model, t_true).pvalue),
             Y + ks_label: float(stats.ks_2samp(y_model, y_true).pvalue),
+            T + es_label: float(stats.epps_singleton_2samp(t_model, t_true).pvalue),
+            Y + es_label: float(stats.epps_singleton_2samp(y_model, y_true).pvalue),
             T + wasserstein_label: float(stats.wasserstein_distance(t_model, t_true)),
             Y + wasserstein_label: float(stats.wasserstein_distance(y_model, y_true)),
         }
+
         return metrics
 
     def get_multivariate_quant_metrics(
@@ -482,7 +529,6 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             from torch_two_sample.statistics_diff import MMDStatistic, EnergyStatistic
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(str(e) + ' ... Install: pip install git+git://github.com/josipd/torch-two-sample')
-
         w_model, t_model, y_model = self.sample(seed=seed, untransform=(not transformed))
         if n is not None and w_model.shape[0] > n:
             select_rows = np.random.choice(w_model.shape[0], n, replace=False)
