@@ -5,7 +5,7 @@ from train_generator import get_args, main
 
 
 def load_gen(saveroot='save', dataroot=None):
-    args = get_args()
+    args = get_args().parse_args([])
     args_path = os.path.join(saveroot, 'args.txt')
     args.__dict__.update(json.load(open(args_path, 'r')))
     print(args)
@@ -14,6 +14,7 @@ def load_gen(saveroot='save', dataroot=None):
     args.train = False
     args.eval = False
     args.saveroot = saveroot
+    args.comet = False
     if dataroot is not None:
         args.dataroot = dataroot
 

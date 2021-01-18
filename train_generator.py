@@ -294,8 +294,8 @@ def get_args():
     # evaluation
     parser.add_argument("--num_univariate_tests", type=int, default=100)
 
-    return parser.parse_args()
+    return parser
 
 
 if __name__ == "__main__":
-    main(get_args())
+    main(get_args().parse_args())
