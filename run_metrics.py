@@ -116,6 +116,8 @@ def evaluate_directory(
                 args = Dict(json.load(f))
 
             args.saveroot = model_folder
+            args.dataroot = "./datasets/"
+            args.comet = False
 
             ites, ate, w, t, y = get_data(args)
 

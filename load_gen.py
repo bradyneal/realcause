@@ -13,6 +13,7 @@ def load_gen(saveroot='save', dataroot=None):
     # overwriting args
     args.train = False
     args.eval = False
+    args.comet = False
     args.saveroot = saveroot
     args.comet = False
     if dataroot is not None:
