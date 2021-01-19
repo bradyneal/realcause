@@ -50,16 +50,17 @@ class TarNet(MLP):
         w, t = wt[:, :-1], wt[:, -1:]
 
         w = self.mlp_w(w)
+        y0 = self._mlp_y0_w(w)
+        y1 = self._mlp_y1_w(w)
 
         # degree of heterogeneity
         assert deg_hetero <= 1.0 and deg_hetero >= 0, f'deg_hetero is in [0,1], got {deg_hetero}'
         if deg_hetero < 1:
-            mean_w = w.mean(0, keepdim=True)
-            dev = w - mean_w
-            w = mean_w + dev * deg_hetero
+            alpha = 1 - deg_hetero
+            ites = y1 - y0
+            y1 = y1 - alpha / 2 * ites
+            y0 = y0 + alpha / 2 * ites
 
-        y0 = self._mlp_y0_w(w)
-        y1 = self._mlp_y1_w(w)
         return y0 * (1 - t) + y1 * t
 
     def _get_loss(self, w, t, y):
