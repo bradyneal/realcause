@@ -36,7 +36,7 @@ class TarNet(MLP):
     def mlp_t_w(self, w):
         return self._mlp_t_w(self.mlp_w(w))
 
-    def mlp_y_tw(self, wt, deg_hetero=1):
+    def mlp_y_tw(self, wt, ret_counterfactuals=False):
         """
         :param wt: concatenation of w and t
         :param deg_hetero: degree of heterogeneity
@@ -48,20 +48,14 @@ class TarNet(MLP):
             deg_hetero = 0.0, the mlps' input will be exactly the mean of the embedding, eliminating any heterogeneity.
         """
         w, t = wt[:, :-1], wt[:, -1:]
-
         w = self.mlp_w(w)
         y0 = self._mlp_y0_w(w)
         y1 = self._mlp_y1_w(w)
+        if ret_counterfactuals:
+            return y0, y1
+        else:
+            return y0 * (1 - t) + y1 * t
 
-        # degree of heterogeneity
-        assert deg_hetero <= 1.0 and deg_hetero >= 0, f'deg_hetero is in [0,1], got {deg_hetero}'
-        if deg_hetero < 1:
-            alpha = 1 - deg_hetero
-            ites = y1 - y0
-            y1 = y1 - alpha / 2 * ites
-            y0 = y0 + alpha / 2 * ites
-
-        return y0 * (1 - t) + y1 * t
 
     def _get_loss(self, w, t, y):
         # compute w_ only once

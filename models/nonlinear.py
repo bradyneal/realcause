@@ -274,8 +274,19 @@ class MLP(BaseGenModel):
         if self.ignore_w:
             w = np.zeros_like(w)
         wt = np.concatenate([w, t], 1)
-        y_ = self.mlp_y_tw(torch.from_numpy(wt).float(), deg_hetero=deg_hetero)
-        y_samples = self.outcome_distribution.sample(y_)
+        y0_, y1_ = self.mlp_y_tw(torch.from_numpy(wt).float(), ret_counterfactuals=True)
+        y0_samples = self.outcome_distribution.sample(y0_)
+        y1_samples = self.outcome_distribution.sample(y1_)
+
+        # degree of heterogeneity
+        assert deg_hetero <= 1.0 and deg_hetero >= 0, f'deg_hetero is in [0,1], got {deg_hetero}'
+        if deg_hetero < 1:
+            alpha = 1 - deg_hetero
+            ites = y1_samples - y0_samples
+            y1_samples = y1_samples - alpha / 2 * ites
+            y0_samples = y0_samples + alpha / 2 * ites
+
+        y_samples = y0_samples * (1 - t) + y1_samples * t
 
         if self.outcome_min is not None or self.outcome_max is not None:
             return np.clip(y_samples, self.outcome_min, self.outcome_max)
