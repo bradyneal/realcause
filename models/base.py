@@ -249,15 +249,10 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         :param untransform: whether to transform the data back to the raw scale
         :param causal_effect_mult: multiplier for size of the causal effect
         :param deg_hetero: degree of heterogeneity (between 0 and 1)
+            When deg_hetero=1, y1 and y0 remain unchanged. When deg_hetero=0,
+            y1 - y0 is the same for all individuals.
         :param seed: random seed
         :return: sampled outcome
-
-        With probability p = (1 - causal_effect) / 2, t will be swapped when sampling y, so that
-            E[y|T=1,w] - E[y|T=0,w] = pE[y|T'=0,w] + (1-p)E[y|T'=1,w] - pE[y|T'=1,w] - (1-p)E[y|T'=0,w]
-                                    = (1-2p)E[y|T'=1,w] - (1-2p)E[y|T'=0,w]
-                                    = causal_effect (size) * ITE
-
-            where T' is the real variable for conditioning (after stochastic swapping)
         """
         if seed is not None:
             self.set_seed(seed)
@@ -282,11 +277,16 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
                 y1_mean = y1.mean()
                 y0_mean = y0.mean()
                 ate = y1_mean - y0_mean
+
+                # calculate value to shrink either y1 or y0 (whichever is
+                # further from its mean) to when deg_hetero = 0
                 further_y1 = np.greater(np.abs(y1 - y1_mean), np.abs(y0 - y0_mean))
                 further_y0 = np.logical_not(further_y1)
-                alpha = np.random.rand(len(y1))
+                alpha = np.random.rand(len(y1))  # how far to shrink y1 toward y1_mean or y0 toward y0_mean
                 y1_limit = further_y1 * ((1 - alpha) * y1 + alpha * y1_mean)
                 y0_limit = further_y0 * ((1 - alpha) * y0 + alpha * y0_mean)
+
+                # shrink y1 (or y0) and calculate corresponding y0 or (y1) based on
                 scaled_y1 = (1 - deg_hetero) * y1_limit + deg_hetero * y1 * further_y1
                 corresponding_y0 = (1 - deg_hetero) * (scaled_y1 - ate) + deg_hetero * y0 * further_y1
                 scaled_y0 = (1 - deg_hetero) * y0_limit + deg_hetero * y0 * further_y0
