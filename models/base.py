@@ -223,7 +223,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         pass
 
     @abstractmethod
-    def _sample_y(self, t, w, deg_hetero=1.0):
+    def _sample_y(self, t, w, ret_counterfactuals=False):
         pass
 
     @abstractmethod
@@ -242,12 +242,13 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         else:
             return t
 
-    def sample_y(self, t, w, untransform=True, causal_effect=1.0, deg_hetero=1.0, seed=None):
+    def sample_y(self, t, w, untransform=True, causal_effect_mult=1.0, deg_hetero=1.0, seed=None):
         """
         :param t: treatment
         :param w: covariate (confounder)
         :param untransform: whether to transform the data back to the raw scale
-        :param causal_effect: size of the causal effect
+        :param causal_effect_mult: multiplier for size of the causal effect
+        :param deg_hetero: degree of heterogeneity (between 0 and 1)
         :param seed: random seed
         :return: sampled outcome
 
@@ -264,19 +265,42 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             # note: input to the model need to be transformed
             w = self.sample_w(untransform=False)
 
-        assert causal_effect <= 1.0 and causal_effect >= 0, f'causal_effect is in [0,1], got {causal_effect}'
-        if causal_effect < 1.0:
-            prob_to_swap = (1 - causal_effect) / 2  # p = 0.0 if causal_effect = 1.0, p = 0.5 if causal_effect = 0.0
-            t = t * 2 - 1  # rescale t = -1 and 1
-            swap = - 2 * (np.random.rand(*t.shape) <= prob_to_swap).astype('float') + 1  # swap = -1, no swap = 1
-            t *= swap
-            t = (t + 1) / 2
-
-        y = self._sample_y(t, w, deg_hetero=deg_hetero)
-        if untransform:
-            return self.y_transform.untransform(y)
-        else:
+        if deg_hetero == 1.0 and causal_effect_mult == 1.0:  # don't change heterogeneity or causal effect size
+            y = self._sample_y(t, w, ret_counterfactuals=False)
+            if untransform:
+                y = self.y_transform.untransform(y)
             return y
+        else:   # change degree of heterogeneity and/or causal effect size
+            y0, y1 = self._sample_y(t, w, ret_counterfactuals=True)
+            if untransform:
+                y0 = self.y_transform.untransform(y0)
+                y1 = self.y_transform.untransform(y1)
+
+            # degree of heterogeneity
+            if deg_hetero != 1.0:
+                assert 0 <= deg_hetero < 1, f'deg_hetero not in [0, 1], got {deg_hetero}'
+                y1_mean = y1.mean()
+                y0_mean = y0.mean()
+                ate = y1_mean - y0_mean
+                further_y1 = np.greater(np.abs(y1 - y1_mean), np.abs(y0 - y0_mean))
+                further_y0 = np.logical_not(further_y1)
+                alpha = np.random.rand(len(y1))
+                y1_limit = further_y1 * ((1 - alpha) * y1 + alpha * y1_mean)
+                y0_limit = further_y0 * ((1 - alpha) * y0 + alpha * y0_mean)
+                scaled_y1 = (1 - deg_hetero) * y1_limit + deg_hetero * y1 * further_y1
+                corresponding_y0 = (1 - deg_hetero) * (scaled_y1 - ate) + deg_hetero * y0 * further_y1
+                scaled_y0 = (1 - deg_hetero) * y0_limit + deg_hetero * y0 * further_y0
+                corresponding_y1 = (1 - deg_hetero) * (scaled_y0 + ate) + deg_hetero * y1 * further_y0
+                y1 = scaled_y1 * further_y1 + corresponding_y1 * further_y0
+                y0 = scaled_y0 * further_y0 + corresponding_y0 * further_y1
+
+            # size of causal effect
+            if causal_effect_mult != 1.0:
+                # assert causal_effect_mult >= 0, f'causal_effect is >= 0, got {causal_effect_mult}'
+                y1 = causal_effect_mult * y1
+                y0 = causal_effect_mult * y0
+
+            return y0 * (1 - t) + y1 * t
 
     def set_seed(self, seed=SEED):
         torch.manual_seed(seed)

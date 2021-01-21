@@ -39,13 +39,7 @@ class TarNet(MLP):
     def mlp_y_tw(self, wt, ret_counterfactuals=False):
         """
         :param wt: concatenation of w and t
-        :param deg_hetero: degree of heterogeneity
         :return: parameter of the conditional distribution p(y|t,w)
-
-        Degree of heterogeneity is implemented by decomposing w as the population mean + individual's deviation from it.
-            The deviation is scaled by the `deg_hetero` coefficient. e.g. if
-            deg_hetero = 1.0, then nothing changes, and if
-            deg_hetero = 0.0, the mlps' input will be exactly the mean of the embedding, eliminating any heterogeneity.
         """
         w, t = wt[:, :-1], wt[:, -1:]
         w = self.mlp_w(w)

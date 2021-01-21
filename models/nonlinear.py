@@ -270,27 +270,23 @@ class MLP(BaseGenModel):
         t_ = self.mlp_t_w(torch.from_numpy(w).float())
         return self.treatment_distribution.sample(t_ + positivity)
 
-    def _sample_y(self, t, w=None, deg_hetero=1.0):
+    def _sample_y(self, t, w=None, ret_counterfactuals=False):
         if self.ignore_w:
             w = np.zeros_like(w)
         wt = np.concatenate([w, t], 1)
-        y0_, y1_ = self.mlp_y_tw(torch.from_numpy(wt).float(), ret_counterfactuals=True)
-        y0_samples = self.outcome_distribution.sample(y0_)
-        y1_samples = self.outcome_distribution.sample(y1_)
-
-        # degree of heterogeneity
-        assert deg_hetero <= 1.0 and deg_hetero >= 0, f'deg_hetero is in [0,1], got {deg_hetero}'
-        if deg_hetero < 1:
-            alpha = 1 - deg_hetero
-            ites = y1_samples - y0_samples
-            y1_samples = y1_samples - alpha / 2 * ites
-            y0_samples = y0_samples + alpha / 2 * ites
-
-        y_samples = y0_samples * (1 - t) + y1_samples * t
-
-        if self.outcome_min is not None or self.outcome_max is not None:
-            return np.clip(y_samples, self.outcome_min, self.outcome_max)
+        if ret_counterfactuals:
+            y0_, y1_ = self.mlp_y_tw(torch.from_numpy(wt).float(), ret_counterfactuals=True)
+            y0_samples = self.outcome_distribution.sample(y0_)
+            y1_samples = self.outcome_distribution.sample(y1_)
+            if self.outcome_min is not None or self.outcome_max is not None:
+                y0_samples = np.clip(y0_samples, self.outcome_min, self.outcome_max)
+                y1_samples = np.clip(y1_samples, self.outcome_min, self.outcome_max)
+            return y0_samples, y1_samples
         else:
+            y_ = self.mlp_y_tw(torch.from_numpy(wt).float(), ret_counterfactuals=False)
+            y_samples = self.outcome_distribution.sample(y_)
+            if self.outcome_min is not None or self.outcome_max is not None:
+                y_samples = np.clip(y_samples, self.outcome_min, self.outcome_max)
             return y_samples
 
     def mean_y(self, t, w):
