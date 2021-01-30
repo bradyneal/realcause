@@ -113,7 +113,7 @@ def bernoulli_sampler(logit, overlap=1):
 
     t = p > np.random.rand(*p.shape)
 
-    return t
+    return t.astype('float32')
 
 
 def exponential_sampler(log_lambda):

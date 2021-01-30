@@ -106,14 +106,15 @@ class GPModel(MLP):
 
         return loss, loss_t, loss_y
 
-    def _sample_t(self, w=None, positivity=0):
+    def _sample_t(self, w=None, overlap=0):
         with eval_ctx(self):
             pred = self.likelihood_t(self.gp_t_w(torch.from_numpy(w).float()))
             t_ = F.logit(pred.mean.unsqueeze(1))
-        return self.treatment_distribution.sample(t_ + positivity)
+        return self.treatment_distribution.sample(t_, overlap)
 
-    def _sample_y(self, t, w=None, deg_hetero=1.0):
+    def _sample_y(self, t, w=None, ret_counterfactuals=False):
         # todo: conditionally independent y?
+        # todo: ret_counterfactuals
         if self.ignore_w:
             w = np.zeros_like(w)
         wt = np.concatenate([w, t], 1)
