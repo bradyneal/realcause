@@ -219,7 +219,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
 
 
     @abstractmethod
-    def _sample_t(self, w, positivity=0):
+    def _sample_t(self, w, overlap=1):
         pass
 
     @abstractmethod
@@ -230,13 +230,25 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
     def mean_y(self, t, w):
         pass
 
-    def sample_t(self, w, untransform=True, positivity=0, seed=None):
+    def sample_t(self, w, untransform=True, overlap=1, seed=None):
+        """
+        Sample the treatment vector.
+
+        :param w: covariate (confounder)
+        :param untransform: whether to transform the data back to the raw scale
+        :param overlap: if 1, leave treatment untouched;
+            if 0, push p(T = 1 | w) to 0 for all w where p(T = 1 | w) < 0.5 and
+            and push p(T = 1 | w) to 1 for all w where p(T = 1 | w) >= 0.5
+            if 0 < overlap < 1, do a linear interpolation of the above
+        :param seed: random seed
+        :return: sampled treatment
+        """
         if seed is not None:
             self.set_seed(seed)
         if w is None:
             # note: input to the model need to be transformed
             w = self.sample_w(untransform=False)
-        t = self._sample_t(w, positivity=positivity)
+        t = self._sample_t(w, overlap=overlap)
         if untransform:
             return self.t_transform.untransform(t)
         else:

@@ -91,8 +91,29 @@ def gaussian_sampler(mean, log_var):
     return torch.randn(*mean.shape) * sigma + mean
 
 
-def bernoulli_sampler(logit):
-    return (torch.sigmoid(logit) > torch.rand_like(logit)).float().data.cpu().numpy()
+def bernoulli_sampler(logit, overlap=1):
+    """
+    Sample (treatment vector) from bernoulli.
+
+    :param logit: p = sigmoid(logit)
+    :param overlap: if 1, leave treatment untouched;
+        if 0, push p(T = 1 | w) to 0 for all w where p(T = 1 | w) < 0.5 and
+        and push p(T = 1 | w) to 1 for all w where p(T = 1 | w) >= 0.5
+        if 0 < overlap < 1, do a linear interpolation of the above
+    :return: sampled treatment
+    """
+    p = torch.sigmoid(logit).float().data.cpu().numpy()
+
+    assert 0 <= overlap <= 1
+    if overlap < 1:
+        likely_treated = p >= 0.5
+        likely_control = np.logical_not(likely_treated)
+        p = likely_treated * (overlap * p + (1 - overlap) * 1) + \
+            likely_control * (overlap * p + (1 - overlap) * 0)
+
+    t = p > np.random.rand(*p.shape)
+
+    return t
 
 
 def exponential_sampler(log_lambda):
@@ -133,7 +154,7 @@ class Bernoulli(BaseDistribution):
     def likelihood(self, x, params):
         return log_bernoulli(x, params)
 
-    def sample(self, params):
+    def sample(self, params, overlap=1):
         return bernoulli_sampler(params)
 
     @property
