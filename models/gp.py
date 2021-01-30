@@ -101,7 +101,7 @@ class GPModel(MLP):
         output_y = self.gp_y_tw(torch.cat([w, t], 1))
 
         loss_t = - self.mll_t(output_t, t[:, 0])
-        loss_y = - self.mll_t(output_y, y[:, 0])
+        loss_y = - self.mll_y(output_y, y[:, 0])
         loss = loss_t + loss_y
 
         return loss, loss_t, loss_y
@@ -189,6 +189,8 @@ if __name__ == "__main__":
     pp.pprint(uni_metrics)
     print("noisy ate:", mdl.noisy_ate())
 
-    plt.hist(y, 50, density=True, alpha=0.5)
+    plt.figure()
+    plt.hist(mdl.y, 50, density=True, alpha=0.5)
     plt.hist(data_samples[2], 50, density=True, alpha=0.5)
     plt.legend(['gt', 'model'])
+    plt.savefig('temp.png')
