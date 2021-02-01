@@ -254,12 +254,12 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         else:
             return t
 
-    def sample_y(self, t, w, untransform=True, causal_effect_mult=1.0, deg_hetero=1.0, seed=None):
+    def sample_y(self, t, w, untransform=True, causal_effect_scale=None, deg_hetero=1.0, seed=None):
         """
         :param t: treatment
         :param w: covariate (confounder)
         :param untransform: whether to transform the data back to the raw scale
-        :param causal_effect_mult: multiplier for size of the causal effect
+        :param causal_effect_scale: scale of the causal effect (size of ATE)
         :param deg_hetero: degree of heterogeneity (between 0 and 1)
             When deg_hetero=1, y1 and y0 remain unchanged. When deg_hetero=0,
             y1 - y0 is the same for all individuals.
@@ -272,7 +272,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             # note: input to the model need to be transformed
             w = self.sample_w(untransform=False)
 
-        if deg_hetero == 1.0 and causal_effect_mult == 1.0:  # don't change heterogeneity or causal effect size
+        if deg_hetero == 1.0 and causal_effect_scale == 1.0:  # don't change heterogeneity or causal effect size
             y = self._sample_y(t, w, ret_counterfactuals=False)
             if untransform:
                 y = self.y_transform.untransform(y)
@@ -307,10 +307,10 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
                 y0 = scaled_y0 * further_y0 + corresponding_y0 * further_y1
 
             # size of causal effect
-            if causal_effect_mult != 1.0:
-                # assert causal_effect_mult >= 0, f'causal_effect is >= 0, got {causal_effect_mult}'
-                y1 = causal_effect_mult * y1
-                y0 = causal_effect_mult * y0
+            if causal_effect_scale is not None:
+                ate = (y1 - y0).mean()
+                y1 = causal_effect_scale / ate * y1
+                y0 = causal_effect_scale / ate * y0
 
             return y0 * (1 - t) + y1 * t
 
