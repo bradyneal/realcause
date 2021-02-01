@@ -156,6 +156,7 @@ def main(args, save_args=True, log_=True):
     outcome_max = 1 if args.y_transform == "Normalize" else None
 
     # model type
+    additional_args = dict()
     if args.model_type == 'tarnet':
         Model = TarNet
 
@@ -191,6 +192,7 @@ def main(args, save_args=True, log_=True):
         )
         logger.info(f'gp_t_w: {repr(network_params["gp_t_w"])}'
                     f'gp_y_tw: {repr(network_params["gp_y_tw"])}')
+        additional_args['num_tasks'] = args.num_tasks
     else:
         raise Exception(f'model type {args.model_type} not implemented')
 
@@ -213,7 +215,8 @@ def main(args, save_args=True, log_=True):
                   grad_norm=args.grad_norm,
                   w_transform=w_transform, y_transform=y_transform,  # TODO set more args
                   savepath=os.path.join(args.saveroot, 'model.pt'),
-                  test_size=args.test_size)
+                  test_size=args.test_size,
+                  additional_args=additional_args)
 
     # TODO GPU support
     if args.train:
@@ -269,6 +272,8 @@ def get_args():
                         choices=gpytorch.kernels.__all__)
     parser.add_argument("--var_dist", type=str, default="MeanFieldVariationalDistribution",
                         choices=[vd for vd in gpytorch.variational.__all__ if 'VariationalDistribution' in vd])
+    parser.add_argument("--num_tasks", type=int, default=32,
+                        help='number of latent variables for the GP atom softmax classifier')
 
     # training params
     parser.add_argument("--lr", type=float, default=0.001)

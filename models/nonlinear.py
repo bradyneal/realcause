@@ -94,7 +94,8 @@ class MLP(BaseGenModel):
                  t_transform=PlaceHolderTransform,
                  y_transform=PlaceHolderTransform,
                  savepath='.cache_best_model.pt',
-                 test_size=None):
+                 test_size=None,
+                 additional_args=dict()):
         super(MLP, self).__init__(*self._matricize((w, t, y)), seed=seed,
                                   train_prop=train_prop, val_prop=val_prop,
                                   test_prop=test_prop, shuffle=shuffle,
@@ -109,6 +110,7 @@ class MLP(BaseGenModel):
         else:
             self.treatment_distribution = distributions.FactorialGaussian()
         self.outcome_distribution = outcome_distribution
+        # todo: extract atoms before preprocessing? (i.e. using the non atomic training data's stats)
         if isinstance(outcome_distribution, distributions.MixedDistribution):
             self.outcome_distribution.atoms = self.y_transform.transform(self.outcome_distribution.atoms).tolist()
         self.outcome_min = outcome_min
@@ -118,6 +120,7 @@ class MLP(BaseGenModel):
         self.ignore_w = ignore_w
         self.grad_norm = grad_norm
         self.savepath = savepath
+        self.additional_args = additional_args
 
         self.dim_w = self.w_transformed.shape[1]
         self.dim_t = self.t_transformed.shape[1]
