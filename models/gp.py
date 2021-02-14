@@ -88,6 +88,91 @@ class GPClassificationModel(gpytorch.models.AbstractVariationalGP):
         return latent_pred
 
 
+# noinspection PyShadowingNames
+class AtomicExactGPModel:
+
+    def __init__(self, x, y, dist, num_tasks, kernel, kernel_a=None, var_dist_a=None):
+        self.x = x
+        self.y = y
+        self.dist = dist
+        self.networks = list()
+        if hasattr(dist, 'atoms'):
+            assert kernel_a is not None and var_dist_a is not None
+            self.a_, self.ind_non_atoms = extract_atom_clf_dataset(y, dist.atoms)
+
+            self.gp_a_x = GPClassificationModel(x, kernel=kernel_a, var_dist=var_dist_a, num_tasks=num_tasks)
+
+            self.networks.append(self.gp_a_x)
+
+            # atom marginal likelihood
+            self.likelihood_a = gpytorch.likelihoods.SoftmaxLikelihood(
+                num_features=num_tasks,
+                num_classes=len(dist.atoms) + 1, mixing_weights=True)  # todo: check mixing weight
+            self.mll_a = gpytorch.mlls.variational_elbo.VariationalELBO(
+                self.likelihood_a, self.gp_a_x, self.a_[:, 0].numel())
+
+            self.gp_y_x = ExactGPModel(x[self.ind_non_atoms[:, 0]], y[self.ind_non_atoms[:, 0]][:, 0], kernel=kernel)
+            self.atomic = True
+
+        else:
+            # outcome network
+            self.gp_y_x = ExactGPModel(x, y[:, 0], kernel)
+            self.atomic = False
+
+        self.networks.append(self.gp_y_x)
+        self.likelihood_y = gpytorch.likelihoods.GaussianLikelihood()
+        self.mll_y = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood_y, self.gp_y_x)
+
+    def loss(self, x, y):
+        a, ind_non_atoms = None, None
+        if self.networks[0].training:
+            x = self.x
+            y = self.y
+            if self.atomic:
+                a, ind_non_atoms = self.a_, self.ind_non_atoms
+        else:
+            if self.atomic:
+                a, ind_non_atoms = \
+                    extract_atom_clf_dataset(y, self.dist.atoms)
+
+        if not self.atomic:
+            output_y = self.gp_y_x(x)
+            loss_y = - self.mll_y(output_y, y[:, 0])
+        else:
+            assert a is not None and ind_non_atoms is not None
+            output_a = self.gp_a_x(x)
+            loss_a = - self.mll_a(output_a, a[:, 0])
+
+            output_y = self.gp_y_x(x[ind_non_atoms[:, 0]])
+            loss_y = - self.mll_y(output_y, y[ind_non_atoms[:, 0]][:, 0])
+
+            loss_y += loss_a
+
+        return loss_y
+
+    def sample(self, x):
+        with eval_ctx(self):
+            pred = self.gp_y_x(x)
+            y_samples = pred.sample(sample_shape=torch.Size((1,)))[0].unsqueeze(1).data.cpu().numpy()
+
+        if self.atomic:
+            with eval_ctx(self):
+                pred = self.likelihood_a(self.gp_a_x(x))
+                a_ = pred.sample()[0].unsqueeze(1).float().data.cpu().numpy()
+
+            atom_masks = list()
+            for j in range(len(self.dist.atoms)):
+                atom_masks.append(a_ == j)
+            non_atom_mask = a_ == len(self.dist.atoms)
+
+            for atom_mask, atom in zip(atom_masks, self.dist.atoms):
+                a_[atom_mask] = atom
+            a_[non_atom_mask] = y_samples[non_atom_mask]
+            y_samples = a_
+
+        return y_samples
+
+
 def extract_atom_clf_dataset(x, atoms):
     """
     :param x: pytorch tensor (vector)
@@ -109,6 +194,8 @@ def extract_atom_clf_dataset(x, atoms):
 # noinspection PyShadowingNames
 class GPModel(MLP):
     # noinspection PyAttributeOutsideInit
+
+    # todo: kernel / var dist for atom classification (now using the same as treatment)
     def build_networks(self):
         self.GP_params_t_w = self.network_params['gp_t_w']
         self.GP_params_y_tw = self.network_params['gp_y_tw']
@@ -133,76 +220,24 @@ class GPModel(MLP):
             self.likelihood_t, self.gp_t_w, self.t_transformed_[:, 0].numel())
 
         # outcome network(s)
-
         # todo: tarnet GP: separate y for t=0 and t=1
-        if hasattr(self.outcome_distribution, 'atoms'):
-            self.a_, self.ind_non_atoms = \
-                extract_atom_clf_dataset(self.y_transformed_, self.outcome_distribution.atoms)
-
-            # atom network
-            # todo: kernel / var dist for atom classification (now using the same as treatment)
-
-            num_tasks = 32 if 'num_tasks' not in self.additional_args.keys() else self.additional_args['num_tasks']
-            self.gp_a_tw = GPClassificationModel(torch.cat([self.w_transformed_, self.t_transformed_], 1),
-                                                 kernel=self.GP_params_t_w.kernel,
-                                                 var_dist=self.GP_params_t_w.var_dist,
-                                                 num_tasks=num_tasks)
-            self.networks.append(self.gp_a_tw)
-
-            # atom marginal likelihood
-            self.likelihood_a = gpytorch.likelihoods.SoftmaxLikelihood(
-                num_features=num_tasks,
-                num_classes=len(self.outcome_distribution.atoms) + 1, mixing_weights=True)  # todo: check mixing weight
-            self.mll_a = gpytorch.mlls.variational_elbo.VariationalELBO(
-                self.likelihood_a, self.gp_a_tw, self.a_[:, 0].numel())
-
-            # outcome network
-            self.gp_y_tw = ExactGPModel(torch.cat([self.w_transformed_[self.ind_non_atoms[:, 0]],
-                                                   self.t_transformed_[self.ind_non_atoms[:, 0]]], 1),
-                                        self.y_transformed_[self.ind_non_atoms[:, 0]][:, 0],
-                                        kernel=self.GP_params_y_tw.kernel)
-            self.atomic = True
-        else:
-            # outcome network
-            self.gp_y_tw = ExactGPModel(torch.cat([self.w_transformed_, self.t_transformed_], 1),
-                                        self.y_transformed_[:, 0],
-                                        kernel=self.GP_params_y_tw.kernel)
-            self.atomic = False
-
-        self.networks.append(self.gp_y_tw)
-
-        self.likelihood_y = gpytorch.likelihoods.GaussianLikelihood()
-        self.mll_y = gpytorch.mlls.ExactMarginalLogLikelihood(
-            self.likelihood_y, self.gp_y_tw)
+        self.gp_y_tw = AtomicExactGPModel(
+            x=torch.cat([self.w_transformed_, self.t_transformed_], 1),
+            y=self.y_transformed_,
+            dist=self.outcome_distribution,
+            kernel=self.GP_params_y_tw.kernel,
+            kernel_a=self.GP_params_t_w.kernel,
+            var_dist_a=self.GP_params_t_w.var_dist,
+            num_tasks=32 if 'num_tasks' not in self.additional_args.keys() else self.additional_args['num_tasks']
+        )
+        self.networks += self.gp_y_tw.networks
 
     def _get_loss(self, w, t, y):
-
-        a, ind_non_atoms = None, None
-        if self.networks[0].training:
-            w = self.w_transformed_
-            t = self.t_transformed_
-            y = self.y_transformed_
-            if self.atomic:
-                a, ind_non_atoms = self.a_, self.ind_non_atoms
-        else:
-            if self.atomic:
-                a, ind_non_atoms = \
-                    extract_atom_clf_dataset(y, self.outcome_distribution.atoms)
 
         output_t = self.gp_t_w(w)
         loss_t = - self.mll_t(output_t, t[:, 0])
 
-        if not self.atomic:
-            output_y = self.gp_y_tw(torch.cat([w, t], 1))
-            loss_y = - self.mll_y(output_y, y[:, 0])
-        else:
-            output_a = self.gp_a_tw(torch.cat([w, t], 1))
-            loss_a = - self.mll_a(output_a, a[:, 0])
-
-            output_y = self.gp_y_tw(torch.cat([w, t], 1)[ind_non_atoms[:, 0]])
-            loss_y = - self.mll_y(output_y, y[ind_non_atoms[:, 0]][:, 0])
-
-            loss_y += loss_a
+        loss_y = self.gp_y_tw.loss(torch.cat([w, t], 1), y)
 
         loss = loss_t + loss_y
 
@@ -221,24 +256,11 @@ class GPModel(MLP):
             w = np.zeros_like(w)
         wt = np.concatenate([w, t], 1)
 
-        with eval_ctx(self):
-            pred = self.gp_y_tw(torch.from_numpy(wt).float())
-            y_samples = pred.sample(sample_shape=torch.Size((1,)))[0].unsqueeze(1).data.cpu().numpy()
+        y_samples = self.gp_y_tw.sample(torch.from_numpy(wt).float())
 
-        if self.atomic:
-            with eval_ctx(self):
-                pred = self.likelihood_a(self.gp_a_tw(torch.from_numpy(wt).float()))
-                a_ = pred.sample()[0].unsqueeze(1).float().data.cpu().numpy()
-
-            atom_masks = list()
-            for j in range(len(self.outcome_distribution.atoms)):
-                atom_masks.append(a_ == j)
-            non_atom_mask = a_ == len(self.outcome_distribution.atoms)
-
-            for atom_mask, atom in zip(atom_masks, self.outcome_distribution.atoms):
-                a_[atom_mask] = atom
-            a_[non_atom_mask] = y_samples[non_atom_mask]
-            y_samples = a_
+        # todo: fix
+        if ret_counterfactuals:
+            return y_samples, y_samples
 
         if self.outcome_min is not None or self.outcome_max is not None:
             return np.clip(y_samples, self.outcome_min, self.outcome_max)
@@ -250,7 +272,7 @@ class GPModel(MLP):
             w = np.zeros_like(w)
         wt = np.concatenate([w, t], 1)
         with eval_ctx(self):
-            pred = self.gp_y_tw(torch.from_numpy(wt).float())
+            pred = self.gp_y_tw(torch.from_numpy(wt).float())  # todo
             mean = pred.mean.unsqueeze(1)
         return mean
 
