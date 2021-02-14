@@ -5,6 +5,7 @@ from models.distributions import functional as F
 import torch
 import gpytorch
 import numpy as np
+import warnings
 
 
 class GPParams:
@@ -268,13 +269,112 @@ class GPModel(MLP):
             return y_samples
 
     def mean_y(self, t, w):
+        warnings.warn(f'mean not implemented for GP')
+        return torch.zeros(*t.shape)
+
+
+# noinspection PyShadowingNames
+class TarGPModel(MLP):
+    # noinspection PyAttributeOutsideInit
+
+    # todo: kernel / var dist for atom classification (now using the same as treatment)
+    def build_networks(self):
+        self.GP_params_t_w = self.network_params['gp_t_w']
+        self.GP_params_y_tw = self.network_params['gp_y_tw']
+
+        # cast the transformed dataset as pytorch tensor
+        self.w_transformed_ = torch.from_numpy(self.w_transformed).float()
+        self.t_transformed_ = torch.from_numpy(self.t_transformed).float()
+        self.y_transformed_ = torch.from_numpy(self.y_transformed).float()
+
+        self.w0_transformed_ = torch.from_numpy(self.w_transformed[self.t_transformed[:, 0] == 0]).float()
+        self.w1_transformed_ = torch.from_numpy(self.w_transformed[self.t_transformed[:, 0] == 1]).float()
+        self.y0_transformed_ = torch.from_numpy(self.y_transformed[self.t_transformed[:, 0] == 0]).float()
+        self.y1_transformed_ = torch.from_numpy(self.y_transformed[self.t_transformed[:, 0] == 1]).float()
+
+        # init network list
+        self.networks = list()
+
+        # treatment network
+        self.gp_t_w = GPBinaryClassificationModel(self.w_transformed_,
+                                                  kernel=self.GP_params_t_w.kernel,
+                                                  var_dist=self.GP_params_t_w.var_dist)
+        self.networks.append(self.gp_t_w)
+
+        # treatment marginal likelihood
+        self.likelihood_t = gpytorch.likelihoods.BernoulliLikelihood()
+        self.mll_t = gpytorch.mlls.variational_elbo.VariationalELBO(
+            self.likelihood_t, self.gp_t_w, self.t_transformed_[:, 0].numel())
+
+        # outcome network(s)
+        # todo: tarnet GP: separate y for t=0 and t=1
+        self.gp_y0_tw = AtomicExactGPModel(
+            x=self.w0_transformed_,
+            y=self.y0_transformed_,
+            dist=self.outcome_distribution,
+            kernel=self.GP_params_y_tw.kernel,
+            kernel_a=self.GP_params_t_w.kernel,
+            var_dist_a=self.GP_params_t_w.var_dist,
+            num_tasks=32 if 'num_tasks' not in self.additional_args.keys() else self.additional_args['num_tasks']
+        )
+        self.gp_y1_tw = AtomicExactGPModel(
+            x=self.w1_transformed_,
+            y=self.y1_transformed_,
+            dist=self.outcome_distribution,
+            kernel=self.GP_params_y_tw.kernel,
+            kernel_a=self.GP_params_t_w.kernel,
+            var_dist_a=self.GP_params_t_w.var_dist,
+            num_tasks=32 if 'num_tasks' not in self.additional_args.keys() else self.additional_args['num_tasks']
+        )
+        self.networks += self.gp_y0_tw.networks
+        self.networks += self.gp_y1_tw.networks
+
+    def _get_loss(self, w, t, y):
+        w0 = w[t[:, 0] == 0]
+        w1 = w[t[:, 0] == 1]
+        y0 = y[t[:, 0] == 0]
+        y1 = y[t[:, 0] == 1]
+
+        output_t = self.gp_t_w(w)
+        loss_t = - self.mll_t(output_t, t[:, 0])
+
+        # todo: make sure batch size of gp is always the entire set
+        loss_y0 = self.gp_y0_tw.loss(w0, y0)
+        loss_y1 = self.gp_y1_tw.loss(w1, y1)
+        loss_y = (loss_y0 * (t == 0).float().sum() + loss_y1 * (t == 1).float().sum()) / t.size(0)
+
+        loss = loss_t + loss_y
+
+        return loss, loss_t, loss_y
+
+    def _sample_t(self, w=None, overlap=0):
+        with eval_ctx(self):
+            pred = self.likelihood_t(self.gp_t_w(torch.from_numpy(w).float()))
+            t_ = F.logit(pred.mean.unsqueeze(1))
+        return self.treatment_distribution.sample(t_, overlap)
+
+    def _sample_y(self, t, w=None, ret_counterfactuals=False):
+        # todo: conditionally independent y?
+        # todo: ret_counterfactuals
         if self.ignore_w:
             w = np.zeros_like(w)
-        wt = np.concatenate([w, t], 1)
-        with eval_ctx(self):
-            pred = self.gp_y_tw(torch.from_numpy(wt).float())  # todo
-            mean = pred.mean.unsqueeze(1)
-        return mean
+        w = torch.from_numpy(w).float()
+
+        y0_samples = self.gp_y0_tw.sample(w)
+        y1_samples = self.gp_y1_tw.sample(w)
+        if self.outcome_min is not None or self.outcome_max is not None:
+            y0_samples = np.clip(y0_samples, self.outcome_min, self.outcome_max)
+            y1_samples = np.clip(y1_samples, self.outcome_min, self.outcome_max)
+
+        # todo: fix
+        if ret_counterfactuals:
+            return y0_samples, y1_samples
+        else:
+            return y0_samples * (1-t) + y1_samples * t
+
+    def mean_y(self, t, w):
+        warnings.warn(f'mean not implemented for GP')
+        return torch.zeros(*t.shape)
 
 
 if __name__ == "__main__":
@@ -283,6 +383,7 @@ if __name__ == "__main__":
     import pprint
 
     pp = pprint.PrettyPrinter(indent=4)
+    TarGPModel = TarGPModel
 
     dataset = 1
     network_params = _DEFAULT_GP.copy()
@@ -310,18 +411,18 @@ if __name__ == "__main__":
     w, t, y = w[::5], t[::5], y[::5]
     # w, t, y = w[:400], t[:400], y[:400]
 
-    mdl = GPModel(w, t, y,
-                  training_params=training_params,
-                  network_params=network_params,
-                  binary_treatment=True, outcome_distribution=dist,
-                  # outcome_min=0.0, outcome_max=1.0,
-                  train_prop=0.5,
-                  val_prop=0.1,
-                  test_prop=0.4,
-                  seed=1,
-                  early_stop=early_stop,
-                  ignore_w=ignore_w,
-                  w_transform=preprocess.Standardize, y_transform=preprocess.Standardize)
+    mdl = TarGPModel(w, t, y,
+                     training_params=training_params,
+                     network_params=network_params,
+                     binary_treatment=True, outcome_distribution=dist,
+                     # outcome_min=0.0, outcome_max=1.0,
+                     train_prop=0.5,
+                     val_prop=0.1,
+                     test_prop=0.4,
+                     seed=1,
+                     early_stop=early_stop,
+                     ignore_w=ignore_w,
+                     w_transform=preprocess.Standardize, y_transform=preprocess.Standardize)
     mdl.train()
     data_samples = mdl.sample()
     # mlp.plot_ty_dists()

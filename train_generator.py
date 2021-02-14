@@ -8,7 +8,7 @@ from data.lalonde import load_lalonde
 from data.lbidd import load_lbidd
 from data.ihdp import load_ihdp
 from data.twins import load_twins
-from models import TarNet, preprocess, TrainingParams, MLPParams, LinearModel, GPModel, GPParams
+from models import TarNet, preprocess, TrainingParams, MLPParams, LinearModel, GPModel, TarGPModel, GPParams
 from models import distributions
 import helpers
 from collections import OrderedDict
@@ -178,9 +178,13 @@ def main(args, save_args=True, log_=True):
 
         logger.info('model type: linear model')
         network_params = dict()
-    elif args.model_type == 'gp':
-        Model = GPModel
-
+    elif 'gp' in args.model_type:
+        if args.model_type == 'gp':
+            Model = GPModel
+        elif args.model_type == 'targp':
+            Model = TarGPModel
+        else:
+            raise Exception(f'model type {args.model_type} not implemented')
         logger.info('model type: linear model')
 
         kernel_t = gpytorch.kernels.__dict__[args.kernel_t]()
@@ -252,7 +256,7 @@ def get_args():
 
     # model type
     parser.add_argument('--model_type', type=str, default='tarnet',
-                        choices=['tarnet', 'linear', 'gp'])  # TODO: renaming tarnet to be dragonnet
+                        choices=['tarnet', 'linear', 'gp', 'targp'])  # TODO: renaming tarnet to be dragonnet
 
     # distribution of outcome (y)
     parser.add_argument('--dist', type=str, default='FactorialGaussian',
