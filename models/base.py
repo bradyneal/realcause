@@ -318,12 +318,31 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         torch.manual_seed(seed)
         np.random.seed(seed)
 
-    def sample(self, untransform=True, seed=None, dataset=TRAIN):
+    def sample(self, untransform=True, seed=None, dataset=TRAIN,
+               overlap=1, causal_effect_scale=None, deg_hetero=1.0):
+        """
+        Sample from generative model.
+
+        :param untransform: whether to transform the data back to the raw scale
+        :param seed: random seed
+        :param dataset: train or test for sampling w from
+        :param overlap: if 1, leave treatment untouched;
+            if 0, push p(T = 1 | w) to 0 for all w where p(T = 1 | w) < 0.5 and
+            and push p(T = 1 | w) to 1 for all w where p(T = 1 | w) >= 0.5
+            if 0 < overlap < 1, do a linear interpolation of the above
+        :param causal_effect_scale: scale of the causal effect (size of ATE)
+        :param deg_hetero: degree of heterogeneity (between 0 and 1)
+            When deg_hetero=1, y1 and y0 remain unchanged. When deg_hetero=0,
+            y1 - y0 is the same for all individuals.
+        :return: (w, t, y)
+        """
         if seed is not None:
             self.set_seed(seed)
         w = self.sample_w(untransform=False, dataset=dataset)
-        t = self.sample_t(w, untransform=False)
-        y = self.sample_y(t, w, untransform=False)
+        t = self.sample_t(w, untransform=False, overlap=overlap)
+        y = self.sample_y(t, w, untransform=False,
+                          causal_effect_scale=causal_effect_scale,
+                          deg_hetero=deg_hetero)
         if untransform:
             return self.w_transform.untransform(w), self.t_transform.untransform(t), self.y_transform.untransform(y)
         else:
