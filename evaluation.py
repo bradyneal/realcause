@@ -22,7 +22,7 @@ CLASSIFICATION_SCORES = ['accuracy', 'balanced_accuracy', 'average_precision',
 CLASSIFICATION_SCORE_DEF = 'accuracy'
 
 
-def run_model_cv(gen_model: BaseGenModel, model: sklearn.base.BaseEstimator,
+def run_model_cv(gen_model: BaseGenModel, model: sklearn.base.BaseEstimator, model_name: str,
                  param_grid, n_seeds: int, model_type: str, n_folds=5,
                  scoring=None, rank_score=None, best_params=False, best_model=False):
     model_type = model_type.lower()
@@ -56,13 +56,22 @@ def run_model_cv(gen_model: BaseGenModel, model: sklearn.base.BaseEstimator,
             t = t.squeeze()
             cv.fit(w, t)
         d = {k: v for k, v in cv.cv_results_.items() if 'split' not in k}
-        d['seed'] = seed
         dfs.append(pd.DataFrame(d))
 
     df = pd.concat(dfs, axis=0)
+    params = df.params
+    cols = [col for col, is_param in zip(df.columns, df.columns.str.startswith('param_')) if is_param]
+
+    # mean over seeds
+    agg_df = df.drop('params', axis='columns').groupby(cols).mean().reset_index()
+    agg_df.insert(0, model_type + '_model', model_name)
+    agg_df.insert(1, 'params', pd.Series(params.iloc[:len(agg_df)], index=agg_df.index))
+
     if best_params or best_model:
-        results = {'df': df}
-        best_cv_params = df[df['rank_test_{}'.format(rank_score)] == 1].params.mode()[0]
+        results = {'df': agg_df}
+        rank_col = 'rank_test_{}'.format(rank_score)
+        best_cv = agg_df[agg_df[rank_col] == agg_df[rank_col].min()]
+        best_cv_params = best_cv.params.iloc[0]
         best_cv_model = model.set_params(**best_cv_params)
         if best_params:
             results['best_params'] = best_cv_model.get_params()
@@ -70,7 +79,7 @@ def run_model_cv(gen_model: BaseGenModel, model: sklearn.base.BaseEstimator,
             results['best_model'] = best_cv_model
         return results
     else:
-        return df
+        return agg_df
 
 
 def calculate_outcome_model_scores(gen_model: BaseGenModel, estimator: sklearn.base.BaseEstimator,
