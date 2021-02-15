@@ -64,9 +64,12 @@ def run_model_cv(gen_model: BaseGenModel, model: sklearn.base.BaseEstimator, mod
     cols = [col for col, is_param in zip(df.columns, df.columns.str.startswith('param_')) if is_param]
 
     # mean over seeds
-    agg_df = df.drop('params', axis='columns').groupby(cols).mean().reset_index()
+    if len(cols) > 0:
+        agg_df = df.drop('params', axis='columns').groupby(cols).mean().reset_index()
+    else:
+        agg_df = pd.DataFrame(df.drop('params', axis='columns').mean()).transpose()
     agg_df.insert(0, model_type + '_model', model_name)
-    agg_df.insert(1, 'params', pd.Series(params.iloc[:len(agg_df)], index=agg_df.index))
+    agg_df.insert(1, 'params_' + model_type + '_model', pd.Series(params.iloc[:len(agg_df)], index=agg_df.index))
 
     # remove timing columns
     if not ret_time:
