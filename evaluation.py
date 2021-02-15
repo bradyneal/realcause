@@ -24,7 +24,8 @@ CLASSIFICATION_SCORE_DEF = 'accuracy'
 
 def run_model_cv(gen_model: BaseGenModel, model: sklearn.base.BaseEstimator, model_name: str,
                  param_grid, n_seeds: int, model_type: str, n_folds=5,
-                 scoring=None, rank_score=None, best_params=False, best_model=False):
+                 scoring=None, rank_score=None, best_params=False, best_model=False,
+                 ret_time=False):
     model_type = model_type.lower()
     if model_type == 'outcome':
         if scoring is None:
@@ -66,6 +67,11 @@ def run_model_cv(gen_model: BaseGenModel, model: sklearn.base.BaseEstimator, mod
     agg_df = df.drop('params', axis='columns').groupby(cols).mean().reset_index()
     agg_df.insert(0, model_type + '_model', model_name)
     agg_df.insert(1, 'params', pd.Series(params.iloc[:len(agg_df)], index=agg_df.index))
+
+    # remove timing columns
+    if not ret_time:
+        time_cols = [col for col, is_time in zip(df.columns, df.columns.str.endswith('time')) if is_time]
+        agg_df.drop(time_cols, axis='columns', inplace=True)
 
     if best_params or best_model:
         results = {'df': agg_df}
