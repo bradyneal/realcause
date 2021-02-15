@@ -359,8 +359,8 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             t = np.full_like(self.t, t)
         return self.sample_y(t, w)
 
-    def ate(self, t1=1, t0=0, w=None, untransform=True, transform_t=True):
-        return self.ite(t1=t1, t0=t0, w=w, untransform=untransform,
+    def ate(self, t1=1, t0=0, w=None, noisy=True, untransform=True, transform_t=True):
+        return self.ite(t1=t1, t0=t0, w=w, noisy=noisy, untransform=untransform,
                         transform_t=transform_t).mean()
 
     def noisy_ate(self, t1=1, t0=0, w=None, n_y_per_w=100, seed=None, transform_w=False):
@@ -388,7 +388,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         #                 transform_t=transform_t).mean()
 
     def ite(self, t1=1, t0=0, w=None, t=None, untransform=True, transform_t=True, transform_w=True,
-            estimand="all", noisy=False, seed=None, n_y_per_w=100):
+            estimand="all", noisy=True, seed=None, n_y_per_w=100):
         if seed is not None:
             self.set_seed(seed)
         if w is None:
