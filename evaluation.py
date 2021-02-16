@@ -120,18 +120,23 @@ def calculate_outcome_model_scores(gen_model: BaseGenModel, estimator: sklearn.b
 
 
 def calculate_metrics(gen_model: BaseGenModel, estimator: BaseEstimator,
-                      n_seeds: int, conf_ints=True, return_ite_vectors=False):
+                      n_seeds: int, conf_ints=True, return_ite_vectors=False,
+                      ate=None, ite=None):
+    if ate is None:
+        ate = gen_model.ate()
+    if ite is None:
+        ite = gen_model.ite().squeeze()
     fitted_estimators = []
     for seed in range(n_seeds):
         w, t, y = gen_model.sample(seed=seed)
         estimator.fit(w, t, y)
         fitted_estimators.append(estimator.copy())
 
-    ate_metrics = calculate_ate_metrics(gen_model.ate(), fitted_estimators, conf_ints=conf_ints)
+    ate_metrics = calculate_ate_metrics(ate, fitted_estimators, conf_ints=conf_ints)
 
     is_ite_estimator = isinstance(estimator, BaseIteEstimator)
     if is_ite_estimator:
-        ite_metrics = calculate_ite_metrics(gen_model.ite().squeeze(), fitted_estimators)
+        ite_metrics = calculate_ite_metrics(ite, fitted_estimators)
         ite_mean_metrics = {'mean_' + k: np.mean(v) for k, v in ite_metrics.items()}
         ite_std_metrics = {'std_of_' + k: np.std(v) for k, v in ite_metrics.items()}
 
