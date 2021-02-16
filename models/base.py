@@ -359,13 +359,15 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             t = np.full_like(self.t, t)
         return self.sample_y(t, w)
 
-    def ate(self, t1=1, t0=0, w=None, noisy=True, untransform=True, transform_t=True):
+    def ate(self, t1=1, t0=0, w=None, noisy=True, untransform=True, transform_t=True, n_y_per_w=100):
         return self.ite(t1=t1, t0=t0, w=w, noisy=noisy, untransform=untransform,
-                        transform_t=transform_t).mean()
+                        transform_t=transform_t, n_y_per_w=n_y_per_w).mean()
 
     def noisy_ate(self, t1=1, t0=0, w=None, n_y_per_w=100, seed=None, transform_w=False):
         if w is not None and transform_w:
             w = self.w_transform.transform(w)
+
+        # Note: bad things happen if w is not transformed and transform_w is False
 
         if seed is not None:
             self.set_seed(seed)
@@ -392,8 +394,8 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         if seed is not None:
             self.set_seed(seed)
         if w is None:
-            w = self.w_transformed
-            # w = self.sample_w(untransform=False)
+            # w = self.w_transformed
+            w = self.sample_w(untransform=False)
             t = self.t
         estimand = estimand.lower()
         if estimand == "all" or estimand == "ate":
@@ -407,13 +409,14 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         if transform_t:
             t1 = self.t_transform.transform(t1)
             t0 = self.t_transform.transform(t0)
+            # Note: check that this is an identity transformation
         if isinstance(t1, Number) or isinstance(t0, Number):
             t_shape = list(self.t.shape)
             t_shape[0] = w.shape[0]
             t1 = np.full(t_shape, t1)
             t0 = np.full(t_shape, t0)
-        if transform_w:
-            w = self.w_transform.transform(w)
+        # if transform_w:
+        #     w = self.w_transform.transform(w)
         if noisy:
             y1_total = np.zeros(w.shape[0])
             y0_total = np.zeros(w.shape[0])
@@ -425,9 +428,11 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         else:
             y_1 = to_np_vector(self.mean_y(t=t1, w=w))
             y_0 = to_np_vector(self.mean_y(t=t0, w=w))
-        if untransform:
-            y_1 = self.y_transform.untransform(y_1)
-            y_0 = self.y_transform.untransform(y_0)
+        # This is already done in sample_interventional --> sample_y
+        # TODO: add this argument to sample_interventional and pass it to sample_y
+        # if untransform:
+        #     y_1 = self.y_transform.untransform(y_1)
+        #     y_0 = self.y_transform.untransform(y_0)
         return y_1 - y_0
 
     def plot_ty_dists(self, joint=True, marginal_hist=True, marginal_qq=True,
