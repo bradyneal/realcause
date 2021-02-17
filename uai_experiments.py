@@ -95,15 +95,15 @@ OUTCOME_MODEL_GRID = [
 ]
 
 PROP_SCORE_MODEL_GRID = [
-    # ('LogisticRegression_l2', LogisticRegression(penalty='l2'), d_Cs),
-    # ('LogisticRegression', LogisticRegression(penalty='none'), {}),
-    # ('LogisticRegression_l2_liblinear', LogisticRegression(penalty='l2', solver='liblinear'), d_Cs),
-    # ('LogisticRegression_l1_liblinear', LogisticRegression(penalty='l1', solver='liblinear'), d_Cs),
-    # ('LogisticRegression_l1_saga', LogisticRegression(penalty='l1', solver='saga'), d_Cs),
-    #
-    # ('LDA', LinearDiscriminantAnalysis(), {}),
-    # ('LDA_shrinkage', LinearDiscriminantAnalysis(solver='lsqr', shrinkage='auto'), {}),
-    # ('QDA', QuadraticDiscriminantAnalysis(), {}),
+    ('LogisticRegression_l2', LogisticRegression(penalty='l2'), d_Cs),
+    ('LogisticRegression', LogisticRegression(penalty='none'), {}),
+    ('LogisticRegression_l2_liblinear', LogisticRegression(penalty='l2', solver='liblinear'), d_Cs),
+    ('LogisticRegression_l1_liblinear', LogisticRegression(penalty='l1', solver='liblinear'), d_Cs),
+    ('LogisticRegression_l1_saga', LogisticRegression(penalty='l1', solver='saga'), d_Cs),
+
+    ('LDA', LinearDiscriminantAnalysis(), {}),
+    ('LDA_shrinkage', LinearDiscriminantAnalysis(solver='lsqr', shrinkage='auto'), {}),
+    ('QDA', QuadraticDiscriminantAnalysis(), {}),
 
     # TODO: add tuning of SVM gamma, rather than using the default "scale" setting
     ('SVM_rbf', SVC(kernel='rbf', probability=True), d_Cs),
@@ -244,24 +244,24 @@ def run_experiments_for_estimator(get_estimator_func, model_grid, save_location,
     return full_df
 
 
-# print('STANDARDIZATION')
-# stand_df = run_experiments_for_estimator(
-#     lambda model: StandardizationEstimator(outcome_model=model),
-#     model_grid=OUTCOME_MODEL_GRID,
-#     save_location=RESULTS_DIR / 'psid_cps_twins_standard.csv',
-#     meta_est_name='standardization',
-#     model_type='outcome',
-#     gen_models=GEN_MODELS)
+print('STANDARDIZATION')
+stand_df = run_experiments_for_estimator(
+    lambda model: StandardizationEstimator(outcome_model=model),
+    model_grid=OUTCOME_MODEL_GRID,
+    save_location=RESULTS_DIR / 'psid_cps_twins_standard.csv',
+    meta_est_name='standardization',
+    model_type='outcome',
+    gen_models=GEN_MODELS)
 
-# print('STRATIFIED STANDARDIZATION')
-# strat_df = run_experiments_for_estimator(
-#     lambda model: StratifiedStandardizationEstimator(outcome_models=model),
-#     model_grid=OUTCOME_MODEL_GRID,
-#     exclude=[('lalonde_cps', 'KernelRidge')],
-#     save_location=RESULTS_DIR / 'psid_cps_twins_strat_standard.csv',
-#     meta_est_name='stratified_standardization',
-#     model_type='outcome',
-#     gen_models=GEN_MODELS)
+print('STRATIFIED STANDARDIZATION')
+strat_df = run_experiments_for_estimator(
+    lambda model: StratifiedStandardizationEstimator(outcome_models=model),
+    model_grid=OUTCOME_MODEL_GRID,
+    exclude=[('lalonde_cps', 'KernelRidge')],
+    save_location=RESULTS_DIR / 'psid_cps_twins_strat_standard.csv',
+    meta_est_name='stratified_standardization',
+    model_type='outcome',
+    gen_models=GEN_MODELS)
 
 print('IPW')
 ps_df = run_experiments_for_estimator(
