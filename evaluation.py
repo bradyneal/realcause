@@ -124,8 +124,12 @@ def calculate_metrics(gen_model: BaseGenModel, estimator: BaseEstimator,
                       ate=None, ite=None):
     if ate is None:
         ate = gen_model.ate()
+    # else:
+    #     print('Already computed ate')
     if ite is None:
         ite = gen_model.ite().squeeze()
+    # else:
+    #     print('Already computed ite')
     fitted_estimators = []
     for seed in range(n_seeds):
         w, t, y = gen_model.sample(seed=seed)
