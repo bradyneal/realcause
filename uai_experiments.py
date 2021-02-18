@@ -9,6 +9,7 @@ from causal_estimators.standardization_estimator import \
     StandardizationEstimator, StratifiedStandardizationEstimator
 from evaluation import run_model_cv
 from run_metrics import load_from_folder
+from causal_estimators.metalearners import XLearner
 
 from sklearn.linear_model import LogisticRegression, LinearRegression, Lasso, Ridge, ElasticNet, RidgeClassifier
 from sklearn.svm import SVR, LinearSVR, SVC, LinearSVC
@@ -179,7 +180,7 @@ t_start = time.time()
 # and bundle all the statistical and causal metrics into a single DataFrame with a seed column
 # (bias/variance/etc. will need to be calculated from this DataFrame)
 # These DataFrames can be used as a dataset for predicting causal performance from predictive performance
-N_SEEDS = 2
+N_SEEDS = 5
 
 
 def run_experiments_for_estimator(get_estimator_func, model_grid, save_location,
@@ -267,12 +268,34 @@ print('IPW')
 ps_df = run_experiments_for_estimator(
     lambda model: IPWEstimator(prop_score_model=model),
     model_grid=PROP_SCORE_MODEL_GRID,
-    exclude=[('lalonde_psid', 'SVM_rbf')],
+    # exclude=[('lalonde_psid', 'SVM_rbf')],
+    exclude=['SVM_rbf'],
     save_location=RESULTS_DIR / 'psid_cps_twins_ipw.csv',
     meta_est_name='ipw',
     model_type='prop_score',
     gen_models=GEN_MODELS)
 
+print('IPW TRIM EPS 0.01')
+ps_trim_df = run_experiments_for_estimator(
+    lambda model: IPWEstimator(prop_score_model=model, trim_eps=0.01),
+    model_grid=PROP_SCORE_MODEL_GRID,
+    # exclude=[('lalonde_psid', 'SVM_rbf')],
+    exclude=['SVM_rbf'],
+    save_location=RESULTS_DIR / 'psid_cps_twins_ipw_trim_01.csv',
+    meta_est_name='ipw_trimeps.01',
+    model_type='prop_score',
+    gen_models=GEN_MODELS)
+
+print('IPW Stabilized weights')
+ps_stab_df = run_experiments_for_estimator(
+    lambda model: IPWEstimator(prop_score_model=model, stabilized=True),
+    model_grid=PROP_SCORE_MODEL_GRID,
+    # exclude=[('lalonde_psid', 'SVM_rbf')],
+    exclude=['SVM_rbf'],
+    save_location=RESULTS_DIR / 'psid_cps_twins_ipw_stabilized.csv',
+    meta_est_name='ipw_stabilized',
+    model_type='prop_score',
+    gen_models=GEN_MODELS)
 
 
 # dataset_dfs = []
