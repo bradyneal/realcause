@@ -180,12 +180,14 @@ t_start = time.time()
 # and bundle all the statistical and causal metrics into a single DataFrame with a seed column
 # (bias/variance/etc. will need to be calculated from this DataFrame)
 # These DataFrames can be used as a dataset for predicting causal performance from predictive performance
-N_SEEDS = 5
+N_SEEDS_CV = 5
+N_SEEDS_METRICS = 5
 
 
 def run_experiments_for_estimator(get_estimator_func, model_grid, save_location,
                                   meta_est_name, model_type, exclude=[],
-                                  gen_models=GEN_MODELS, n_seeds=N_SEEDS):
+                                  gen_models=GEN_MODELS, n_seeds_cv=N_SEEDS_CV,
+                                  n_seeds_metrics=N_SEEDS_METRICS):
     # if outcome_model_grid is None and prop_score_model_grid is None:
     #     raise ValueError('Either outcome_model_grid or prop_score_model_grid must be not None.')
     # if outcome_model_grid is not None and prop_score_model_grid is not None:
@@ -211,13 +213,13 @@ def run_experiments_for_estimator(get_estimator_func, model_grid, save_location,
                 continue
             model_start = time.time()
             results = run_model_cv(gen_model, model, model_name=model_name, param_grid=param_grid,
-                                   n_seeds=n_seeds, model_type=model_type, best_model=False, ret_time=False)
+                                   n_seeds=n_seeds_cv, model_type=model_type, best_model=False, ret_time=False)
             metrics_list = []
             for params in results[param_str]:
                 try:
                     est_start = time.time()
                     estimator = get_estimator_func(model.set_params(**params))
-                    metrics = calculate_metrics(gen_model, estimator, n_seeds=n_seeds,
+                    metrics = calculate_metrics(gen_model, estimator, n_seeds=n_seeds_metrics,
                                                 conf_ints=False, ate=ate, ite=ite)
                     est_end = time.time()
                     # Add estimator fitting time in minutes
