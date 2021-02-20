@@ -22,9 +22,10 @@ CLASSIFICATION_SCORES = ['accuracy', 'balanced_accuracy', 'average_precision',
 CLASSIFICATION_SCORE_DEF = 'accuracy'
 
 
-def run_model_cv(gen_model: BaseGenModel, model: sklearn.base.BaseEstimator,
+def run_model_cv(gen_model: BaseGenModel, model: sklearn.base.BaseEstimator, model_name: str,
                  param_grid, n_seeds: int, model_type: str, n_folds=5,
-                 scoring=None, rank_score=None, best_params=False, best_model=False):
+                 scoring=None, rank_score=None, best_params=False, best_model=False,
+                 ret_time=False):
     model_type = model_type.lower()
     if model_type == 'outcome':
         if scoring is None:
@@ -56,13 +57,30 @@ def run_model_cv(gen_model: BaseGenModel, model: sklearn.base.BaseEstimator,
             t = t.squeeze()
             cv.fit(w, t)
         d = {k: v for k, v in cv.cv_results_.items() if 'split' not in k}
-        d['seed'] = seed
         dfs.append(pd.DataFrame(d))
 
     df = pd.concat(dfs, axis=0)
+    params = df.params
+    cols = [col for col, is_param in zip(df.columns, df.columns.str.startswith('param_')) if is_param]
+
+    # mean over seeds
+    if len(cols) > 0:
+        agg_df = df.drop('params', axis='columns').groupby(cols).mean().reset_index()
+    else:
+        agg_df = pd.DataFrame(df.drop('params', axis='columns').mean()).transpose()
+    agg_df.insert(0, model_type + '_model', model_name)
+    agg_df.insert(1, 'params_' + model_type + '_model', pd.Series(params.iloc[:len(agg_df)], index=agg_df.index))
+
+    # remove timing columns
+    if not ret_time:
+        time_cols = [col for col, is_time in zip(df.columns, df.columns.str.endswith('time')) if is_time]
+        agg_df.drop(time_cols, axis='columns', inplace=True)
+
     if best_params or best_model:
-        results = {'df': df}
-        best_cv_params = df[df['rank_test_{}'.format(rank_score)] == 1].params.mode()[0]
+        results = {'df': agg_df}
+        rank_col = 'rank_test_{}'.format(rank_score)
+        best_cv = agg_df[agg_df[rank_col] == agg_df[rank_col].min()]
+        best_cv_params = best_cv.params.iloc[0]
         best_cv_model = model.set_params(**best_cv_params)
         if best_params:
             results['best_params'] = best_cv_model.get_params()
@@ -70,7 +88,7 @@ def run_model_cv(gen_model: BaseGenModel, model: sklearn.base.BaseEstimator,
             results['best_model'] = best_cv_model
         return results
     else:
-        return df
+        return agg_df
 
 
 def calculate_outcome_model_scores(gen_model: BaseGenModel, estimator: sklearn.base.BaseEstimator,
@@ -102,18 +120,27 @@ def calculate_outcome_model_scores(gen_model: BaseGenModel, estimator: sklearn.b
 
 
 def calculate_metrics(gen_model: BaseGenModel, estimator: BaseEstimator,
-                      n_seeds: int, conf_ints=True, return_ite_vectors=False):
+                      n_seeds: int, conf_ints=True, return_ite_vectors=False,
+                      ate=None, ite=None):
+    if ate is None:
+        ate = gen_model.ate()
+    # else:
+    #     print('Already computed ate')
+    if ite is None:
+        ite = gen_model.ite().squeeze()
+    # else:
+    #     print('Already computed ite')
     fitted_estimators = []
     for seed in range(n_seeds):
         w, t, y = gen_model.sample(seed=seed)
         estimator.fit(w, t, y)
         fitted_estimators.append(estimator.copy())
 
-    ate_metrics = calculate_ate_metrics(gen_model.ate(), fitted_estimators, conf_ints=conf_ints)
+    ate_metrics = calculate_ate_metrics(ate, fitted_estimators, conf_ints=conf_ints)
 
     is_ite_estimator = isinstance(estimator, BaseIteEstimator)
     if is_ite_estimator:
-        ite_metrics = calculate_ite_metrics(gen_model.ite().squeeze(), fitted_estimators)
+        ite_metrics = calculate_ite_metrics(ite, fitted_estimators)
         ite_mean_metrics = {'mean_' + k: np.mean(v) for k, v in ite_metrics.items()}
         ite_std_metrics = {'std_of_' + k: np.std(v) for k, v in ite_metrics.items()}
 
