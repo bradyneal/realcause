@@ -348,7 +348,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         else:
             return w, t, y
 
-    def sample_interventional(self, t, w=None, seed=None):
+    def sample_interventional(self, t, w=None, seed=None, causal_effect_scale=None, deg_hetero=1.0):
         if seed is not None:
             self.set_seed(seed)
         if w is None:
@@ -357,11 +357,14 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             raise ValueError('Unsupported data type: {} ... only numpy is currently supported'.format(type(w)))
         if isinstance(t, Number):
             t = np.full_like(self.t, t)
-        return self.sample_y(t, w)
+        return self.sample_y(t, w, causal_effect_scale=causal_effect_scale, deg_hetero=deg_hetero)
 
-    def ate(self, t1=1, t0=0, w=None, noisy=True, untransform=True, transform_t=True, n_y_per_w=100):
+    def ate(self, t1=1, t0=0, w=None, noisy=True, untransform=True, transform_t=True, n_y_per_w=100,
+            causal_effect_scale=None, deg_hetero=1.0):
         return self.ite(t1=t1, t0=t0, w=w, noisy=noisy, untransform=untransform,
-                        transform_t=transform_t, n_y_per_w=n_y_per_w).mean()
+                        transform_t=transform_t, n_y_per_w=n_y_per_w,
+                        causal_effect_scale=causal_effect_scale,
+                        deg_hetero=deg_hetero).mean()
 
     def noisy_ate(self, t1=1, t0=0, w=None, n_y_per_w=100, seed=None, transform_w=False):
         if w is not None and transform_w:
@@ -390,7 +393,8 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         #                 transform_t=transform_t).mean()
 
     def ite(self, t1=1, t0=0, w=None, t=None, untransform=True, transform_t=True, transform_w=True,
-            estimand="all", noisy=True, seed=None, n_y_per_w=100):
+            estimand="all", noisy=True, seed=None, n_y_per_w=100,
+            causal_effect_scale=None, deg_hetero=1.0):
         if seed is not None:
             self.set_seed(seed)
         if w is None:
@@ -421,11 +425,16 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             y1_total = np.zeros(w.shape[0])
             y0_total = np.zeros(w.shape[0])
             for _ in range(n_y_per_w):
-                y1_total += to_np_vector(self.sample_interventional(t=t1, w=w))
-                y0_total += to_np_vector(self.sample_interventional(t=t0, w=w))
+                y1_total += to_np_vector(self.sample_interventional(
+                    t=t1, w=w,causal_effect_scale=causal_effect_scale, deg_hetero=deg_hetero))
+                y0_total += to_np_vector(self.sample_interventional(
+                    t=t0, w=w, causal_effect_scale=causal_effect_scale, deg_hetero=deg_hetero))
             y_1 = y1_total / n_y_per_w
             y_0 = y0_total / n_y_per_w
         else:
+            if causal_effect_scale is not None or deg_hetero != 1.0:
+                raise ValueError('Invalid causal_effect_scale or deg_hetero. '
+                                 'Current mean_y only supports defaults.')
             y_1 = to_np_vector(self.mean_y(t=t1, w=w))
             y_0 = to_np_vector(self.mean_y(t=t0, w=w))
         # This is already done in sample_interventional --> sample_y
