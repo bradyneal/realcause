@@ -27,13 +27,13 @@ References:
 
 import os
 import pandas as pd
-from utils import download_dataset, unzip
+from utils import download_dataset, DATA_FOLDER
 
 TWINS_URL = 'https://raw.githubusercontent.com/shalit-lab/Benchmarks/master/Twins/Final_data_twins.csv'
 TWINS_FILENAME = 'twins.csv'
 
 
-def load_twins(dataroot=None, return_sketchy_ites=False, return_sketchy_ate=False,
+def load_twins(dataroot=DATA_FOLDER, return_sketchy_ites=False, return_sketchy_ate=False,
                observe_sketchy_counterfactuals=False):
     """
     Load the Twins dataset
