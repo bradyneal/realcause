@@ -254,7 +254,8 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         else:
             return t
 
-    def sample_y(self, t, w, untransform=True, causal_effect_scale=None, deg_hetero=1.0, seed=None):
+    def sample_y(self, t, w, untransform=True, causal_effect_scale=None,
+                 deg_hetero=1.0, ret_counterfactuals=False, seed=None):
         """
         :param t: treatment
         :param w: covariate (confounder)
@@ -263,6 +264,7 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         :param deg_hetero: degree of heterogeneity (between 0 and 1)
             When deg_hetero=1, y1 and y0 remain unchanged. When deg_hetero=0,
             y1 - y0 is the same for all individuals.
+        :param ret_counterfactuals: return counterfactuals if True
         :param seed: random seed
         :return: sampled outcome
         """
@@ -272,17 +274,14 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
             # note: input to the model need to be transformed
             w = self.sample_w(untransform=False)
 
-        if deg_hetero == 1.0 and causal_effect_scale == None:  # don't change heterogeneity or causal effect size
-            y = self._sample_y(t, w, ret_counterfactuals=False)
-            if untransform:
-                y = self.y_transform.untransform(y)
-            return y
-        else:   # change degree of heterogeneity and/or causal effect size
-            y0, y1 = self._sample_y(t, w, ret_counterfactuals=True)
-            if untransform:
-                y0 = self.y_transform.untransform(y0)
-                y1 = self.y_transform.untransform(y1)
+        y0, y1 = self._sample_y(t, w, ret_counterfactuals=True)
+        if untransform:
+            y0 = self.y_transform.untransform(y0)
+            y1 = self.y_transform.untransform(y1)
 
+        if deg_hetero == 1.0 and causal_effect_scale == None:  # don't change heterogeneity or causal effect size
+            pass
+        else:   # change degree of heterogeneity and/or causal effect size
             # degree of heterogeneity
             if deg_hetero != 1.0:
                 assert 0 <= deg_hetero < 1, f'deg_hetero not in [0, 1], got {deg_hetero}'
@@ -312,14 +311,17 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
                 y1 = causal_effect_scale / ate * y1
                 y0 = causal_effect_scale / ate * y0
 
+        if ret_counterfactuals:
+            return y0, y1
+        else:
             return y0 * (1 - t) + y1 * t
 
     def set_seed(self, seed=SEED):
         torch.manual_seed(seed)
         np.random.seed(seed)
 
-    def sample(self, untransform=True, seed=None, dataset=TRAIN,
-               overlap=1, causal_effect_scale=None, deg_hetero=1.0):
+    def sample(self, untransform=True, seed=None, dataset=TRAIN, overlap=1,
+               causal_effect_scale=None, deg_hetero=1.0, ret_counterfactuals=False):
         """
         Sample from generative model.
 
@@ -334,19 +336,31 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         :param deg_hetero: degree of heterogeneity (between 0 and 1)
             When deg_hetero=1, y1 and y0 remain unchanged. When deg_hetero=0,
             y1 - y0 is the same for all individuals.
+        :param ret_counterfactuals: return counterfactuals if True
         :return: (w, t, y)
         """
         if seed is not None:
             self.set_seed(seed)
         w = self.sample_w(untransform=False, dataset=dataset)
         t = self.sample_t(w, untransform=False, overlap=overlap)
-        y = self.sample_y(t, w, untransform=False,
-                          causal_effect_scale=causal_effect_scale,
-                          deg_hetero=deg_hetero)
-        if untransform:
-            return self.w_transform.untransform(w), self.t_transform.untransform(t), self.y_transform.untransform(y)
+        if ret_counterfactuals:
+            y0, y1 = self.sample_y(
+                t, w, untransform=False, causal_effect_scale=causal_effect_scale,
+                deg_hetero=deg_hetero, ret_counterfactuals=True
+            )
+            if untransform:
+                return (self.w_transform.untransform(w), self.t_transform.untransform(t),
+                        (self.y_transform.untransform(y0), self.y_transform.untransform(y1)))
+            else:
+                return w, t, (y0, y1)
         else:
-            return w, t, y
+            y = self.sample_y(t, w, untransform=False,
+                              causal_effect_scale=causal_effect_scale,
+                              deg_hetero=deg_hetero, ret_counterfactuals=False)
+            if untransform:
+                return self.w_transform.untransform(w), self.t_transform.untransform(t), self.y_transform.untransform(y)
+            else:
+                return w, t, y
 
     def sample_interventional(self, t, w=None, seed=None, causal_effect_scale=None, deg_hetero=1.0):
         if seed is not None:
