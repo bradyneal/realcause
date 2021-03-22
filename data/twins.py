@@ -27,13 +27,14 @@ References:
 
 import os
 import pandas as pd
-from utils import download_dataset, DATA_FOLDER
+from utils import download_dataset, DATA_FOLDER, NUMPY, PANDAS
 
 TWINS_URL = 'https://raw.githubusercontent.com/shalit-lab/Benchmarks/master/Twins/Final_data_twins.csv'
 TWINS_FILENAME = 'twins.csv'
 
 
-def load_twins(dataroot=DATA_FOLDER, return_sketchy_ites=False, return_sketchy_ate=False,
+def load_twins(dataroot=DATA_FOLDER, data_format=NUMPY,
+               return_sketchy_ites=False, return_sketchy_ate=False,
                observe_sketchy_counterfactuals=False):
     """
     Load the Twins dataset
@@ -50,17 +51,26 @@ def load_twins(dataroot=DATA_FOLDER, return_sketchy_ites=False, return_sketchy_a
     download_dataset(TWINS_URL, 'Twins', dataroot=dataroot, filename=TWINS_FILENAME)
     full_df = pd.read_csv(os.path.join(dataroot, TWINS_FILENAME), index_col=0)
 
-    d = {
-        'w': full_df.drop(['T', 'y0', 'y1', 'yf', 'y_cf', 'Propensity'], axis='columns').to_numpy(),
-        't': full_df['T'].to_numpy(),
-        'y': full_df['yf'].to_numpy()
-    }
+
+    if data_format == NUMPY:
+        d = {
+            'w': full_df.drop(['T', 'y0', 'y1', 'yf', 'y_cf', 'Propensity'], axis='columns').to_numpy(),
+            't': full_df['T'].to_numpy(),
+            'y': full_df['yf'].to_numpy()
+        }
+    elif data_format == PANDAS:
+        d = {
+            'w': full_df.drop(['T', 'y0', 'y1', 'yf', 'y_cf', 'Propensity'], axis='columns'),
+            't': full_df['T'],
+            'y': full_df['yf']
+        }
 
     if return_sketchy_ites or return_sketchy_ate:
         ites = full_df['y1'] - full_df['y0']
+        ites_np = ites.to_numpy()
         if return_sketchy_ites:
-            d['ites'] = ites.to_numpy()
+            d['ites'] = ites if data_format == PANDAS else ites_np
         if return_sketchy_ate:
-            d['ate'] = ites.to_numpy().mean()
+            d['ate'] = ites_np.mean()
 
     return d
