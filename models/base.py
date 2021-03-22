@@ -320,11 +320,13 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         torch.manual_seed(seed)
         np.random.seed(seed)
 
-    def sample(self, untransform=True, seed=None, dataset=TRAIN, overlap=1,
+    def sample(self, w=None, transform_w=True, untransform=True, seed=None, dataset=TRAIN, overlap=1,
                causal_effect_scale=None, deg_hetero=1.0, ret_counterfactuals=False):
         """
         Sample from generative model.
 
+        :param w: covariates (confounders)
+        :param transform_w: whether to transform the w (if given)
         :param untransform: whether to transform the data back to the raw scale
         :param seed: random seed
         :param dataset: train or test for sampling w from
@@ -341,7 +343,10 @@ class BaseGenModel(object, metaclass=BaseGenModelMeta):
         """
         if seed is not None:
             self.set_seed(seed)
-        w = self.sample_w(untransform=False, dataset=dataset)
+        if w is None:
+            w = self.sample_w(untransform=False, dataset=dataset)
+        elif transform_w:
+            w = self.w_transform.transform(w)
         t = self.sample_t(w, untransform=False, overlap=overlap)
         if ret_counterfactuals:
             y0, y1 = self.sample_y(
