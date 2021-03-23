@@ -84,9 +84,17 @@ python train_generator.py --data "lalonde" --dataroot [path-to-ur-data-folder] -
     --dist "FactorialGaussian" --n_hidden_layers 1 --dim_h 128 --w_transform "Standardize" --y_transform "Normalize"
 ```
 
-* `--data`
-
-TODO #brady
+* `--data` <br>
+	This argument specifies the dataset. Options:
+	- "lalonde" or "lalonde_psid" - LaLonde PSID dataset
+	- "lalonde_cps" - LaLonde CPS dataset
+	- "lalonde_rct" - LaLonde RCT dataset
+	- "twins" - Twins dataset
+	- "ihdp" - IHDP dataset
+	- "lbidd\_\<link\>\_\<n\>" - LBIDD dataset with link function \<link\> and number of samples \<n\> <br>
+		Valid \<link\> options: linear, quadratic, cubic, exp, and log <br>
+		Valid \<n\> options: 1k, 2.5k, 5k, 10k, 25k, and 50k <br>
+		Example: "lbidd\_cubic\_10k" yields an LBIDD dataset wth a cubic link function and 10k samples
 
 
 * `--x_transform` <br>
