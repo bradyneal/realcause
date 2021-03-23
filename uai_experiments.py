@@ -9,7 +9,6 @@ from causal_estimators.standardization_estimator import \
     StandardizationEstimator, StratifiedStandardizationEstimator
 from evaluation import run_model_cv
 from run_metrics import load_from_folder
-from causal_estimators.metalearners import XLearner
 
 from sklearn.linear_model import LogisticRegression, LinearRegression, Lasso, Ridge, ElasticNet, RidgeClassifier
 from sklearn.svm import SVR, LinearSVR, SVC, LinearSVC
@@ -25,9 +24,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 
 from sklearn.pipeline import Pipeline, make_pipeline
-from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
-from sklearn.model_selection import cross_val_score, cross_validate
 from sklearn.exceptions import UndefinedMetricWarning
 
 import warnings
@@ -138,8 +135,6 @@ PROP_SCORE_MODEL_GRID = [
     # MLPClassifier(alpha=1, max_iter=1000),
 ]
 
-# ihdp_gen_model, args = load_from_folder(dataset='ihdp')
-# lbidd_gen_model, args = load_from_folder(dataset='LBIDD')
 psid_gen_model, args = load_from_folder(dataset='lalonde_psid1')
 cps_gen_model, args = load_from_folder(dataset='lalonde_cps1')
 twins_gen_model, args = load_from_folder(dataset='twins')
@@ -157,32 +152,10 @@ GEN_MODELS = [
     ('twins', twins_gen_model, twins_ate, twins_ite)
 ]
 
-# start = time.time()
-# psid_gen_model.ate(n_y_per_w=100)
-# print('PSID ATE 100 seconds:', time.time() - start)
-#
-# start = time.time()
-# psid_gen_model.ate(n_y_per_w=1000)
-# print('PSID ATE 1000 seconds:', time.time() - start)
-#
-# start = time.time()
-# cps_gen_model.ate(n_y_per_w=100)
-# print('CPS ATE 100 seconds:', time.time() - start)
-#
-# start = time.time()
-# cps_gen_model.ate(n_y_per_w=1000)
-# print('CPS ATE 1000 seconds:', time.time() - start)
-
 t_start = time.time()
 
-# TODO: move the loop over seeds out here (rather than in calculuate_metrics and run_model_cv)
-# and then use cross_validate() and version of calculuate_metrics() to get scores for all models
-# and bundle all the statistical and causal metrics into a single DataFrame with a seed column
-# (bias/variance/etc. will need to be calculated from this DataFrame)
-# These DataFrames can be used as a dataset for predicting causal performance from predictive performance
 N_SEEDS_CV = 5
 N_SEEDS_METRICS = 5
-
 
 def run_experiments_for_estimator(get_estimator_func, model_grid, save_location,
                                   meta_est_name, model_type, exclude=[],
@@ -298,41 +271,3 @@ ps_stab_df = run_experiments_for_estimator(
     meta_est_name='ipw_stabilized',
     model_type='prop_score',
     gen_models=GEN_MODELS)
-
-
-# dataset_dfs = []
-# for gen_name, gen_model in GEN_MODELS:
-#     print('DATASET:', gen_name)
-#     dataset_start = time.time()
-#     model_dfs = []
-#     for model_name, outcome_model, param_grid in OUTCOME_MODEL_GRID:
-#         print('MODEL:', model_name)
-#         model_start = time.time()
-#         results = run_model_cv(gen_model, outcome_model, model_name=model_name, param_grid=param_grid,
-#                                n_seeds=N_SEEDS, model_type='outcome', best_model=False, ret_time=True)
-#         metrics_list = []
-#         for params in results['params_outcome_model']:
-#             est_start = time.time()
-#             estimator = StandardizationEstimator(outcome_model=outcome_model.set_params(**params))
-#             metrics = calculate_metrics(gen_model, estimator, n_seeds=N_SEEDS, conf_ints=False)
-#             est_end = time.time()
-#             # Add estimator fitting time in minutes
-#             metrics['time'] = (est_end - est_start) / 60
-#             metrics_list.append(metrics)
-#         causal_metrics = pd.DataFrame(metrics_list)
-#         model_df = pd.concat([results, causal_metrics], axis=1)
-#         model_df.insert(0, 'dataset', gen_name)
-#         model_df.insert(1, 'meta-estimator', 'standardization')
-#         model_dfs.append(model_df)
-#         model_end = time.time()
-#         print(model_name, 'standardization time:', (model_end - model_start) / 60, 'minutes')
-#
-#     dataset_df = pd.concat(model_dfs, axis=0)
-#     dataset_end = time.time()
-#     print(gen_name, 'standardization time:', (dataset_end - dataset_start) / 60 / 60, 'hours')
-#     dataset_dfs.append(dataset_df)
-# full_df = pd.concat(dataset_dfs, axis=0)
-
-# t_end = time.time()
-# print('Total time elapsed:', (t_end - t_start) / 60 / 60, 'hours')
-# full_df.to_csv('results/psid_cps_twins_standardization5.csv', float_format='%.2f', index=False)

@@ -194,27 +194,3 @@ pehe_cv_df = stand_cv_df.sort_values(by=['dataset', 'mean_pehe', 'ate_rmse', 'at
 rmse_cv_df.to_csv('results/rmse_sorted_estimators.csv', float_format='%.2f', index=False)
 bias_cv_df.to_csv('results/bias_sorted_estimators.csv', float_format='%.2f', index=False)
 pehe_cv_df.to_csv('results/pehe_sorted_estimators.csv', float_format='%.2f', index=False)
-
-
-### Notes on outliers
-
-# ate_rmse and mean_pehe are all the same
-x1 = df[(df['dataset'] == 'lalonde_cps') &
-        (df['meta-estimator'] == 'standardization') &
-        (df['outcome_model'] == 'SVM_rbf')]
-x2 = df[(df['dataset'] == 'lalonde_psid') &
-        (df['meta-estimator'] == 'standardization') &
-        (df['outcome_model'] == 'SVM_rbf')]
-
-# ate_rmse is all the same, but mean_pehe isn't
-x3 = df[(df['dataset'] == 'twins') &
-        (df['meta-estimator'] == 'stratified_standardization') &
-        (df['outcome_model'] == 'DecisionTree')]
-
-# ate_rmse is all the same, and PEHE is nan
-x4 = df[(df['dataset'] == 'twins') &
-        (df['meta-estimator'] == 'ipw') &
-        (df['prop_score_model'] == 'SVM_sigmoid')]
-x5 = df[(df['dataset'] == 'twins') &
-        (df['meta-estimator'] == 'ipw_trimeps.01') &
-        (df['prop_score_model'] == 'SVM_sigmoid')]
