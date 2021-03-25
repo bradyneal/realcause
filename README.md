@@ -54,7 +54,38 @@ For example, on MacOS, I had trouble installing the `Matching` R package and the
 ```
 
 
-## Training causal generative models
+## Loading RealCause pre-computed datasets
+
+You can load any of the realistic RealCause datasets (trained on LaLonde PSID, LaLonde CPS, and Twins) from `realcause_datasets/` using `pandas.read_csv()` or by using our `load_realcause_dataset()` function in `loading.py`.
+We provide 100 different samples of each dataset.
+These samples are generated in `make_datasets.py`.
+
+
+Example usage to load sample 69 of the LaLonde PSID dataset:
+
+```
+from loading import load_realcause_dataset
+
+df = load_realcause_dataset('lalonde_psid', 69)
+```
+
+Valid value for the dataset argument: 'lalonde\_psid', 'lalonde\_cps', and 'twins'.
+Valid values for the sample argument: 0-99.
+If the sample argument is not given, it defaults to 0.
+
+Example usage to load sample 0 of the Twins dataset without giving the sample argument:
+
+```
+from loading import load_realcause_dataset
+
+df = load_realcause_dataset('twins')
+```
+
+
+## Loading RealCause pre-trained generative models
+TODO
+
+## Training RealCause generative models
 
 
 <!--### Code structure
