@@ -8,8 +8,9 @@ from loading import load_from_folder
 
 from data.lalonde import load_lalonde
 from data.twins import load_twins
+from consts import REALCAUSE_DATASETS_FOLDER, N_SAMPLE_SEEDS, N_AGG_SEEDS
 
-FOLDER = Path('realcause_datasets')
+FOLDER = Path(REALCAUSE_DATASETS_FOLDER)
 FOLDER.mkdir(parents=True, exist_ok=True)
 
 psid_gen_model, args = load_from_folder(dataset='lalonde_psid1')
@@ -25,8 +26,6 @@ gen_models = [psid_gen_model, cps_gen_model, twins_gen_model]
 w_dfs = [psid_w, cps_w, twins_w]
 names = ['lalonde_psid', 'lalonde_cps', 'twins']
 
-N_SAMPLE_SEEDS = 100
-N_AGG_SEEDS = 100
 dfs = []
 print('N samples:', N_SAMPLE_SEEDS)
 print('N seeds per sample:', N_AGG_SEEDS)
