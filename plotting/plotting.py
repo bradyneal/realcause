@@ -10,7 +10,7 @@ from PIL import Image
 
 FIGSIZE = [12, 5]
 SINGLE_FIGSIZE = [5.5, 5]
-DIR = 'plots'
+DIR = '../plots'
 DPI = 300
 
 

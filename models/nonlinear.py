@@ -7,7 +7,7 @@ import torch
 from torch import nn
 from torch.utils import data
 from itertools import chain
-from plotting import fig2img
+from plotting.plotting import fig2img
 from tqdm import tqdm
 from contextlib import contextmanager
 

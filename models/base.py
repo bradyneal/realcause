@@ -7,9 +7,8 @@ import warnings
 from typing import Type
 
 from models.preprocess import Preprocess, PlaceHolderTransform
-from plotting import compare_joints, compare_bivariate_marginals
-from utils import T, Y, to_np_vectors, to_np_vector, to_torch_variable, permutation_test, regular_round, get_duplicates
-
+from plotting.plotting import compare_joints, compare_bivariate_marginals
+from utils import T, Y, to_np_vectors, to_np_vector, to_torch_variable, permutation_test, regular_round
 
 MODEL_LABEL = "model"
 TRUE_LABEL = "true"

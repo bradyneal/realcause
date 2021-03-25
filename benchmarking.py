@@ -1,8 +1,4 @@
-from pyro.infer.autoguide import AutoNormal
-from DataGenModel import DataGenModel
-from data.synthetic import generate_wty_linear_scalar_data, generate_wty_linear_multi_w_data
-from data.whynot_simulators import generate_lalonde_random_outcome
-from models import linear_gaussian_full_model, linear_gaussian_outcome_model, linear_multi_w_outcome_model, VAE
+from data.synthetic import generate_wty_linear_multi_w_data
 import numpy as np
 import pandas as pd
 import whynot as wn
@@ -11,7 +7,7 @@ from functools import partial
 
 import seaborn as sns; sns.set()
 import matplotlib.pyplot as plt
-from plotting import save_and_show
+from plotting.plotting import save_and_show
 
 ATE_ESTS = 'ate_ests'
 COVERAGE_COUNT = 'coverage_count'
