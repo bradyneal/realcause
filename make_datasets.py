@@ -4,7 +4,7 @@ from numpy.testing import assert_approx_equal
 from pathlib import Path
 import time
 
-from run_metrics import load_from_folder
+from loading import load_from_folder
 
 from data.lalonde import load_lalonde
 from data.twins import load_twins

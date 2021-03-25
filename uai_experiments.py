@@ -8,7 +8,7 @@ from causal_estimators.ipw_estimator import IPWEstimator
 from causal_estimators.standardization_estimator import \
     StandardizationEstimator, StratifiedStandardizationEstimator
 from evaluation import run_model_cv
-from run_metrics import load_from_folder
+from loading import load_from_folder
 
 from sklearn.linear_model import LogisticRegression, LinearRegression, Lasso, Ridge, ElasticNet, RidgeClassifier
 from sklearn.svm import SVR, LinearSVR, SVC, LinearSVC
