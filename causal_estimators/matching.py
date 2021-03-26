@@ -9,9 +9,8 @@ from rpy2.robjects import r
 import rpy2.robjects as ro
 from rpy2.robjects import numpy2ri; numpy2ri.activate()
 
-from causal_estimators.base import BaseEstimator
+from causal_estimators.base import BaseEstimator, NotFittedError
 from data.synthetic import generate_wty_linear_multi_w_data
-from exceptions import NotFittedError
 
 MATCHING = 'Matching'
 RGENOUD = 'rgenoud'
