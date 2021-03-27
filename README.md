@@ -10,23 +10,6 @@ This installs all the dependencies in a conda environment and activates the envi
 If step 1 above fails, try the following instead: `conda env create -f environment_exact.yml`.
 
 
-## Project Structure
-```
-├── data/		- folder for data generators and real datasets
-├── models/		- folder for Pyro/PyTorch models and guides
-├── plots/		- folder where (gitignored) plots are automatically saved
-├── tests/		- folder for test suite
-├── benchmarking.py	- benchmark estimators on data generators
-├── DataGenModel.py
-	- workhorse class that takes in a dataset, model, guide, etc. and 
-	  provides useful methods such as training, sampling, ATE calculation,
-	  plotting diagnostics, quantitative diagnostics, etc.
-├── examples.py		- file that includes many examples of how to use the code
-├── plotting.py		- diagnostic plotting functions
-├── slides.pdf		- project slides from presentation Brady gave for a class
-└── utils.py		- various utility functions
-```
-
 ## Do your own analysis on our causal-predictive metric dataset
 
 We trained a total of 1568 different estimators.
