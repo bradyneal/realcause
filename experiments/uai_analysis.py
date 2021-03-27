@@ -17,6 +17,7 @@ ipw_df = pd.concat([
 ], axis=0).reset_index(drop=True)
 full_df = pd.concat([stand_df, ipw_df], axis=0).reset_index(drop=True)
 complete_df = pd.concat([stand_df, ipw_df, pd.read_csv(RESULTS_DIR / 'psid_cps_twins_ipw_stabilized.csv')], axis=0).reset_index(drop=True)
+complete_df.to_csv('causal-predictive-analysis.csv', index=False)
 
 
 def get_correlation(df, causal_score, regression_score='mean_test_neg_root_mean_squared_error',
