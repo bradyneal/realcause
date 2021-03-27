@@ -3,7 +3,6 @@
 *.pdf
 *.png
 ihdp*.npz*
-experiments/
 GenModelCkpts/
 
 # Mac files

@@ -3,11 +3,11 @@ import pandas as pd
 import time
 from pathlib import Path
 
-from evaluation import calculate_metrics
+from experiments.evaluation import calculate_metrics
 from causal_estimators.ipw_estimator import IPWEstimator
 from causal_estimators.standardization_estimator import \
     StandardizationEstimator, StratifiedStandardizationEstimator
-from evaluation import run_model_cv
+from experiments.evaluation import run_model_cv
 from loading import load_from_folder
 
 from sklearn.linear_model import LogisticRegression, LinearRegression, Lasso, Ridge, ElasticNet, RidgeClassifier

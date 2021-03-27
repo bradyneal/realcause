@@ -1,7 +1,7 @@
 import pytest
 from pytest import approx
 
-from evaluation import calculate_metrics
+from experiments.evaluation import calculate_metrics
 from models.linear import LinearGenModel
 from data.synthetic import generate_wty_linear_multi_w_data
 from causal_estimators.ipw_estimator import IPWEstimator
