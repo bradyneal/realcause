@@ -2,13 +2,11 @@
 Realistic benchmark for different causal inference methods. The realism comes from fitting generative models to data with an assumed causal structure. 
 
 ## Installation
-1. `conda env create -f environment.yml`
-2. `conda activate gen`
+Once you've created a virtual environment (e.g. with conda, virtualenv, etc.) install the required packages:
 
-This installs all the dependencies in a conda environment and activates the environment. To deactivate the environment, run `conda deactivate`. The environment can be reactivated at any time with `conda activate gen`.
-
-If step 1 above fails, try the following instead: `conda env create -f environment_exact.yml`.
-
+```
+pip install -r requirements.txt
+```
 
 ## Do your own analysis on our causal-predictive metric dataset
 
