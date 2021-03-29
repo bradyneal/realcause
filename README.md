@@ -57,7 +57,7 @@ df = load_realcause_dataset('twins')
 
 
 ## Loading RealCause pre-trained generative models
-Loading the pre-trained models is done using the function `load_from_folder(DATASET)` from the script `loading.py`, where `DATASET` can be one of: 
+Loading the pre-trained models can be done using the function `load_from_folder(DATASET)` from the script `loading.py`, where `DATASET` can be one of: 
  - `lalonde_cps1`
  - `lalonde_psid1`
  - `LBIDD_exp`
@@ -66,6 +66,12 @@ Loading the pre-trained models is done using the function `load_from_folder(DATA
  - `LBIDD_quadratic`
  - `ihdp`
  - `twins`
+ 
+For example, this is a script to load the model trained on the `lalond_cps1` dataset:
+```
+from loading import load_from_folder
+model, args = load_from_folder("lalonde_cps1")
+```
 
 ## Training RealCause generative models
 
