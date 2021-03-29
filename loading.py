@@ -52,11 +52,17 @@ def load_gen(saveroot='save', dataroot=None):
     return model, args
 
 
-def load_from_folder(dataset, checkpoint_dir="./GenModelCkpts"):
-    checkpoint_dir = Path(checkpoint_dir).resolve()
+def load_from_folder(dataset, checkpoint_path="./GenModelCkpts.zip"):
+    checkpoint_path = Path(checkpoint_path).resolve()
+    root_dir = checkpoint_path.parent
+    checkpoint_dir = root_dir / checkpoint_path.stem
+    if not checkpoint_dir.is_dir():
+        with zipfile.ZipFile(checkpoint_path, "r") as zip_ref:
+            zip_ref.extractall()
+
     dataset_roots = os.listdir(checkpoint_dir)
-    dataset_stem = dataset.split('_')[0]
-    subdata_stem = dataset.split('_')[-1]
+    dataset_stem = dataset.split("_")[0]
+    subdata_stem = dataset.split("_")[-1]
 
     assert dataset_stem in dataset_roots
     subdatasets = os.listdir(checkpoint_dir / dataset_stem)
@@ -64,10 +70,7 @@ def load_from_folder(dataset, checkpoint_dir="./GenModelCkpts"):
 
     subdata_path = checkpoint_dir / Path(dataset_stem) / Path(subdata_stem)
     # Check if unzipping is necessary
-    if (
-        len(os.listdir(subdata_path)) == 1
-        and ".zip" in os.listdir(subdata_path)[0]
-    ):
+    if len(os.listdir(subdata_path)) == 1 and ".zip" in os.listdir(subdata_path)[0]:
         zip_name = os.listdir(subdata_path)[0]
         zip_path = subdata_path / zip_name
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
