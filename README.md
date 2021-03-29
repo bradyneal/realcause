@@ -57,7 +57,8 @@ df = load_realcause_dataset('twins')
 
 
 ## Loading RealCause pre-trained generative models
-Loading the pre-trained models can be done using the function `load_from_folder(DATASET)` from the script `loading.py`, where `DATASET` can be one of: 
+Loading the pre-trained models can be done using the function `load_from_folder(DATASET)` from the script `loading.py`, where `DATASET` can be one of:
+
  - `lalonde_cps1`
  - `lalonde_psid1`
  - `LBIDD_exp`
@@ -67,11 +68,38 @@ Loading the pre-trained models can be done using the function `load_from_folder(
  - `ihdp`
  - `twins`
  
-For example, this is a script to load the model trained on the `lalond_cps1` dataset:
+For example, this is a script to load the model trained on the LaLonde CPS dataset:
+
 ```
 from loading import load_from_folder
 model, args = load_from_folder("lalonde_cps1")
 ```
+
+## Using RealCause generative models
+
+### Sampling
+
+To see most of the methods you can use with these generative models, see the [BaseGenModel class](https://github.com/bradyneal/causal-benchmark/blob/master/models/base.py#L56).
+After you've loaded a generative model `model`, you can sample from it as follows:
+
+```
+w, t, y = model.sample()
+```
+
+We show how to use the knobs below.
+See further documentation for the sample method in [its docstring](https://github.com/bradyneal/causal-benchmark/blob/master/models/base.py#L322).
+
+### Using knobs
+
+We currently provide three knobs as parameters to the `sample()` method:
+
+* `overlap`
+	- If 1, leave treatment untouched.
+	- If 0, push p(T = 1 | w) to 0 for all w where p(T = 1 | w) < 0.5 and push p(T = 1 | w) to 1 for all w where p(T = 1 | w) >= 0.5.
+	- If 0 < overlap < 1, do a linear interpolation of the above.
+* `causal_effect_scale`: scale of the causal effect (size of ATE)
+* `deg_hetero`: degree of heterogeneity (between 0 and 1). When `deg_hetero=1`, y<sub>1</sub> and y<sub>0</sub> remain unchanged. When `deg_hetero=0`,
+            y<sub>1</sub> - y<sub>0</sub> is the same for all individuals.
 
 ## Training RealCause generative models
 
