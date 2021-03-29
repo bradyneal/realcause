@@ -5,7 +5,6 @@ import pandas as pd
 import torch
 
 from data.synthetic import generate_wty_linear_scalar_data, generate_wty_linear_multi_w_data
-from data.whynot_simulators import generate_lalonde_random_outcome
 from data.lalonde import load_lalonde
 from data.ihdp import load_ihdp_datasets
 from utils import NUMPY, PANDAS, PANDAS_SINGLE, TORCH
@@ -182,16 +181,6 @@ def test_lalonde_original_cps3():
     assert y.shape == (n,)
     ate = y[t == 1].mean() - y[t == 0].mean()
     assert round(ate) == -1008
-
-
-def test_lalonde_random_outcome_data_pandas():
-    (w, t, y), causal_effects = generate_lalonde_random_outcome(data_format=PANDAS)
-    assert isinstance(w, pd.DataFrame) and isinstance(t, pd.Series) and isinstance(y, pd.Series)
-
-
-def test_lalonde_random_outcome_data_torch():
-    (w, t, y), causal_effects = generate_lalonde_random_outcome(data_format=TORCH)
-    assert all(isinstance(x, torch.Tensor) for x in (w, t, y))
 
 
 def test_multivariate_w_data():
